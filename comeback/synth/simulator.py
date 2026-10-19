@@ -581,6 +581,8 @@ class MatchSimulator:
         fields: dict[str, Any] = {"player_in": in_id, "player_out": out_id}
         if formation:
             fields["formation"] = formation
+        if spot:
+            fields["spot"] = list(spot)
         self._emit("substitution", side.code, out_id, **fields)
         self.clock += self.rng.uniform(20, 35)
 
@@ -638,7 +640,10 @@ def match_metadata(home: Team, away: Team, *, seed: int, match_id: str,
     """First line of a match file: fixture, rosters, scenario and conventions."""
 
     def team_dict(team: Team) -> dict[str, Any]:
-        return {**asdict(team.club), "players": [asdict(p) for p in team.players],
+        starters = {p.id for p in team.starting_xi}
+        players = [{**asdict(p), "spot": list(FORMATION_433[p.number]) if p.id in starters else None}
+                   for p in team.players]
+        return {**asdict(team.club), "players": players,
                 "starting_xi": [p.id for p in team.starting_xi], "formation": "4-3-3"}
 
     return {

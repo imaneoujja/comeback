@@ -25,6 +25,7 @@ class MatchBrain:
         self.engine = MatchEngine(meta)
         self.gateway = gateway
         self.cards: dict[str, dict[str, Any]] = {}
+        self._situations: dict[str, dict[str, Any]] = {}
         st = self.engine.state
         self.team_names = dict(st.team_names)
         self.roster = st.roster
@@ -33,6 +34,7 @@ class MatchBrain:
         """Feed one event; store provisional template cards for new moments."""
         update = self.engine.process(event)
         for moment in update.moments:
+            self._situations[moment.moment_id] = self._situation()  # as it was when the moment happened
             data = moment.to_dict()
             self.cards[moment.moment_id] = {
                 **data, **moment_card_text(data, self.team_names), "verified": True, "source": "template",
@@ -52,7 +54,8 @@ class MatchBrain:
     async def write_card(self, moment: Moment) -> dict[str, Any]:
         """Run Analyst → Verifier for one moment and upgrade the stored card."""
         data = moment.to_dict()
-        task = AnalystTask(data, self.team_names, self.roster, self._recent_headlines(moment.t), self._situation())
+        situation = self._situations.get(moment.moment_id) or self._situation()
+        task = AnalystTask(data, self.team_names, self.roster, self._recent_headlines(moment.t), situation)
         card = {**await write_moment_card(task, self.gateway), "pending": False}
         self.cards[moment.moment_id] = card
         return card

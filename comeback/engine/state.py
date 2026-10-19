@@ -85,6 +85,11 @@ class MatchState:
         }
         self.formation = {self.home: meta["home"].get("formation"), self.away: meta["away"].get("formation")}
         self.players_on_pitch = {self.home: 11, self.away: 11}
+        # Who is on the pitch and at which base spot (team attacking frame), for renderers.
+        self.lineup: dict[str, dict[str, list[float]]] = {
+            meta[s]["id"]: {p["id"]: p["spot"] for p in meta[s]["players"] if p.get("spot")}
+            for s in ("home", "away")
+        }
         self.teams = {code: TeamStats(code) for code in (self.home, self.away)}
         self.players = {pid: PlayerStats(pid) for pid in self.roster}
         self.score = {self.home: 0, self.away: 0}
@@ -218,12 +223,18 @@ class MatchState:
         team = self.teams[e["team"]]
         if e["color"] == "red":
             team.red_cards += 1
+            self.lineup[e["team"]].pop(e["player"], None)
             self.players_on_pitch[e["team"]] -= 1
             self.red_card_t[e["team"]] = e["t"]
         else:
             team.yellow_cards += 1
 
     def _on_substitution(self, e: dict[str, Any]) -> None:
+        lineup = self.lineup[e["team"]]
+        spot = e.get("spot") or lineup.get(e["player_out"])
+        lineup.pop(e["player_out"], None)
+        if spot:
+            lineup[e["player_in"]] = spot
         if e.get("formation"):
             self.formation[e["team"]] = e["formation"]
 

@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>COMEBACK — the AI that watches the match for you</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%227%22 fill=%22%2307090d%22/%3E%3Ccircle cx=%2216%22 cy=%2216%22 r=%227%22 fill=%22%23ff4d5e%22/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/web/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">COME<span>BACK</span></span>
+      <span class="tagline">The AI that watches the match for you while you're away</span>
+    </div>
+    <div class="controls">
+      <span class="control-label">Replay</span>
+      <div class="segmented" id="speeds" role="group" aria-label="Replay speed"></div>
+      <button class="icon-btn" id="pause" title="Pause / play" aria-label="Pause">❚❚</button>
+      <button class="ghost-btn" id="restart" title="Restart the match">Restart</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="broadcast">
+      <div class="tv">
+        <canvas id="pitch" aria-label="Animated top-down view of the match"></canvas>
+
+        <div class="scorebug" id="scorebug">
+          <div class="sb-team home"><i class="sb-chip"></i><span class="sb-code"></span><span class="sb-reds"></span></div>
+          <div class="sb-score"><span class="sb-home">0</span><span class="sb-sep">–</span><span class="sb-away">0</span></div>
+          <div class="sb-team away"><span class="sb-reds"></span><span class="sb-code"></span><i class="sb-chip"></i></div>
+          <div class="sb-clock" id="clock">00:00</div>
+        </div>
+
+        <div class="danger" id="danger">
+          <div class="danger-title">DANGER</div>
+          <div class="danger-row home"><span class="dr-code"></span><div class="dr-bar"><i></i></div><span class="dr-val">0</span></div>
+          <div class="danger-row away"><span class="dr-code"></span><div class="dr-bar"><i></i></div><span class="dr-val">0</span></div>
+        </div>
+
+        <div class="ov ov-top-right" id="ov-top_right"></div>
+        <div class="ov ov-lower-third" id="ov-lower_third"></div>
+        <div class="ov ov-banner" id="ov-banner"></div>
+        <div class="live-pill"><i></i>LIVE · SYNTHETIC MATCH</div>
+      </div>
+
+      <div class="panel timeline-panel">
+        <div class="panel-head">
+          <span>Match timeline</span>
+          <span class="legend">
+            <span><i class="lg-home"></i><b class="lg-home-name"></b> control</span>
+            <span><i class="lg-away"></i><b class="lg-away-name"></b> control</span>
+            <span><i class="lg-alert"></i>“Come back” alert</span>
+            <span><i class="lg-awayband"></i>You were away</span>
+          </span>
+        </div>
+        <canvas id="timeline" aria-label="Momentum timeline with key moments"></canvas>
+      </div>
+
+      <div class="panel studio">
+        <div class="panel-head">
+          <span>Studio feed</span>
+          <span class="muted">Written once by the Analyst agent · fact-checked by the Verifier · shared by every fan</span>
+        </div>
+        <div class="cards" id="cards"></div>
+      </div>
+    </section>
+
+    <aside class="phone-col">
+      <div class="phone" id="phone">
+        <div class="phone-notch"></div>
+        <div class="phone-screen">
+          <div class="phone-status"><span id="phone-clock">0'</span><span class="phone-app">COMEBACK</span><span>●●●</span></div>
+          <div class="profiles" id="profiles" role="tablist" aria-label="Fan profile"></div>
+          <div class="fan-card" id="fan-card"></div>
+          <div class="presence" id="presence"></div>
+          <div class="actions">
+            <button class="act" id="btn-away">I'm away</button>
+            <button class="act primary" id="btn-back">I'm back</button>
+            <button class="act" id="btn-join">Join at 60'</button>
+          </div>
+          <label class="auto"><input type="checkbox" id="auto-away" checked> Treat switching tabs as leaving</label>
+          <div class="catchup" id="catchup" hidden></div>
+          <div class="notes-head">Notifications</div>
+          <div class="notes" id="notes"><div class="empty">Nothing yet. Leave the match and COMEBACK will watch it for you.</div></div>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <footer class="footer">
+    Synthetic data · fictional clubs and players · Microsoft Agent Framework agents on Microsoft Foundry
+  </footer>
+  <script src="/web/app.js"></script>
+</body>
+</html>
