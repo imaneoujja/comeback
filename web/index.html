@@ -55,7 +55,9 @@
     </section>
 
     <section class="mon fan" aria-label="Fan device monitor">
-      <div class="mon-label"><span class="tally green" id="fan-tally"><i></i>FAN</span><span class="src" id="fan-src">DEVICE FEED</span></div>
+      <div class="mon-label"><span class="tally green" id="fan-tally"><i></i>FAN</span><span class="src" id="fan-src">DEVICE FEED</span>
+        <button class="pair-btn" id="pair-btn">PAIR PHONE</button></div>
+      <div class="pair-box" id="pair-box" hidden></div>
       <div class="screen fan-screen">
         <div class="profiles" id="profiles" role="tablist" aria-label="Fan profile"></div>
         <div class="fan-who" id="fan-card"></div>
@@ -107,6 +109,7 @@
     </section>
   </main>
 
+  <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
   <script type="module" src="/web/js/main.js"></script>
 </body>
 </html>

@@ -11,10 +11,12 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from comeback.agents.analyst import needs_analyst
 from comeback.agents.brain import MatchBrain
 from comeback.agents.llm import LLMGateway
 from comeback.agents.watcher import Watcher
 from comeback.engine.match import EngineUpdate, load_match
+from comeback.fans.crowd import Crowd
 from comeback.fans.profiles import FanProfile
 from comeback.fans.session import FanSession
 
@@ -23,7 +25,8 @@ log = logging.getLogger(__name__)
 MATCHES_DIR = Path(__file__).resolve().parents[2] / "data" / "matches"
 SPEEDS = (1, 5, 10, 20, 40)
 MAX_SLEEP_S = 1.5  # dead-ball pauses are shortened so the replay never feels frozen
-CARD_WAIT_S = 20.0  # how long a catch-up waits for pending verified cards before using templates
+CARD_WAIT_S = 20.0
+CROWD_SIZE = 10_000  # how long a catch-up waits for pending verified cards before using templates
 
 
 def cue_visible(cue: dict[str, Any], level: str) -> bool:
@@ -40,11 +43,13 @@ class ReplaySession:
         self.match_id = match_id
         self.meta, self.events = load_match(MATCHES_DIR / f"{match_id}.jsonl")
         self.brain = MatchBrain(self.meta, gateway)
+        self.crowd = Crowd(self.brain.engine, CROWD_SIZE)
         self.speed = speed if speed in SPEEDS else 10
         self.index = 0
         self.paused = False
         self.away_bands: list[dict[str, float | None]] = []
         self._subscribers: set[asyncio.Queue] = set()
+        self._devices: set[asyncio.Queue] = set()
         self._task: asyncio.Task | None = None
         self._card_writer: asyncio.Task | None = None
         self._card_queue: asyncio.Queue = asyncio.Queue()
@@ -53,13 +58,20 @@ class ReplaySession:
 
     # -------------------------------------------------------- subscribers
 
-    def subscribe(self) -> asyncio.Queue:
+    def subscribe(self, device: bool = False) -> asyncio.Queue:
+        """A screen (the control room) or a paired fan device (phone) listening to this session."""
         queue: asyncio.Queue = asyncio.Queue()
         self._subscribers.add(queue)
+        if device:
+            self._devices.add(queue)
+            self.publish("device", {"paired": len(self._devices)})
         return queue
 
     def unsubscribe(self, queue: asyncio.Queue) -> None:
         self._subscribers.discard(queue)
+        if queue in self._devices:
+            self._devices.discard(queue)
+            self.publish("device", {"paired": len(self._devices)})
 
     def publish(self, kind: str, data: Any) -> None:
         for queue in self._subscribers:
@@ -108,7 +120,12 @@ class ReplaySession:
             "timeline": self.brain.engine.timeline,
             "cards": sorted(self.brain.cards.values(), key=lambda c: c["t"]),
             "notifications": self.fan.notifications, "finished": st.finished,
+            "crowd": self.crowd_snapshot(), "devices": len(self._devices),
         }
+
+    def crowd_snapshot(self) -> dict[str, Any]:
+        analyst_calls = sum(c.get("attempts") or 1 for c in self.brain.cards.values() if needs_analyst(c))
+        return self.crowd.snapshot(analyst_calls)
 
     # -------------------------------------------------------- fan actions
 
@@ -167,8 +184,11 @@ class ReplaySession:
         for moment in update.moments:
             if self.brain.cards[moment.moment_id]["pending"]:
                 self._card_queue.put_nowait(moment)
+        self.crowd.on_event(self.brain.engine, update, self.brain.cards)
         if silent:
             return update
+        if self.crowd.ticked:
+            self.publish("crowd", self.crowd_snapshot())
         level = self.fan.profile.level
         self.publish("event", event)
         for cue in update.cues:

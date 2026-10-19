@@ -194,3 +194,19 @@ def test_workflow_traces_each_step_for_the_control_room() -> None:
     assert [(s["agent"], s["step"]) for s in steps] == [
         ("Analyst", "draft"), ("Verifier", "rejected"), ("Analyst", "draft"), ("Verifier", "verified")]
     assert "9" in steps[1]["detail"] and steps[0]["label"] == "71' goal"
+
+
+def test_a_crowd_of_fans_needs_few_stories() -> None:
+    from comeback.fans.crowd import Crowd
+
+    meta, events = load_match(DEMO)
+    brain = MatchBrain(meta, LLMGateway(LLMSettings(mode=LLMMode.OFFLINE)))
+    crowd = Crowd(brain.engine, size=2000)
+    for event in events:
+        update = brain.process(event)
+        crowd.on_event(brain.engine, update, brain.cards)
+    snap = crowd.snapshot(analyst_calls=17)
+    assert snap["catchups"] > 1000 and snap["alerts_sent"] > 0
+    assert snap["stories"] < snap["catchups"] / 5          # most catch-ups reuse an already written story
+    assert [g["minute"] for g in snap["back_in_time"]] == [18, 39, 71, 84, 92]
+    assert len(snap["grid"]) == 2000

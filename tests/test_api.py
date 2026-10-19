@@ -55,3 +55,9 @@ def test_replay_late_join_and_away_back_cycle() -> None:
     assert joined["source"] == "llm"  # precomputed demo window → served from the committed cache
     assert back["bucket"] in ("key_moments", "full_story") and back["text"]
     assert {"state", "catchup", "presence", "event", "snapshot"} <= set(kinds)
+
+
+def test_phone_pairing_needs_an_existing_session() -> None:
+    assert client.get("/phone").status_code == 200
+    assert client.get("/api/stream?session=nobody&device=true").status_code == 404
+    assert "url" in client.get("/api/lan").json()

@@ -7,6 +7,8 @@ import {
 } from "./panels.js";
 import { drawTactical } from "./tactical.js";
 import { initAgents } from "./agents.js";
+import { initAudience } from "./audience.js";
+import { initPairing } from "./pairing.js";
 
 let program = null;          // 3D renderer, or null → 2D fallback on the PGM canvas
 let lastFrame = performance.now();
@@ -41,6 +43,8 @@ async function boot() {
   }
   buildControls();
   initAgents();
+  initAudience();
+  initPairing();
   connect();
   requestAnimationFrame(frame);
 }
@@ -107,6 +111,8 @@ function connect() {
   });
   on("catchup", renderCatchup);
   on("agent", () => {});         // forwarded to the AGENTS monitor through emit()
+  on("crowd", () => {});         // forwarded to the AUD monitor
+  on("device", () => {});        // phone paired / unpaired
   on("end", () => put("banner", `<div class="bn" style="--team:#ecebe6"><div class="bn-k">FULL-TIME</div>
       <div class="bn-t">${app.teams[app.home].name} ${app.snapshot?.score_str ?? ""} ${app.teams[app.away].name}</div></div>`, 120, 999));
 }

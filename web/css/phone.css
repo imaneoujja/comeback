@@ -1,0 +1,47 @@
+:root { --red: #ff3b30; --green: #30d158; --amber: #ffb000; --text: #f2f1ec; --dim: #77756f;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, monospace; --cond: "IBM Plex Sans Condensed", system-ui, sans-serif; }
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; background: #000; color: var(--text); font-family: var(--cond); -webkit-tap-highlight-color: transparent; }
+button { font: inherit; color: inherit; cursor: pointer; }
+.ph { min-height: 100dvh; padding: calc(env(safe-area-inset-top) + 14px) 18px calc(env(safe-area-inset-bottom) + 18px); display: flex; flex-direction: column; gap: 18px; }
+.ph-top { display: flex; justify-content: space-between; align-items: center; font-family: var(--mono); font-size: 12px; letter-spacing: .12em; color: var(--dim); }
+.ph-brand { font-family: var(--cond); font-weight: 700; font-size: 20px; letter-spacing: .16em; color: var(--text); }
+.ph-live.on { color: var(--green); }
+.pair { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 18px; }
+.pair-k, .k { font-family: var(--mono); font-size: 11px; letter-spacing: .18em; color: var(--dim); margin: 0; }
+h1 { font-size: 40px; line-height: 1.02; margin: 0; font-weight: 700; }
+.hint { color: var(--dim); font-size: 15px; margin: 0; }
+.big { border: 0; background: var(--red); color: #fff; font-family: var(--mono); font-weight: 700; letter-spacing: .14em; font-size: 16px; padding: 18px; }
+.big.light { background: #fff; color: #000; }
+.main { display: flex; flex-direction: column; gap: 14px; }
+.who { font-size: 17px; color: var(--dim); } .who b { color: var(--text); }
+.score { font-family: var(--mono); font-size: 14px; letter-spacing: .08em; }
+.score b { font-family: var(--cond); font-size: 28px; letter-spacing: .02em; }
+.state { font-family: var(--mono); font-size: 14px; letter-spacing: .12em; padding: 12px; border: 1px solid #1f3a28; color: var(--green); }
+.state.away { border-color: #4a3a12; color: var(--amber); }
+.btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.btn { border: 1px solid #333; background: #111; font-family: var(--mono); font-size: 13px; letter-spacing: .1em; padding: 14px 6px; }
+.btn.hot:not(:disabled) { background: var(--red); border-color: var(--red); color: #fff; font-weight: 700; }
+.btn:disabled { opacity: .3; }
+.catchup { border-left: 4px solid var(--amber); background: #0f0f0f; padding: 14px; }
+.catchup .ck { font-family: var(--mono); font-size: 11px; letter-spacing: .16em; color: var(--amber); }
+.catchup .ct { font-size: 24px; font-weight: 700; margin: 2px 0 8px; }
+.catchup .cx { font-size: 18px; line-height: 1.45; }
+.catchup .cf { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; font-family: var(--mono); font-size: 11px; color: var(--green); }
+.notes { display: flex; flex-direction: column; gap: 8px; }
+.note { border: 1px solid #262626; background: #0d0d0d; padding: 12px; animation: drop .4s ease both; }
+.note.come_back { border-color: rgba(255, 59, 48, .6); }
+.note .nh { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 11px; letter-spacing: .14em; color: var(--dim); margin-bottom: 4px; }
+.note.come_back .nh b { color: var(--red); }
+.note .nx { font-size: 17px; line-height: 1.4; }
+.empty { color: var(--dim); font-size: 15px; }
+.takeover { position: fixed; inset: 0; z-index: 10; background: var(--red); color: #fff; display: flex; flex-direction: column; justify-content: center;
+  gap: 22px; padding: 28px; animation: flash .9s steps(2) 4; }
+.takeover.goal { background: #fff; color: #000; animation: none; }
+.takeover[hidden] { display: none; }
+.to-k { font-family: var(--mono); font-weight: 700; font-size: 18px; letter-spacing: .3em; }
+.to-t { font-size: 30px; line-height: 1.15; font-weight: 700; }
+.to-x { border: 0; background: none; color: inherit; opacity: .7; font-family: var(--mono); font-size: 12px; letter-spacing: .14em; }
+@keyframes flash { 50% { background: #8f0f08; } }
+@keyframes drop { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }

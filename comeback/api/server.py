@@ -5,6 +5,7 @@ Run with ``python -m comeback`` and open http://localhost:8000.
 
 import asyncio
 import json
+import socket
 import uuid
 from contextlib import asynccontextmanager
 from functools import cache
@@ -18,6 +19,7 @@ from fastapi.staticfiles import StaticFiles
 from comeback.agents.llm import LLMGateway
 from comeback.api.replay import MATCHES_DIR, SPEEDS, ReplaySession, cue_visible
 from comeback.engine.match import load_match, run_engine
+from comeback.fans.crowd import scaling_curve
 from comeback.fans.profiles import load_profiles
 
 WEB_DIR = Path(__file__).resolve().parents[2] / "web"
@@ -65,6 +67,24 @@ def index() -> FileResponse:
     return FileResponse(WEB_DIR / "index.html")
 
 
+@app.get("/phone", include_in_schema=False)
+def phone_page() -> FileResponse:
+    """The fan's real phone: pairs with a control-room session through a QR code."""
+    return FileResponse(WEB_DIR / "phone.html")
+
+
+@app.get("/api/lan")
+def lan_address(request: Request) -> dict[str, Any]:
+    """This machine's address on the local network, so a phone can reach the server (QR code)."""
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect(("192.0.2.1", 80))  # TEST-NET address: no packet is sent, it only picks the outgoing interface
+            ip = s.getsockname()[0]
+    except OSError:
+        return {"url": None}
+    return {"url": f"http://{ip}:{request.url.port or 80}"}
+
+
 @app.get("/api/match/{match_id}")
 def match_info(match_id: str) -> dict[str, Any]:
     """Fixture metadata, rosters (starters carry their formation spot) and scenario."""
@@ -94,17 +114,34 @@ def overlays(match_id: str, profile: str | None = None) -> dict[str, Any]:
     return {"match_id": match_id, "count": len(cues), "cues": cues}
 
 
+_scale_cache: dict[str, list[dict[str, int]]] = {}
+
+
+@app.get("/api/scale/{match_id}")
+async def scale(match_id: str) -> dict[str, Any]:
+    """LLM calls needed to serve audiences of growing size (computed once, in a worker thread)."""
+    if match_id not in _scale_cache:
+        meta, events = load_match(_match_path(match_id))
+        _scale_cache[match_id] = await asyncio.to_thread(scaling_curve, meta, events)
+    return {"match_id": match_id, "curve": _scale_cache[match_id]}
+
+
 @app.get("/api/stream")
 async def stream(request: Request, match_id: str = DEFAULT_MATCH, session: str | None = None,
-                 profile: str = "omar", speed: int = 10) -> StreamingResponse:
-    """Server-Sent Events: events, snapshots, overlay cues, moment cards, alerts, catch-ups."""
+                 profile: str = "omar", speed: int = 10, device: bool = False) -> StreamingResponse:
+    """Server-Sent Events: events, snapshots, overlay cues, moment cards, alerts, catch-ups.
+
+    ``device=true`` attaches a fan's phone to an existing session (never creates one).
+    """
     _match_path(match_id)
     session_id = session or uuid.uuid4().hex[:12]
     replay = sessions.get(session_id)
+    if device and replay is None:
+        raise HTTPException(404, "no such session: scan the QR code shown in the control room")
     if replay is None or replay.match_id != match_id:
         replay = ReplaySession(session_id, match_id, _profile(profile), gateway, speed)
         sessions[session_id] = replay
-    queue = replay.subscribe()
+    queue = replay.subscribe(device=device)
     replay.start()
 
     async def events():
