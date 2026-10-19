@@ -4,7 +4,7 @@
 *before* the big moment, and tells you what you missed when you return, in your
 language, from your club's point of view, sized to how long you were gone.
 
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/YOUR_GITHUB_USERNAME/comeback)
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/imaneoujja/comeback)
 
 ![COMEBACK: the fan returns just before the 71st-minute goal and gets a verified catch-up](docs/screenshot.png)
 
@@ -44,7 +44,7 @@ the forwarded port **8000**.
 **Locally** (Python ≥ 3.10):
 
 ```bash
-git clone https://github.com/YOUR_GITHUB_USERNAME/comeback.git && cd comeback
+git clone https://github.com/imaneoujja/comeback.git && cd comeback
 python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 python -m comeback                                   # → http://localhost:8000
