@@ -62,7 +62,11 @@ THE_COMEBACK = Scenario(
     away="HLT",
     seed=2026,
     beats=(
-        Beat(18.3, "goal", "HLT", player="HLT-9", note="Lights strike first on the break"),
+        Beat(13.5, "momentum", "HLT", until_minute=18.4, strength=1.3,
+             note="Lights find a way down the flanks"),
+        Beat(18.3, "goal", "HLT", player="HLT-9", note="Lights strike first"),
+        Beat(35.5, "momentum", "HLT", until_minute=39.3, strength=0.9,
+             note="Lights press high before the break"),
         Beat(39.2, "goal", "HLT", player="HLT-11", note="Lights double the lead before half-time"),
         Beat(55.0, "shape_change", "RVR", player="RVR-6", player_in="RVR-15", formation="4-2-4",
              note="Rovers sacrifice a holding midfielder for a second striker"),

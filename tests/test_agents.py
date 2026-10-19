@@ -88,6 +88,18 @@ def test_numerical_claims_must_name_the_short_handed_team() -> None:
     assert check_numerical_claims("Harbour Lights FC are down to 10 men.", on_pitch) == []
     assert check_numerical_claims("Rovers equalise despite being a man down.", on_pitch)
     assert check_numerical_claims("They play with ten men.", {"A": 11, "B": 11})
+    assert check_numerical_claims(
+        "Harbour Lights FC must defend their lead with 10 men against full-strength Riverside Rovers.", on_pitch) == []
+    assert check_numerical_claims("Kestrel's goal reignites Riverside's fight against a ten-man Harbour Lights side.",
+                                  on_pitch) == []
+    assert check_numerical_claims("Kestrel reduces Harbour Lights FC's lead, boosting Riverside Rovers' momentum "
+                                  "despite playing with a numerical disadvantage.", on_pitch)
+    assert check_numerical_claims("Riverside Rovers win, overcoming a numerical advantage for Harbour Lights FC.",
+                                  on_pitch)
+    assert check_numerical_claims("Riverside Rovers, with a numerical advantage, keep pushing.", on_pitch) == []
+    assert check_numerical_claims("Riverside Rovers win, overcoming a numerical advantage after Harbour Lights FC "
+                                  "lost a player.", on_pitch)
+    assert check_numerical_claims("An early lead with both teams at full strength.", {"A": 11, "B": 11}) == []
 
 
 def test_claims_must_stay_within_the_match() -> None:
@@ -210,3 +222,27 @@ def test_a_crowd_of_fans_needs_few_stories() -> None:
     assert snap["stories"] < snap["catchups"] / 5          # most catch-ups reuse an already written story
     assert [g["minute"] for g in snap["back_in_time"]] == [18, 39, 71, 84, 92]
     assert len(snap["grid"]) == 2000
+
+
+def test_every_fans_last_alert_before_a_goal_names_the_scoring_side(monkeypatch) -> None:
+    """Demo coherence: whatever the fan, the call-back before a goal is about the team that then scores."""
+    import comeback.agents.watcher as watcher_module
+
+    monkeypatch.setattr(watcher_module, "MAX_ALERTS_PER_ABSENCE", 99)
+    meta, events = load_match(DEMO)
+    for fan_id, profile in load_profiles().items():
+        brain = MatchBrain(meta, LLMGateway(LLMSettings(mode=LLMMode.OFFLINE)))
+        session = FanSession(profile)
+        session.go_away(0.0)                       # away for the whole match: sees every alert
+        watcher = Watcher(session, brain.engine)
+        alerts, goals = [], []
+        for event in events:
+            for note in watcher.on_update(brain.engine, brain.process(event)):
+                if note.kind == "come_back":
+                    alerts.append(note)
+            if event["type"] == "goal":
+                goals.append(event)
+        for goal in goals:
+            before = [a for a in alerts if goal["t"] - 360 <= a.t < goal["t"]]
+            assert before, (fan_id, goal["minute"], "no call-back before the goal")
+            assert before[-1].team == goal["team"], (fan_id, goal["minute"], before[-1].text)

@@ -27,7 +27,7 @@ from comeback.fans.session import FanSession  # noqa: E402
 DEMO = Path(__file__).resolve().parents[1] / "data" / "matches" / "demo-comeback.jsonl"
 
 # (fan, leaves at match minute, comes back at match minute); None = late join at that minute.
-SCRIPT = [("reda", None, 60.0), ("omar", 65.0, 70.5), ("sofia", 75.0, 86.0)]
+SCRIPT = [("reda", None, 60.0), ("omar", 66.0, 70.5), ("sofia", 75.0, 86.0)]
 # Extra late joins at 60' so the "Join at 60'" button has real text for every profile offline.
 EXTRA_JOINS = ["omar", "sofia"]
 

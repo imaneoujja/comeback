@@ -104,12 +104,31 @@ def check_length(text: str, max_chars: int, label: str) -> list[str]:
 
 
 _SHORT_HANDED = re.compile(
-    r"man down|men down|down to (?:10|ten)|(?:10|ten) men|a player down|down a player|numerical disadvantage"
+    r"man down|men down|down to (?:10|ten)|(?:10|ten) men|(?:10|ten)-man|a player down|down a player"
+    r"|numerical disadvantage"
     r"|player disadvantage|infériorité numérique|à dix|réduits? à (?:10|dix)|inferioridad numérica|con diez"
     r"|con 10",
     re.IGNORECASE,
 )
-_SENTENCE = re.compile(r"[^.!?。！？]+")
+_EXTRA_MAN = re.compile(
+    r"numerical advantage|extra man|man advantage|player advantage|numerical superiority|full[- ]strength"
+    r"|supériorité numérique|homme de plus|superioridad numérica|jugador más",
+    re.IGNORECASE,
+)
+_SENTENCE = re.compile(r"[^.!?。！？\n]+")
+_OPPOSING = re.compile(
+    r"\b(?:against|versus|vs\.?|facing|face|contre|face à|contra|ante)\s+(?:the |a |an |les? |la |el |los )?$",
+    re.IGNORECASE,
+)
+_EQUAL_NUMBERS_CLAIM = re.compile(   # like _EXTRA_MAN, minus "full strength" (true when both teams have 11)
+    _SHORT_HANDED.pattern + r"|numerical advantage|extra man|man advantage|player advantage|numerical superiority"
+    r"|supériorité numérique|superioridad numérica",
+    re.IGNORECASE,
+)
+_OVERCOMING = re.compile(
+    r"\b(?:overcom\w*|overturn\w*|surmont\w*|superando|superar)\s+(?:a |an |the |une |la |el )?$", re.IGNORECASE
+)
+_FOR_TEAM = re.compile(r"^\s*(?:for|of|to|pour|de|du|para|a favor de)\s+(?:the |les? |la |el )?", re.IGNORECASE)
 _GENERIC_WORDS = {"FC", "United", "City", "Athletic", "St.", "Point"}
 
 
@@ -118,20 +137,67 @@ def _team_tokens(name: str) -> set[str]:
 
 
 def check_numerical_claims(text: str, players_on_pitch: dict[str, int]) -> list[str]:
-    """A "playing with ten men" claim must name the short-handed team, and only that team."""
+    """A numerical disadvantage claim must be about the short-handed team, an advantage claim about the other.
+
+    A claim is attached to the team named just before it in the sentence (usually the
+    subject: "Lights must defend with 10 men"), or to the team just after it when it
+    follows "against / versus / face à…" ("against ten-man Lights") or is followed by
+    "for / of / pour…" ("a numerical advantage for Rovers"). No team named → ambiguous.
+    """
     if len(set(players_on_pitch.values())) < 2:
-        if _SHORT_HANDED.search(text):
-            return ["Both teams have the same number of players: do not mention a numerical disadvantage."]
+        if _EQUAL_NUMBERS_CLAIM.search(text):
+            return ["Both teams have the same number of players: do not mention a numerical (dis)advantage."]
         return []
     short = min(players_on_pitch, key=players_on_pitch.get)
     full = max(players_on_pitch, key=players_on_pitch.get)
     issues = []
+    claims = [(_SHORT_HANDED, short, "disadvantage"), (_EXTRA_MAN, full, "advantage")]
     for sentence in _SENTENCE.findall(text):
-        if not _SHORT_HANDED.search(sentence):
-            continue
-        names_short = any(t in sentence for t in _team_tokens(short))
-        if not names_short:
-            issues.append(f"'{sentence.strip()}': only {short} is short-handed ({players_on_pitch[short]} "
-                          f"players); {full} has {players_on_pitch[full]}. Name {short} explicitly when "
-                          "mentioning the numerical disadvantage.")
+        for pattern, expected, kind in claims:
+            issue = _misattributed(sentence, pattern, expected, kind, short, full, players_on_pitch)
+            if issue:
+                issues.append(issue)
+                break
     return issues
+
+
+def _misattributed(sentence: str, pattern: re.Pattern, expected: str, kind: str, short: str, full: str,
+                   players_on_pitch: dict[str, int]) -> str | None:
+    """Feedback if a numerical (dis)advantage claim in ``sentence`` is attached to the wrong team."""
+    for claim in pattern.finditer(sentence):
+        mentions = [(m.start(), m.end(), team) for team in (short, full) for token in _team_tokens(team)
+                    for m in re.finditer(re.escape(token), sentence)]
+        before = [(claim.start() - end, team) for start, end, team in mentions if end <= claim.start()]
+        after = [(start - claim.end(), team) for start, end, team in mentions if start >= claim.end()]
+        owner = expected
+        if after and (_OPPOSING.search(sentence[:claim.start()]) or _FOR_TEAM.match(sentence[claim.end():])):
+            attached = min(after)[1]          # explicit owner: "against ten-man X", "an advantage for X"
+        elif before or after:
+            attached = min(before or after)[1]
+            if _OVERCOMING.search(sentence[:claim.start()]):   # "X won, overcoming a numerical advantage":
+                owner = full if expected == short else short   # the advantage was the other side's
+        else:
+            attached = None
+        if attached != owner:
+            return (f"'{sentence.strip()}': {short} is short-handed ({players_on_pitch[short]} players) and "
+                    f"{full} has {players_on_pitch[full]}, so the numerical {kind} belongs to {expected}. "
+                    f"Attach it to {expected} explicitly.")
+    return None
+
+
+_FINAL_RESULT = re.compile(
+    r"\b(?:won|wins|win the match|victory|draw|drew|defeat|lost the match|victoire|match nul|gagn[ée]|d[ée]faite"
+    r"|victoria|empate|empataron|ganaron|derrota)\b",
+    re.IGNORECASE,
+)
+
+
+def check_no_final_result(text: str, finished: bool) -> list[str]:
+    """Before full-time, a text must not talk as if the match were already won, drawn or lost."""
+    if finished:
+        return []
+    found = sorted({m.group(0).lower() for m in _FINAL_RESULT.finditer(text)})
+    if found:
+        return [f"The match is not over: do not describe a final result ({', '.join(found)}). "
+                "Say who leads or that the score is level right now."]
+    return []

@@ -23,7 +23,7 @@ export function renderScore() {
   $("#clock").textContent = clockText(s);
   $("#bar-score").innerHTML = `<b style="color:${teamColour(s.home)}">${s.home}</b><span>${s.score[s.home]}–${s.score[s.away]}</span>
     <b style="color:${teamColour(s.away)}">${s.away}</b><span class="m">${clockText(s)}</span>`;
-  $("#danger").innerHTML = `<div class="dg-title">DANGER INDEX</div>` + [s.home, s.away].map((code) => {
+  $("#danger").innerHTML = `<div class="dg-title">DANGER · LAST 2 MIN · 0–100</div>` + [s.home, s.away].map((code) => {
     const t = s.teams[code];
     const hot = t.danger >= 55 && t.danger_slope > 0;
     return `<div class="dg-row ${hot ? "hot" : ""}"><b>${code}</b><div class="dg-bar"><i style="width:${Math.min(100, t.danger)}%;background:${teamColour(code)}"></i></div><span class="dg-val">${Math.round(t.danger)}</span></div>`;

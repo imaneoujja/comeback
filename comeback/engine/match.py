@@ -68,6 +68,8 @@ class MatchEngine:
                 self._add(team, e, "box_entry", WEIGHTS["box_entry"], channel(end[1]))
             elif etype == "pass" and in_final_third(end[0]):
                 self._add(team, e, "final_third_pass", WEIGHTS["final_third_pass"])
+            elif etype == "pass" and end[0] > PITCH_LENGTH / 2:
+                self._add(team, e, "opp_half_pass", WEIGHTS["opp_half_pass"])
         elif etype == "shot":
             self._add(team, e, "shot", shot_weight(e["xg"]))
         elif etype == "corner":
@@ -97,6 +99,7 @@ class MatchEngine:
         teams = {}
         for code in (st.home, st.away):
             danger, slope = self.danger_now(code)
+            recent = self.danger[code].reasons(st.t)
             teams[code] = {
                 "name": st.team_names[code],
                 **st.teams[code].to_dict(),
@@ -105,6 +108,7 @@ class MatchEngine:
                 "control": round(control[code], 3),
                 "danger": round(danger, 1),
                 "danger_slope": round(slope, 1),
+                "last_2min": {k: recent[k] for k in ("box_entries", "shots", "corners", "final_third_passes")},
                 "players_on_pitch": st.players_on_pitch[code],
                 "formation": st.formation[code],
             }

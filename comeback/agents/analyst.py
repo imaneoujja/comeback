@@ -15,6 +15,7 @@ from comeback.agents.verifier import (
     allowed_numbers,
     check_length,
     check_names,
+    check_no_final_result,
     check_numbers,
     check_numerical_claims,
     check_scope,
@@ -113,6 +114,7 @@ class AnalystWriter:
                               set(task.team_names.values()), {c.name for c in CLUBS.values()})
         issues += check_numerical_claims(text, task.situation.get("players_on_pitch", {}))
         issues += check_scope(text)
+        issues += check_no_final_result(text, m["type"] == "full_time")
         return issues
 
     def fallback(self, task: AnalystTask) -> dict[str, Any]:

@@ -15,6 +15,7 @@ WEIGHTS: dict[str, float] = {
     "corner": 6.0,
     "ball_won_high": 5.0,
     "pressure_won": 2.0,
+    "opp_half_pass": 0.6,      # territorial pressure: sustained possession in the opponent half
 }
 SHOT_BASE = 10.0
 SHOT_XG_WEIGHT = 40.0

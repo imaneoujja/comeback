@@ -21,12 +21,14 @@ class FanProfile:
     focus_metric: str | None = None
 
     def relevant_teams(self, home: str, away: str) -> list[str]:
-        """Teams whose danger matters to this fan."""
-        if self.club_id in (home, away):
-            return [home, away]  # own club attacking *or* defending
-        if self.favourite_player_id:
-            return [self.favourite_player_id.split("-")[0]]
+        """Teams whose danger matters to this fan: both — their side attacking *or* defending."""
         return [home, away]
+
+    def pov_team(self) -> str | None:
+        """The side this fan's story is told from: their club, or their favourite player's team."""
+        if self.club_id:
+            return self.club_id
+        return self.favourite_player_id.split("-")[0] if self.favourite_player_id else None
 
 
 def load_profiles(path: Path = PROFILES_PATH) -> dict[str, FanProfile]:

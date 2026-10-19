@@ -17,11 +17,13 @@ export function renderData() {
     ["SHOTS", h.shots, a.shots], ["XG", h.xg.toFixed(2), a.xg.toFixed(2)],
     ["POSSESSION", pct(h.possession), pct(a.possession)], ["POSS · LAST 5'", pct(h.possession_5min), pct(a.possession_5min)],
     ["PASS ACC", pct(h.pass_accuracy), pct(a.pass_accuracy)], ["AVG PASS DIFF", h.avg_pass_difficulty ?? "–", a.avg_pass_difficulty ?? "–"],
-    ["BOX ENTRIES", h.box_entries, a.box_entries], ["PLAYERS", h.players_on_pitch, a.players_on_pitch],
+    ["BOX ENTRIES · LAST 2'", h.last_2min.box_entries, a.last_2min.box_entries],
+    ["BOX ENTRIES · MATCH", h.box_entries, a.box_entries],
+    ["DANGER · LAST 2'", Math.round(h.danger), Math.round(a.danger)],
   ];
   $("#data").innerHTML = `<table><tr><th></th><th style="color:${teamColour(s.home)}">${s.home}</th><th style="color:${teamColour(s.away)}">${s.away}</th></tr>
-    ${rows.map(([k, x, y]) => `<tr><td>${k}</td><td class="v">${x}</td><td class="v">${y}</td></tr>`).join("")}</table>
-    <div>CHAOS ${s.chaos_per_min.toFixed(1)} DUELS+TURNOVERS/MIN</div>`;
+    ${rows.map(([k, x, y]) => `<tr><td>${k}</td><td class="v">${x}</td><td class="v">${y}</td></tr>`).join("")}
+    <tr><td>CHAOS · DUELS+TURNOVERS/MIN</td><td class="v" colspan="2">${s.chaos_per_min.toFixed(1)}</td></tr></table>`;
 }
 
 /* ------------------------------------------------------------------ RUNDOWN */

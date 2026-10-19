@@ -39,7 +39,19 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(title="COMEBACK", description="The AI that watches the match for you while you're away.",
               lifespan=lifespan)
-app.mount("/web", StaticFiles(directory=WEB_DIR), name="web")
+NO_CACHE = {"Cache-Control": "no-cache"}   # always revalidate the UI: a stale module breaks the app silently
+
+
+class UIStaticFiles(StaticFiles):
+    """Static files for the web UI, revalidated on every load."""
+
+    async def get_response(self, path: str, scope):
+        response = await super().get_response(path, scope)
+        response.headers.update(NO_CACHE)
+        return response
+
+
+app.mount("/web", UIStaticFiles(directory=WEB_DIR), name="web")
 
 
 def _match_path(match_id: str) -> Path:
@@ -64,13 +76,13 @@ def _profile(profile_id: str):
 
 @app.get("/", include_in_schema=False)
 def index() -> FileResponse:
-    return FileResponse(WEB_DIR / "index.html")
+    return FileResponse(WEB_DIR / "index.html", headers=NO_CACHE)
 
 
 @app.get("/phone", include_in_schema=False)
 def phone_page() -> FileResponse:
     """The fan's real phone: pairs with a control-room session through a QR code."""
-    return FileResponse(WEB_DIR / "phone.html")
+    return FileResponse(WEB_DIR / "phone.html", headers=NO_CACHE)
 
 
 @app.get("/api/lan")

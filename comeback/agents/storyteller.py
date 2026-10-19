@@ -16,6 +16,7 @@ from comeback.agents.verifier import (
     allowed_numbers,
     check_length,
     check_names,
+    check_no_final_result,
     check_numbers,
     check_numerical_claims,
     check_scope,
@@ -136,6 +137,7 @@ class StorytellerWriter:
         on_pitch = task.delta.get("players_on_pitch_now") or {name: 11 for name in task.team_names.values()}
         issues += check_numerical_claims(text, on_pitch)
         issues += check_scope(text)
+        issues += check_no_final_result(text, any(c["type"] == "full_time" for c in task.cards))
         return issues
 
     def fallback(self, task: CatchupTask) -> dict[str, Any]:

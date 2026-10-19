@@ -61,7 +61,7 @@ class Watcher:
     def _come_back(self, engine: MatchEngine, team: str, e: dict[str, Any], danger: float) -> Notification:
         st, lang = self.state, self.session.profile.language
         reasons = engine.danger[team].reasons(e["t"])
-        club = self.session.profile.club_id
+        club = self.session.profile.pov_team()
         attacking_view = club is None or club == team
         names = st.team_names
         if attacking_view:

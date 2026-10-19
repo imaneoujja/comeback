@@ -25,8 +25,8 @@ COMEBACK personalises on **what you saw and what you missed**:
 
 | | What happens | Example (demo match) |
 |---|---|---|
-| **1. You leave** | A Watcher agent keeps watching for you. It knows your club, favourite player, level and language. | Omar (Riverside Rovers fan, analyst, French) leaves at 65'. |
-| **2. It's heating up** | It calls you back **before** the moment, and says why. | 67': *"Reviens — Riverside Rovers est entré 2 fois dans la surface en 2 minutes et a tenté 1 tir."* |
+| **1. You leave** | A Watcher agent keeps watching for you. It knows your club, favourite player, level and language. | Omar (Riverside Rovers fan, analyst, French) leaves at 66'. |
+| **2. It's heating up** | It calls you back **before** the moment, and says why. | 69': *"Reviens — Riverside Rovers est entré 2 fois dans la surface en 2 minutes et a tenté 1 tir."* |
 | **3. You return** | A "Previously on…" catch-up of what **changed**, sized to your absence (one line / key moments / full story). | 70': a 5-minute catch-up in French. The 71' goal arrives 30 seconds later. |
 
 ![While the fan is away, COMEBACK keeps watching and sends a "come back" alert](docs/away.png)
@@ -60,7 +60,7 @@ without any key.
 2. **Reda** (Spanish, follows striker Elian Quarryn): pick his profile and press
    **Join at 60'**. You get the full story so far, centred on his player.
 3. **Omar** (French, analyst, Rovers fan): pick his profile, press **I'm away**
-   at about 65' (or just switch browser tab). Around 67' his phone gets a
+   at about 66' (or just switch browser tab). Around 69' his phone gets a
    "come back" alert. Press **I'm back** at about 70'. Read the catch-up, then
    watch the 71' goal.
 4. **Sofia** (English, casual, Harbour Lights fan): away at about 75', back at
@@ -123,19 +123,22 @@ flowchart LR
 
 ### The Verifier earns its place
 
-These are real errors from our first recordings with `gpt-4.1-mini` (plus one
-our tests caught). Each one became a rule:
+These are real errors from our recordings with `gpt-4.1-mini` (plus one our
+tests caught). Each one became a rule:
 
 | The model wrote | Why it was wrong | Rule now enforced |
 |---|---|---|
 | "Rovers equalise *despite being a man down*" | Harbour Lights had the red card | A "ten men" claim must name the short-handed team |
 | "*the fastest shot of the season*" | The facts only cover this match | No season, league, career or all-time claims |
 | "*Kestrel almost extended the lead* for Riverside" | Riverside were trailing 1-2 (the bare score "1-2" was misread) | Every score handed to the agents is labelled with team names |
+| "Riverside Rovers *grabbed a well-earned draw*" (at 86') | The match was not over | No final result (win, draw, defeat) before full-time, in all three languages |
+| "Rovers won, *overcoming a numerical advantage for Harbour Lights FC*" | Harbour Lights had 10 players | Numerical advantage or disadvantage claims must attach to the right team, including "for X", "against ten-man X" and "overcoming…" |
 | "Kestrel scores his *9th*" (test case) | Invented: the 9 came from the player id `RVR-9` | Every number must exist in the facts; ids are not statistics |
 
 The Verifier also rejects players who are not part of the moment, clubs outside
-the match, and over-long texts. In the demo match, 2 of 20 texts were revised
-after feedback. The UI shows it ("✓ Analyst → Verifier · revised 1×").
+the match, and over-long texts. In the demo match, 3 of 23 texts were revised
+after feedback. The control room shows it live (AGENTS monitor) and on screen
+("✓ Analyst → Verifier · revised 1×").
 
 ### Explaining *why*, not just *what*
 
@@ -161,7 +164,7 @@ after feedback. The UI shows it ("✓ Analyst → Verifier · revised 1×").
 LLM call per fan per event when the audience is counted in hundreds of millions.
 COMEBACK writes each key moment **once** (Analyst). Watchers are rule-based and
 cost nothing per fan. Stories are generated per (moment set, language, level,
-club) and cached. The whole demo match costs **22 LLM calls** (15 cards, 2
+club) and cached. The whole demo match costs **27 LLM calls** (18 cards, 4
 revisions, 5 stories), whatever the number of viewers.
 
 ## Data and match intelligence
@@ -181,9 +184,11 @@ the match metadata. Averages over 20 unscripted matches, checked by tests:
 **Pass difficulty** (0–100): distance, pressure, forward ratio, final third and
 long-ball terms; completion probability is a logistic of passing skill minus
 difficulty. **xG**: logistic of distance and goal-mouth angle (headers penalised).
-**Danger index** (0–100): exponentially decayed sum of box entries, final-third
-passes, shots (10 + 40·xG), corners, high regains and successful pressure,
-squashed with tanh.
+**Danger index** (0–100, last ~2 minutes): exponentially decayed sum of box
+entries, final-third passes, passes into the opponent half, shots (10 + 40·xG),
+corners, high regains and successful pressure, squashed with tanh. In the demo
+match, every goal is preceded by a "come back" alert about the team that then
+scores, for each of the three fans (checked by a test).
 
 ### Does "come back" actually predict anything?
 
@@ -193,10 +198,10 @@ chance is already over), 3-minute cooldown.
 
 | Metric | Value |
 |---|---|
-| Alerts per team per match | 2.9 |
-| Alert followed by a shot with xG ≥ 0.1 within 60 s | **23%** (chance baseline: 5%, **×4.7**) |
-| Goals preceded by an alert for the scoring team (5-min window) | 26% |
-| Median lead time before those goals | 38 s |
+| Alerts per team per match | 3.1 |
+| Alert followed by a shot with xG ≥ 0.1 within 60 s | **22%** (chance baseline: 5%, **×4.6**) |
+| Goals preceded by an alert for the scoring team (5-min window) | 27% |
+| Median lead time before those goals | 40 s |
 
 These are honest numbers on synthetic data. Validating them on real tracking data
 is future work.
@@ -230,7 +235,7 @@ LLM_MODE=record python scripts/precompute.py     # re-record the demo cache
 ## Development
 
 ```bash
-pytest                        # 41 tests: realism, engine, verifier, workflow paths, watcher, API
+pytest                        # 45 tests: realism, engine, verifier, workflow paths, watchers, crowd, API
 ruff check .
 python -m comeback.synth.cli random --count 5    # more synthetic matches
 python scripts/evaluate_alerts.py

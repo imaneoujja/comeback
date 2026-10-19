@@ -61,5 +61,6 @@ function tick() {
 
 function apply() {
   $(".gallery").classList.toggle("focus-mode", auto);
-  for (const mon of document.querySelectorAll(".mon[data-mon]")) mon.classList.toggle("focus", auto && mon.dataset.mon === current.id);
+  const onAir = auto ? current.id : "pgm";
+  for (const mon of document.querySelectorAll(".mon[data-mon]")) mon.classList.toggle("focus", mon.dataset.mon === onAir);
 }
