@@ -94,6 +94,11 @@ class MomentDetector:
     def _name(self, player_id: str | None) -> str | None:
         return self.state.player_name(player_id)
 
+    def _numbers(self) -> dict[str, Any]:
+        """Players on the pitch per team, only when a red card made it uneven."""
+        on_pitch = self.state.players_on_pitch
+        return {"players_on_pitch": dict(on_pitch)} if len(set(on_pitch.values())) > 1 else {}
+
     # --------------------------------------------------------- per event
 
     def _on_goal(self, e: dict[str, Any], danger_before: dict[str, float]) -> list[Moment]:
@@ -137,7 +142,8 @@ class MomentDetector:
         }
         importance = 85 + 5 * (e["minute"] >= 80) + 5 * (situation in ("equaliser", "go_ahead"))
         if opp in st.red_card_t:
-            facts["minutes_since_red_card"] = int((e["t"] - st.red_card_t[opp]) // 60)
+            facts["minutes_since_opponent_red_card"] = int((e["t"] - st.red_card_t[opp]) // 60)
+        facts |= self._numbers()
         if scorer in self._missed:
             facts["missed_big_chance_minute"], facts["missed_big_chance_xg"] = self._missed[scorer]
             importance += 3
@@ -164,7 +170,7 @@ class MomentDetector:
             found.append(self._new(e, "big_chance", e["team"], [e["player"]], 55 + 50 * e["xg"], {
                 "player": e["player"], "player_name": self._name(e["player"]), "xg": e["xg"],
                 "outcome": e["outcome"], "shot_speed_kmh": speed, "body_part": e["body_part"],
-                "score": self.state.score_str(),
+                "score": self.state.score_str(), **self._numbers(),
             }, [e["id"]]))
         return found
 
@@ -268,9 +274,8 @@ class MomentDetector:
         share = st.possession_share()
         facts = {
             "now_in_control": dominant, "previously_in_control": previous,
-            "control": {k: round(v, 2) for k, v in control.items()},
             "possession_last_5min": {k: round(v, 2) for k, v in share.items()},
             "pass_accuracy_last_5min": {k: round(st.rolling_pass_accuracy(k), 2) for k in control},
-            "score": st.score_str(),
+            "score": st.score_str(), **self._numbers(),
         }
         return [self._new(e, "momentum_swing", dominant, [], 55, facts, [e["id"]])]

@@ -91,7 +91,8 @@ def test_demo_goals_carry_the_storylines() -> None:
         "opener", "extends_lead", "pulls_one_back", "equaliser", "go_ahead"]
     first_rovers, equaliser, winner = goals[2], goals[3], goals[4]
     assert first_rovers.facts["missed_big_chance_minute"] == 68
-    assert first_rovers.facts["minutes_since_red_card"] == 8
+    assert first_rovers.facts["minutes_since_opponent_red_card"] == 8
+    assert first_rovers.facts["players_on_pitch"] == {"RVR": 11, "HLT": 10}
     assert equaliser.facts["came_on_minute"] == 55
     assert equaliser.facts["comeback_from_deficit"] == 2
     assert winner.importance >= 95

@@ -1,0 +1,8 @@
+[
+  {"id": "omar", "name": "Omar", "club_id": "RVR", "favourite_player_id": null,
+   "level": "analyst", "language": "fr", "focus_metric": "xg"},
+  {"id": "sofia", "name": "Sofia", "club_id": "HLT", "favourite_player_id": null,
+   "level": "casual", "language": "en", "focus_metric": null},
+  {"id": "reda", "name": "Reda", "club_id": null, "favourite_player_id": "HLT-9",
+   "level": "casual", "language": "es", "focus_metric": null}
+]
