@@ -59,6 +59,28 @@ class CatchupTask:
     late_join: bool = False
 
 
+PROMPT_DELTA_KEYS = ("score_then", "score_now", "in_control_then", "in_control_now",
+                     "players_on_pitch_now", "key_changes")
+
+
+def labelled_score(score: str | None, team_names: dict[str, str]) -> str | None:
+    """'1-2' → 'Riverside Rovers 1-2 Harbour Lights FC' (home first), so no model misreads who leads."""
+    if not score:
+        return None
+    home, away = team_names.values()
+    return f"{home} {score} {away}"
+
+
+def prompt_delta(delta: dict[str, Any], late_join: bool, team_names: dict[str, str]) -> dict[str, Any]:
+    """The delta block without exact minutes: two absences covering the same moments share one story."""
+    out = {k: delta[k] for k in PROMPT_DELTA_KEYS if k in delta}
+    for key in ("score_then", "score_now"):
+        out[key] = labelled_score(out.get(key), team_names)
+    if late_join:
+        out["minute_now"] = delta["minute_now"]
+    return out
+
+
 class StorytellerWriter:
     """VerifiedWriter implementation for catch-ups."""
 
@@ -79,9 +101,11 @@ class StorytellerWriter:
             },
             "situation": "joined the match late" if task.late_join else "was away and just came back",
             "word_limit": WORD_LIMITS[task.bucket],
-            "delta": task.delta,
+            "delta": prompt_delta(task.delta, task.late_join, task.team_names),
             "moments": [
                 {"minute": c["minute"], "type": c["type"], "team": task.team_names.get(c["team"]),
+                 "score_after_this_moment": labelled_score(
+                     c["facts"].get("score_after") or c["facts"].get("score"), task.team_names),
                  "headline": c["headline"], "why_it_matters": c["why_it_matters"],
                  "facts": readable_facts(c["facts"], task.team_names)}
                 for c in task.cards

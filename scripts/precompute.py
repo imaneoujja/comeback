@@ -28,6 +28,8 @@ DEMO = Path(__file__).resolve().parents[1] / "data" / "matches" / "demo-comeback
 
 # (fan, leaves at match minute, comes back at match minute); None = late join at that minute.
 SCRIPT = [("reda", None, 60.0), ("omar", 65.0, 70.5), ("sofia", 75.0, 86.0)]
+# Extra late joins at 60' so the "Join at 60'" button has real text for every profile offline.
+EXTRA_JOINS = ["omar", "sofia"]
 
 
 async def main() -> None:
@@ -67,6 +69,10 @@ async def main() -> None:
                     print(f"\n<<< {fan} {'joins' if leave is None else 'is back'} at {event['minute']}' "
                           f"[{result['bucket']}, {result['source']}, x{result['attempts']}]\n{result['text']}\n")
                 SCRIPT[:] = [s for s in SCRIPT if s[0] != fan]
+                if leave is None:
+                    for extra in EXTRA_JOINS:
+                        joined = await brain.catchup(profiles[extra], 0.0, event["t"], late_join=True)
+                        print(f"<<< {extra} joins at {event['minute']}' [{joined['source']}]: {joined['text'][:90]}…")
                 break
 
     print("\nGateway stats:", json.dumps(dict(gateway.stats)))

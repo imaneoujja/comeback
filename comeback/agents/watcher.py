@@ -9,7 +9,7 @@ instant and cost-free per fan, which is what lets the design scale to every view
 from dataclasses import dataclass, field
 from typing import Any
 
-from comeback.agents.templates import ALERT_TEXT, GOAL_ALERT_TEXT, SIDE_TEXT, SIDE_WORDS
+from comeback.agents.templates import ALERT_TEXT, GOAL_ALERT_TEXT, SIDE_TEXT, SIDE_WORDS, pressure_texts
 from comeback.engine.alerts import AlertRule, AlertTracker
 from comeback.engine.match import EngineUpdate, MatchEngine
 from comeback.fans.session import FanSession
@@ -69,10 +69,10 @@ class Watcher:
             side_text = SIDE_TEXT[lang].format(opponent=names[st.opponent(team)], side=SIDE_WORDS[side][lang]) \
                 if side else ""
             text = ALERT_TEXT["attacking"][lang].format(
-                team=names[team], box_entries=reasons["box_entries"], side_text=side_text)
+                team=names[team], side_text=side_text, **pressure_texts(lang, reasons["box_entries"], reasons["shots"]))
         else:
-            text = ALERT_TEXT["defending"][lang].format(
-                team=names[club], opponent=names[team], box_entries=reasons["box_entries"])
+            pressure = pressure_texts(lang, reasons["box_entries"], reasons["shots"])
+            text = ALERT_TEXT["defending"][lang].format(team=names[club], opponent=names[team], **pressure)
         facts = {"danger": round(danger), "score": st.score_str(),
                  **{k: v for k, v in reasons.items() if k != "evidence_event_ids"}}
         return Notification("come_back", e["t"], e["minute"], team, text, facts, list(reasons["evidence_event_ids"]))

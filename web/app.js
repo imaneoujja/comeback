@@ -116,7 +116,11 @@ function connect() {
   on("card", (c) => { app.cards.set(c.moment_id, c); renderCards(); drawTimeline(); refreshBannerCard(c); });
   on("timeline", (t) => { app.timeline.push(t); drawTimeline(); });
   on("notification", (n) => { app.notes.unshift(n); renderNotes(); buzz(); drawTimeline(); });
-  on("presence", (p) => { app.present = p.present; app.awayBands = p.away_bands; renderPresence(); drawTimeline(); });
+  on("presence", (p) => {
+    app.present = p.present; app.awayBands = p.away_bands;
+    if (!p.present) hideCatchup();
+    renderPresence(); drawTimeline();
+  });
   on("catchup", renderCatchup);
   on("end", () => showBanner(`<div class="bn" style="--team:var(--text)"><div class="bn-kicker">FULL-TIME</div>
       <div class="bn-title">${esc(app.teams[app.home].name)} ${esc(app.snapshot?.score_str)} ${esc(app.teams[app.away].name)}</div></div>`, 60, 999));
@@ -343,6 +347,7 @@ function renderScore() {
   bug.querySelector(".home .sb-reds").innerHTML = "<i></i>".repeat(s.teams[s.home].red_cards);
   bug.querySelector(".away .sb-reds").innerHTML = "<i></i>".repeat(s.teams[s.away].red_cards);
   $("#clock").textContent = clockText(s);
+  $("#btn-join").disabled = s.period === 2 && s.minute >= 60;
   $("#phone-clock").textContent = `${s.minute}'`;
   for (const side of ["home", "away"]) {
     const code = s[side], t = s.teams[code];
@@ -576,6 +581,7 @@ function renderPresence() {
   }
   $("#btn-away").disabled = !app.present;
   $("#btn-back").disabled = app.present;
+  $("#away-veil").hidden = app.present;
 }
 
 function minuteAt(t) {
@@ -615,9 +621,23 @@ function renderCatchup(c) {
   el.hidden = false;
   el.innerHTML = `<div class="catchup-kicker"><span>PREVIOUSLY ON…</span><button aria-label="Close" onclick="hideCatchup()">×</button></div>
     <div class="catchup-title">${esc(title)}</div><div class="delta">${chips}</div>
-    <div class="catchup-text">${esc(c.text)}</div><div class="catchup-foot">${badge}</div>`;
+    <div class="catchup-text">${esc(c.text)}</div>
+    <div class="catchup-foot">${badge}${"speechSynthesis" in window ? `<button class="listen" id="listen">🔊 Listen</button>` : ""}</div>`;
+  const listen = $("#listen");
+  if (listen) listen.addEventListener("click", () => speak(c.text, c.language));
 }
 
-function hideCatchup() { const el = $("#catchup"); el.hidden = true; el.innerHTML = ""; }
+function speak(text, lang) {
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = { en: "en-GB", fr: "fr-FR", es: "es-ES" }[lang] || "en-GB";
+  u.rate = 1.03;
+  speechSynthesis.speak(u);
+}
+
+function hideCatchup() {
+  if ("speechSynthesis" in window) speechSynthesis.cancel();
+  const el = $("#catchup"); el.hidden = true; el.innerHTML = "";
+}
 
 boot();

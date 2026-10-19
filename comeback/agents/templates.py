@@ -113,16 +113,38 @@ _SITUATION_TEXT = {
 
 ALERT_TEXT: dict[str, dict[str, str]] = {
     "attacking": {
-        "en": "Come back — {team} have entered the box {box_entries} times in 2 minutes{side_text}.",
-        "fr": "Reviens — {team} est entré {box_entries} fois dans la surface en 2 minutes{side_text}.",
-        "es": "Vuelve — {team} ha pisado el área {box_entries} veces en 2 minutos{side_text}.",
+        "en": "Come back — {team} have {box_text} in 2 minutes{shots_text}{side_text}.",
+        "fr": "Reviens — {team} {box_text} en 2 minutes{shots_text}{side_text}.",
+        "es": "Vuelve — {team} {box_text} en 2 minutos{shots_text}{side_text}.",
     },
     "defending": {
-        "en": "Come back — {team} are under siege: {opponent} entered the box {box_entries} times in 2 minutes.",
-        "fr": "Reviens — {team} est assiégé : {opponent} est entré {box_entries} fois dans la surface en 2 minutes.",
-        "es": "Vuelve — {team} está contra las cuerdas: {opponent} pisó el área {box_entries} veces en 2 minutos.",
+        "en": "Come back — {team} are under siege: {opponent} have {box_text} in 2 minutes{shots_text}.",
+        "fr": "Reviens — {team} est assiégé : {opponent} {box_text} en 2 minutes{shots_text}.",
+        "es": "Vuelve — {team} está contra las cuerdas: {opponent} {box_text} en 2 minutos{shots_text}.",
     },
 }
+
+# (no box entry, one, several) — {n} is the number of box entries
+BOX_TEXT = {
+    "en": ("piled on the pressure", "entered the box once", "entered the box {n} times"),
+    "fr": ("met la pression", "est entré une fois dans la surface", "est entré {n} fois dans la surface"),
+    "es": ("aprieta sin parar", "ha pisado el área una vez", "ha pisado el área {n} veces"),
+}
+
+# (one shot, several) — {n} is the number of shots
+SHOTS_TEXT = {
+    "en": (" and taken {n} shot", " and taken {n} shots"),
+    "fr": (" et a tenté {n} tir", " et a tenté {n} tirs"),
+    "es": (" y ha rematado {n} vez", " y ha rematado {n} veces"),
+}
+
+
+def pressure_texts(lang: str, box_entries: int, shots: int) -> dict[str, str]:
+    """Grammatical "box entries" and "shots" fragments for alert texts."""
+    box = BOX_TEXT[lang][min(box_entries, 2)].format(n=box_entries)
+    shots_text = SHOTS_TEXT[lang][0 if shots == 1 else 1].format(n=shots) if shots else ""
+    return {"box_text": box, "shots_text": shots_text}
+
 
 SIDE_TEXT = {
     "en": ", {opponent}'s {side} side is cracking",
