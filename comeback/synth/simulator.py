@@ -29,6 +29,10 @@ CENTRE = (PITCH_LENGTH / 2, PITCH_WIDTH / 2)
 
 # Calibration constant for pass completion (tuned against the realism targets).
 PASS_MOD_BASE = 0.0
+# Spells of dominance (unscripted matches): persistence per 30 s, noise, effect size.
+SPELL_PERSISTENCE = 0.9
+SPELL_NOISE = 0.3
+SPELL_EFFECT = 0.8
 
 STYLES: dict[str, dict[str, float]] = {
     "possession": {"pass_length": 10.0, "progression": 0.5, "press": 0.26, "carry": 0.17},
@@ -133,6 +137,11 @@ class MatchSimulator:
         beats = scenario.beats if scenario else ()
         self.windows = [b for b in beats if b.kind == "momentum"]
         self.pending: list[Beat] = sorted((b for b in beats if b.kind != "momentum"), key=lambda b: b.minute)
+        # Latent "spell" of dominance in unscripted matches (> 0 favours home), a
+        # mean-reverting random walk updated every 30 s: real matches come in waves.
+        self.spells = scenario is None
+        self.latent = 0.0
+        self._next_latent_t = 0.0
         self.sub_plan: list[tuple[float, int, str]] = []
         if scenario is None or scenario.random_substitutions:
             for idx in (0, 1):
@@ -205,10 +214,17 @@ class MatchSimulator:
 
     def _momentum(self, idx: int) -> float:
         code, minute = self.sides[idx].code, self._minute()
-        return sum(
+        scripted = sum(
             w.strength for w in self.windows
             if w.team == code and w.minute <= minute < (w.until_minute or w.minute)
         )
+        spell = max(0.0, self.latent if idx == 0 else -self.latent)
+        return scripted + SPELL_EFFECT * spell
+
+    def _update_latent(self) -> None:
+        while self.spells and self.clock >= self._next_latent_t:
+            self.latent = _clip(self.latent * SPELL_PERSISTENCE + self.rng.gauss(0, SPELL_NOISE), -1.2, 1.2)
+            self._next_latent_t = self.clock + 30
 
     def _team_mod(self, idx: int) -> float:
         side, opp = self.sides[idx], self.sides[1 - idx]
@@ -245,6 +261,7 @@ class MatchSimulator:
     # -------------------------------------------------------------- actions
 
     def _play_action(self) -> None:
+        self._update_latent()
         side, opp = self.sides[self.att], self.sides[1 - self.att]
         if self.holder not in side.on_pitch:
             self.holder = min(side.on_pitch, key=lambda pid: _dist(self._teammate_pos(pid), self.ball))
@@ -611,7 +628,7 @@ class MatchSimulator:
         self._carry(carrier, False, target=(self.rng.uniform(92, 96), flank + (6 if flank < 34 else -6)),
                     speed=max(31.0, carrier.top_speed_kmh * 0.95))
         if self.holder != shooter_id:
-            shot_spot = (self.rng.uniform(94, 98), self.rng.uniform(30, 38))
+            shot_spot = (self.rng.uniform(96, 99), self.rng.uniform(31, 37))
             self._pass(carrier, False, shooter_id, shot_spot, force=True)
         self._shoot(side.on_pitch[shooter_id], forced=outcome)
 
