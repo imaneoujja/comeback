@@ -10,7 +10,7 @@ import re
 from typing import Any
 
 _NUMBER = re.compile(r"\d+(?:[.,]\d+)?")
-_PLAYER_ID = re.compile(r"^[A-Z]{3}-\d+$")  # e.g. "RVR-9": an id, not a statistic
+_PLAYER_ID = re.compile(r"^[A-Z]{3}-\d+$")  # e.g. "EMB-9": an id, not a statistic
 _OUT_OF_SCOPE = re.compile(
     r"\b(?:season|league|career|all-time|history|saison|championnat|carrière|histoire|temporada|liga"
     r"|carrera|historia)\b",
@@ -117,7 +117,7 @@ _EXTRA_MAN = re.compile(
 )
 _SENTENCE = re.compile(r"[^.!?。！？\n]+")
 _OPPOSING = re.compile(
-    r"\b(?:against|versus|vs\.?|facing|face|contre|face à|contra|ante)\s+(?:the |a |an |les? |la |el |los )?$",
+    r"\b(?:against|versus|vs\.?|facing|face|contre|face à|contra|ante)\s+(?:the |a |an |les? |la |l['’]|el |los )?$",
     re.IGNORECASE,
 )
 _EQUAL_NUMBERS_CLAIM = re.compile(   # like _EXTRA_MAN, minus "full strength" (true when both teams have 11)
@@ -128,7 +128,8 @@ _EQUAL_NUMBERS_CLAIM = re.compile(   # like _EXTRA_MAN, minus "full strength" (t
 _OVERCOMING = re.compile(
     r"\b(?:overcom\w*|overturn\w*|surmont\w*|superando|superar)\s+(?:a |an |the |une |la |el )?$", re.IGNORECASE
 )
-_FOR_TEAM = re.compile(r"^\s*(?:for|of|to|pour|de|du|para|a favor de)\s+(?:the |les? |la |el )?", re.IGNORECASE)
+_FOR_TEAM = re.compile(r"^\s*(?:for|of|to|pour|des|de|du|d['’]|para|a favor de|del)\s*(?:the |les? |la |el |los )?",
+                       re.IGNORECASE)
 _GENERIC_WORDS = {"FC", "United", "City", "Athletic", "St.", "Point"}
 
 
@@ -140,9 +141,9 @@ def check_numerical_claims(text: str, players_on_pitch: dict[str, int]) -> list[
     """A numerical disadvantage claim must be about the short-handed team, an advantage claim about the other.
 
     A claim is attached to the team named just before it in the sentence (usually the
-    subject: "Lights must defend with 10 men"), or to the team just after it when it
-    follows "against / versus / face à…" ("against ten-man Lights") or is followed by
-    "for / of / pour…" ("a numerical advantage for Rovers"). No team named → ambiguous.
+    subject: "Comets must defend with 10 men"), or to the team just after it when it
+    follows "against / versus / face à…" ("against ten-man Comets") or is followed by
+    "for / of / pour…" ("a numerical advantage for Emberfield"). No team named → ambiguous.
     """
     if len(set(players_on_pitch.values())) < 2:
         if _EQUAL_NUMBERS_CLAIM.search(text):

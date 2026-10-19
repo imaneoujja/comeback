@@ -66,7 +66,7 @@ def test_state_matches_the_raw_events() -> None:
         passes = [e for e in events if e["type"] == "pass" and e["team"] == code]
         assert st.teams[code].passes == len(passes)
         assert st.teams[code].passes_completed == sum(e["success"] for e in passes)
-    assert st.players_on_pitch == {"RVR": 11, "HLT": 10}
+    assert st.players_on_pitch == {"EMB": 11, "SMC": 10}
     assert sum(st.possession_share(None).values()) == pytest.approx(1.0)
 
 
@@ -79,8 +79,8 @@ def test_engine_is_streaming_no_look_ahead() -> None:
             break
     snap = engine.snapshot()
     assert snap["score_str"] == "0-2"
-    assert snap["teams"]["HLT"]["players_on_pitch"] == 10
-    assert snap["teams"]["RVR"]["formation"] == "4-2-4"
+    assert snap["teams"]["SMC"]["players_on_pitch"] == 10
+    assert snap["teams"]["EMB"]["formation"] == "4-2-4"
 
 
 # ----------------------------------------------------------------- moments
@@ -92,7 +92,7 @@ def test_demo_goals_carry_the_storylines() -> None:
     first_rovers, equaliser, winner = goals[2], goals[3], goals[4]
     assert first_rovers.facts["missed_big_chance_minute"] == 68
     assert first_rovers.facts["minutes_since_opponent_red_card"] == 8
-    assert first_rovers.facts["players_on_pitch"] == {"RVR": 11, "HLT": 10}
+    assert first_rovers.facts["players_on_pitch"] == {"EMB": 11, "SMC": 10}
     assert equaliser.facts["came_on_minute"] == 55
     assert equaliser.facts["comeback_from_deficit"] == 2
     assert winner.importance >= 95
@@ -105,7 +105,7 @@ def test_key_moments_are_detected_with_valid_evidence() -> None:
     assert {"goal", "red_card", "shape_change", "big_chance", "half_time", "full_time",
             "momentum_swing", "danger_peak"} <= types
     red = next(m for m in engine.moments if m.type == "red_card")
-    assert red.team == "HLT" and red.facts["players_left"] == 10
+    assert red.team == "SMC" and red.facts["players_left"] == 10
     for m in engine.moments:
         assert 0 <= m.importance <= 100
         assert m.evidence_event_ids and set(m.evidence_event_ids) <= ids
@@ -120,7 +120,7 @@ def test_overlay_cues_are_well_formed() -> None:
     assert sum(c["template"] == "shot_speed" for c in engine.cues) == len(shots)
     for cue in engine.cues:
         assert cue["layer"] in {"lower_third", "top_right", "banner"}
-        assert cue["template"] in {"player_tag", "pass_quality", "shot_speed", "sprint", "danger", "moment"}
+        assert cue["template"] in {"player_tag", "pass_quality", "shot_speed", "sprint", "distance", "danger", "moment"}
         assert cue["audience"] in {"all", "analyst", "casual"}
         assert cue["t_out"] > cue["t_in"] and 0 <= cue["priority"] <= 100
 
@@ -142,7 +142,16 @@ def test_demo_calls_rovers_fans_back_before_the_71st_minute_goal() -> None:
     engine, tracker, alerts = MatchEngine(meta), AlertTracker(), []
     for event in events:
         engine.process(event)
-        danger, slope = engine.danger_now("RVR")
-        if tracker.check(event["t"], danger, slope, engine.state.seconds_since_shot("RVR")):
+        danger, slope = engine.danger_now("EMB")
+        if tracker.check(event["t"], danger, slope, engine.state.seconds_since_shot("EMB")):
             alerts.append(event["minute"])
     assert any(66 <= m < 71 for m in alerts)
+
+
+def test_speed_and_distance_tags_fire_on_thresholds() -> None:
+    cues = demo().cues
+    sprints = [c for c in cues if c["template"] == "sprint"]
+    distances = [c for c in cues if c["template"] == "distance"]
+    assert sprints and all(c["data"]["speed_kmh"] >= 32 and c["layer"] == "lower_third" for c in sprints)
+    assert distances and all(c["data"]["threshold_m"] % 100 == 0 for c in distances)
+    assert all(c["data"]["distance_with_ball_m"] >= c["data"]["threshold_m"] for c in distances)

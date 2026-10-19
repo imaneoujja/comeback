@@ -156,7 +156,7 @@ export function buzz() {
 
 export function renderCatchup(c) {
   const d = c.delta || {};
-  const title = c.late_join ? "The story so far" : `While you were away · ${d.away_minutes} min`;
+  const title = c.final ? `Full-time · ${c.headline || ""}` : c.late_join ? "The story so far" : `While you were away · ${d.away_minutes} min`;
   const chips = [
     `<span class="chip">${esc(d.score_then)} → <b>${esc(d.score_now)}</b></span>`,
     d.in_control_now ? `<span class="chip">IN CONTROL: ${d.in_control_then && !c.late_join ? `${esc(d.in_control_then)} → ` : ""}<b>${esc(d.in_control_now)}</b></span>` : "",

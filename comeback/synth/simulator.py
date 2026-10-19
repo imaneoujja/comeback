@@ -381,7 +381,7 @@ class MatchSimulator:
         return False
 
     def _carry(self, holder: Player, under_pressure: bool, target: Point | None = None,
-               speed: float | None = None) -> None:
+               speed: float | None = None, contested: bool = True) -> None:
         start = self.ball
         if target is None:
             if start[0] < 85 and not under_pressure and self.rng.random() < 0.3:
@@ -397,12 +397,12 @@ class MatchSimulator:
         length = _dist(start, target)
         code = self.sides[self.att].code
         self._emit("carry", code, holder.id, start, target, speed_kmh=round(speed, 1))
-        if speed > 30:
+        if round(speed, 1) > 30:   # the event stores the rounded speed
             self._emit("sprint", code, holder.id, start, target,
                        speed_kmh=round(speed, 1), distance_m=round(length, 1))
         self.clock += length / (speed / 3.6) + 0.5
         self.ball = target
-        if self.rng.random() < 0.12:
+        if contested and self.rng.random() < 0.12:   # scripted runs cannot be tackled mid-sequence
             self._tackle(self._nearest_opponent(self.ball))
 
     def _tackle(self, defender_id: str) -> bool:
@@ -472,7 +472,7 @@ class MatchSimulator:
             speed = 120 - 1.2 * distance + (shooter.finishing - 60) * 0.25 + self.rng.gauss(0, 8)
         if forced:
             outcome = forced
-        elif self.rng.random() < xg * (0.75 + shooter.finishing / 280):
+        elif self.rng.random() < xg * (0.62 + shooter.finishing / 320):   # finishing skill (calibrated)
             outcome = "goal" if self.random_goals else "saved"
         else:
             u = self.rng.random()
@@ -628,7 +628,7 @@ class MatchSimulator:
             self._pass(self.sides[idx].on_pitch[self.holder], False, receiver, target, force=True)
         carrier = side.on_pitch[self.holder]
         self._carry(carrier, False, target=(self.rng.uniform(92, 96), flank + (6 if flank < 34 else -6)),
-                    speed=max(31.0, carrier.top_speed_kmh * 0.95))
+                    speed=max(31.0, carrier.top_speed_kmh * 0.95), contested=False)
         if self.holder != shooter_id:
             shot_spot = (self.rng.uniform(96, 99), self.rng.uniform(31, 37))
             self._pass(carrier, False, shooter_id, shot_spot, force=True)

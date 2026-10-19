@@ -26,24 +26,24 @@ from comeback.fans.profiles import load_profiles
 from comeback.fans.session import FanSession
 
 DEMO = Path(__file__).resolve().parents[1] / "data" / "matches" / "demo-comeback.jsonl"
-TEAMS = {"RVR": "Riverside Rovers", "HLT": "Harbour Lights FC"}
+TEAMS = {"EMB": "Emberfield", "SMC": "Saltmarsh Comets"}
 ROSTER = {
-    "RVR-9": {"name": "Tavi Kestrel", "team": "RVR"},
-    "RVR-7": {"name": "Ivo Farrow", "team": "RVR"},
-    "HLT-4": {"name": "Daro Harthill", "team": "HLT"},
+    "EMB-9": {"name": "Tavi Kestrel", "team": "EMB"},
+    "EMB-7": {"name": "Ivo Farrow", "team": "EMB"},
+    "SMC-4": {"name": "Daro Harthill", "team": "SMC"},
 }
 GOAL = {
-    "moment_id": "m001", "t": 4262.0, "minute": 71, "period": 2, "type": "goal", "team": "RVR",
-    "players": ["RVR-9"], "importance": 88,
-    "facts": {"score_before": "0-2", "score_after": "1-2", "situation": "pulls_one_back", "scorer": "RVR-9",
+    "moment_id": "m001", "t": 4262.0, "minute": 71, "period": 2, "type": "goal", "team": "EMB",
+    "players": ["EMB-9"], "importance": 88,
+    "facts": {"score_before": "0-2", "score_after": "1-2", "situation": "pulls_one_back", "scorer": "EMB-9",
               "scorer_name": "Tavi Kestrel", "xg": 0.336, "missed_big_chance_minute": 68,
-              "players_on_pitch": {"RVR": 11, "HLT": 10}},
+              "players_on_pitch": {"EMB": 11, "SMC": 10}},
     "evidence_event_ids": ["e1"],
 }
 
 
 def task() -> AnalystTask:
-    return AnalystTask(GOAL, TEAMS, ROSTER, situation={"players_on_pitch": {TEAMS["RVR"]: 11, TEAMS["HLT"]: 10}})
+    return AnalystTask(GOAL, TEAMS, ROSTER, situation={"players_on_pitch": {TEAMS["EMB"]: 11, TEAMS["SMC"]: 10}})
 
 
 class FakeGateway:
@@ -64,8 +64,8 @@ def card(headline: str, why: str) -> str:
     return json.dumps({"headline": headline, "why_it_matters": why})
 
 
-GOOD = card("Kestrel makes amends for Riverside Rovers",
-            "After his saved chance at 68, Tavi Kestrel cuts it to 1-2 against ten-man Harbour Lights FC.")
+GOOD = card("Kestrel makes amends for Emberfield",
+            "After his saved chance at 68, Tavi Kestrel cuts it to 1-2 against ten-man Saltmarsh Comets.")
 
 
 # ---------------------------------------------------------------- verifier
@@ -77,29 +77,32 @@ def test_numbers_must_come_from_the_facts() -> None:
 
 
 def test_uninvolved_players_and_foreign_clubs_are_rejected() -> None:
-    clubs = {"Riverside Rovers", "Harbour Lights FC", "Elmwood United"}
-    assert check_names("Tavi Kestrel scores", {"RVR-9"}, ROSTER, set(TEAMS.values()), clubs) == []
-    assert check_names("Farrow's cross finds Kestrel", {"RVR-9"}, ROSTER, set(TEAMS.values()), clubs)
-    assert check_names("like Elmwood United last week", {"RVR-9"}, ROSTER, set(TEAMS.values()), clubs)
+    clubs = {"Emberfield", "Saltmarsh Comets", "Thornwick United"}
+    assert check_names("Tavi Kestrel scores", {"EMB-9"}, ROSTER, set(TEAMS.values()), clubs) == []
+    assert check_names("Farrow's cross finds Kestrel", {"EMB-9"}, ROSTER, set(TEAMS.values()), clubs)
+    assert check_names("like Thornwick United last week", {"EMB-9"}, ROSTER, set(TEAMS.values()), clubs)
 
 
 def test_numerical_claims_must_name_the_short_handed_team() -> None:
-    on_pitch = {"Riverside Rovers": 11, "Harbour Lights FC": 10}
-    assert check_numerical_claims("Harbour Lights FC are down to 10 men.", on_pitch) == []
-    assert check_numerical_claims("Rovers equalise despite being a man down.", on_pitch)
+    on_pitch = {"Emberfield": 11, "Saltmarsh Comets": 10}
+    assert check_numerical_claims("Saltmarsh Comets are down to 10 men.", on_pitch) == []
+    assert check_numerical_claims("Emberfield equalise despite being a man down.", on_pitch)
     assert check_numerical_claims("They play with ten men.", {"A": 11, "B": 11})
     assert check_numerical_claims(
-        "Harbour Lights FC must defend their lead with 10 men against full-strength Riverside Rovers.", on_pitch) == []
-    assert check_numerical_claims("Kestrel's goal reignites Riverside's fight against a ten-man Harbour Lights side.",
-                                  on_pitch) == []
-    assert check_numerical_claims("Kestrel reduces Harbour Lights FC's lead, boosting Riverside Rovers' momentum "
+        "Saltmarsh Comets must defend their lead with 10 men against full-strength Emberfield.", on_pitch) == []
+    assert check_numerical_claims(
+        "Kestrel's goal reignites Emberfield's fight against a ten-man Saltmarsh Comets side.", on_pitch) == []
+    assert check_numerical_claims("Kestrel reduces Saltmarsh Comets's lead, boosting Emberfield' momentum "
                                   "despite playing with a numerical disadvantage.", on_pitch)
-    assert check_numerical_claims("Riverside Rovers win, overcoming a numerical advantage for Harbour Lights FC.",
+    assert check_numerical_claims("Emberfield win, overcoming a numerical advantage for Saltmarsh Comets.",
                                   on_pitch)
-    assert check_numerical_claims("Riverside Rovers, with a numerical advantage, keep pushing.", on_pitch) == []
-    assert check_numerical_claims("Riverside Rovers win, overcoming a numerical advantage after Harbour Lights FC "
+    assert check_numerical_claims("Emberfield, with a numerical advantage, keep pushing.", on_pitch) == []
+    assert check_numerical_claims("Emberfield win, overcoming a numerical advantage after Saltmarsh Comets "
                                   "lost a player.", on_pitch)
     assert check_numerical_claims("An early lead with both teams at full strength.", {"A": 11, "B": 11}) == []
+    fr = {"Emberfield": 11, "Saltmarsh Comets": 10}
+    assert check_numerical_claims(
+        "Une gestion tactique d’Emberfield face à l’infériorité numérique des Saltmarsh Comets.", fr) == []
 
 
 def test_claims_must_stay_within_the_match() -> None:
@@ -246,3 +249,21 @@ def test_every_fans_last_alert_before_a_goal_names_the_scoring_side(monkeypatch)
             before = [a for a in alerts if goal["t"] - 360 <= a.t < goal["t"]]
             assert before, (fan_id, goal["minute"], "no call-back before the goal")
             assert before[-1].team == goal["team"], (fan_id, goal["minute"], before[-1].text)
+
+
+def test_every_fan_gets_a_verified_full_time_gazette() -> None:
+    meta, events = load_match(DEMO)
+    brain = MatchBrain(meta, LLMGateway(LLMSettings(mode=LLMMode.OFFLINE)))
+
+    async def replay() -> list[dict]:
+        for event in events:
+            for moment in brain.process(event).moments:
+                if brain.cards[moment.moment_id]["pending"]:
+                    await brain.write_card(moment)
+        return [await brain.final_recap(p) for p in load_profiles().values()]
+
+    recaps = asyncio.run(replay())
+    assert {r["language"] for r in recaps} == {"en", "fr", "es"}
+    for recap in recaps:
+        assert recap["final"] and recap["source"] == "llm" and recap["headline"]
+        assert 0 < len(recap["key_moments"]) <= 6

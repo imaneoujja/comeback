@@ -200,6 +200,8 @@ class ReplaySession:
                 label = f"{moment.minute}' {moment.type.replace('_', ' ')}"
                 detail = f"{moment.team or 'match'} · importance {moment.importance} · {len(moment.facts)} facts"
                 self.trace({"agent": "Engine", "step": "moment", "label": label, "detail": detail})
+        if event["type"] == "match_end":
+            asyncio.create_task(self._gazette())
         timeline = self.brain.engine.timeline
         if timeline and timeline[-1]["t"] == event["t"]:
             self.publish("timeline", timeline[-1])
@@ -246,6 +248,14 @@ class ReplaySession:
                 log.exception("card writing failed for %s", moment.moment_id)
             finally:
                 self._card_queue.task_done()
+
+    async def _gazette(self) -> None:
+        """Full-time: the Storyteller writes this fan's own recap of the match."""
+        await self._drain_cards()
+        self.trace({"agent": "Watcher", "step": "full_time", "label": self.fan.profile.name,
+                    "detail": "full-time → Storyteller: personal recap"})
+        recap = await self.brain.final_recap(self.fan.profile, trace=self.trace)
+        self.publish("gazette", recap)
 
     async def _drain_cards(self) -> None:
         """Let pending cards finish (bounded): a catch-up should tell verified stories."""

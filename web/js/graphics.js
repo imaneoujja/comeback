@@ -109,9 +109,11 @@ function cueHtml(cue) {
         <div class="stat-m">${esc(d.player_name)}</div><div class="stat-s">${detail}</div></div>`;
     }
     case "sprint":
-      return `<div class="stat" style="${team}"><div class="stat-k">TOP SPEED</div>
-        <div class="stat-v">${d.speed_kmh.toFixed(1)}<small>KM/H</small></div>
-        <div class="stat-m">${esc(d.player_name)}</div><div class="stat-s">${d.distance_m} M SPRINT</div></div>`;
+      return speedTag(d, "SPEED", `${d.speed_kmh.toFixed(1)} KM/H`,
+        `${d.distance_m} M SPRINT · ${d.distance_with_ball_m} M WITH THE BALL`);
+    case "distance":
+      return speedTag(d, "DISTANCE", `${d.threshold_m} M`,
+        `WITH THE BALL · TOP SPEED ${d.top_speed_kmh ? d.top_speed_kmh.toFixed(1) + " KM/H" : "–"}`);
     case "danger":
       return `<div class="bn danger" style="${team}"><div class="bn-k">DANGER ▲ ${esc(teamName(d.team).toUpperCase())}</div>
         <div class="bn-t">${d.box_entries} box entries in ${Math.round(d.window_s / 60)} minutes</div>
@@ -121,6 +123,69 @@ function cueHtml(cue) {
     default:
       return "";
   }
+}
+
+function speedTag(d, kicker, big, line) {
+  const [first, ...rest] = d.player_name.split(" ");
+  return `<div class="lt" style="--team:${teamColour(d.team)}"><div class="lt-num">${d.number}</div><div class="lt-body">
+    <div class="lt-k">${kicker} · ${esc(first)} <b>${esc(rest.join(" ").toUpperCase())}</b></div>
+    <div class="lt-big">${big}</div><div class="lt-meta">${line}</div></div></div>`;
+}
+
+/** Lower third for the player a fan follows ("player focus"). */
+export function favouriteTag(pid) {
+  const info = app.roster[pid];
+  if (!info) return;
+  const [first, ...rest] = info.name.split(" ");
+  put("lower_third", `<div class="lt fav" style="--team:${teamColour(info.team)}"><div class="lt-num">${info.number}</div>
+    <div class="lt-body"><div class="lt-k">★ YOUR PLAYER</div><div class="lt-name">${esc(first)} <b>${esc(rest.join(" "))}</b></div>
+    <div class="lt-meta">${esc(info.position)} · ${esc(teamName(info.team))}</div></div></div>`, 2.8, 58);
+}
+
+const METRIC = {
+  xg: { label: "xG", value: (t) => t.xg.toFixed(2) },
+  possession: { label: "POSSESSION", value: (t) => `${Math.round(t.possession * 100)}%` },
+  pass_difficulty: { label: "AVG PASS DIFFICULTY", value: (t) => t.avg_pass_difficulty ?? "–" },
+};
+
+/** The single number this fan said they care about (profile.focus_metric). */
+export function renderMetric(fan) {
+  const el = $("#metric");
+  const s = app.snapshot;
+  if (!fan?.focus_metric || !s) { el.hidden = true; return; }
+  el.hidden = false;
+  if (fan.focus_metric === "top_speed") {
+    const pid = fan.favourite_player_id;
+    const name = app.roster[pid]?.name.split(" ").at(-1).toUpperCase() || "";
+    const mine = app.topSpeed[pid];
+    const best = (code) => (s.teams[code].top_sprint_kmh ? s.teams[code].top_sprint_kmh.toFixed(1) : "–");
+    el.innerHTML = `<span class="mk">YOUR METRIC · TOP SPEED</span>
+      <span class="mv">${esc(name)} ${mine ? `${mine.toFixed(1)}<small>KM/H</small>` : "<small>NO SPRINT YET</small>"}</span>
+      <span class="ms">MATCH BEST ${s.home} ${best(s.home)} · ${s.away} ${best(s.away)}</span>`;
+    return;
+  }
+  const m = METRIC[fan.focus_metric];
+  if (!m) { el.hidden = true; return; }
+  el.innerHTML = `<span class="mk">YOUR METRIC · ${m.label}</span>
+    <span class="mv"><b style="color:${teamColour(s.home)}">${s.home}</b> ${m.value(s.teams[s.home])} – ${m.value(s.teams[s.away])} <b style="color:${teamColour(s.away)}">${s.away}</b></span>`;
+}
+
+/** Full-time: the fan's own front page, written by the Storyteller. */
+export function renderGazette(g, fan) {
+  const s = app.snapshot;
+  const home = app.teams[app.home].name, away = app.teams[app.away].name;
+  const el = $("#gazette");
+  el.innerHTML = `<div class="gz">
+    <div class="gz-top"><span>FULL-TIME EDITION</span><span class="gz-mast">The Comeback Gazette</span>
+      <span>WRITTEN FOR ${esc(fan?.name?.toUpperCase() || "")} · ${esc((g.language || "").toUpperCase())}</span></div>
+    <div class="gz-score">${esc(home)} <b>${s ? s.score[app.home] : ""}–${s ? s.score[app.away] : ""}</b> ${esc(away)}</div>
+    <h1 class="gz-h">${esc(g.headline || "")}</h1>
+    <div class="gz-body"><p class="gz-text">${esc(g.text)}</p>
+      <aside class="gz-side"><div class="gz-k">KEY MOMENTS</div>${(g.key_moments || []).map((k) =>
+        `<div class="gz-m"><b>${k.minute}'</b> ${esc(k.headline)}</div>`).join("")}</aside></div>
+    <div class="gz-foot"><span>${tag(g, "Storyteller")}</span><button class="key" id="gz-close">CLOSE</button></div></div>`;
+  el.hidden = false;
+  $("#gz-close").addEventListener("click", () => { el.hidden = true; });
 }
 
 export function momentBanner(card) {

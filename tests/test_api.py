@@ -14,7 +14,7 @@ client = TestClient(app)
 
 def test_match_profiles_and_overlays_endpoints() -> None:
     match = client.get("/api/match/demo-comeback").json()
-    assert (match["home"]["id"], match["away"]["id"]) == ("RVR", "HLT")
+    assert (match["home"]["id"], match["away"]["id"]) == ("EMB", "SMC")
     assert all(p["spot"] for p in match["home"]["players"] if p["id"] in match["home"]["starting_xi"])
     profiles = client.get("/api/profiles").json()
     assert {p["language"] for p in profiles} <= {"en", "fr", "es"}

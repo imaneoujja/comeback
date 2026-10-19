@@ -1,5 +1,6 @@
 """Incremental match state: score, clock, possession and team/player statistics."""
 
+import math
 from collections import deque
 from dataclasses import asdict, dataclass
 from typing import Any
@@ -26,12 +27,14 @@ class PlayerStats:
     big_chances_missed: int = 0
     top_speed_kmh: float = 0.0
     sprints: int = 0
+    distance_with_ball_m: float = 0.0
     tackles_won: int = 0
     interceptions: int = 0
 
     def to_dict(self) -> dict[str, Any]:
         data = asdict(self)
         data["xg"] = round(self.xg, 2)
+        data["distance_with_ball_m"] = round(self.distance_with_ball_m)
         data["pass_accuracy"] = round(self.passes_completed / self.passes, 3) if self.passes else None
         data["avg_pass_difficulty"] = round(self.difficulty_sum / self.passes, 1) if self.passes else None
         del data["difficulty_sum"]
@@ -170,6 +173,7 @@ class MatchState:
         start = self.frame(e["team"], e["x"], e["y"])
         end = self.frame(e["team"], e["end_x"], e["end_y"])
         self.teams[e["team"]].box_entries += in_box(*end) and not in_box(*start)
+        self.players[e["player"]].distance_with_ball_m += math.dist(start, end)
 
     def _on_sprint(self, e: dict[str, Any]) -> None:
         player, team = self.players[e["player"]], self.teams[e["team"]]

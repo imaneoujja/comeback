@@ -44,17 +44,17 @@ class Team:
         return self.starting_xi + self.bench
 
 
-# Club ids are the three-letter codes used in events ("team": "RVR").
+# Club ids are the three-letter codes used in events ("team": "EMB").
 # play_style must be a key of comeback.synth.simulator.STYLES.
 CLUBS: dict[str, Club] = {
     club.id: club
     for club in (
-        Club("RVR", "Riverside Rovers", "#36B37E", "possession", 78),
-        Club("HLT", "Harbour Lights FC", "#F2A541", "direct", 75),
-        Club("NRA", "Northgate Athletic", "#6C63FF", "pressing", 73),
-        Club("ELM", "Elmwood United", "#38A8C7", "balanced", 70),
-        Club("CPC", "Crown Point City", "#E56B6F", "counter", 72),
-        Club("SVW", "St. Vale Wanderers", "#B58BD4", "low_block", 68),
+        Club("EMB", "Emberfield", "#EE7B30", "possession", 78),
+        Club("SMC", "Saltmarsh Comets", "#1FA39A", "direct", 75),
+        Club("LKA", "Larkhaven Athletic", "#2F6B4F", "pressing", 73),
+        Club("THU", "Thornwick United", "#6B7480", "balanced", 70),
+        Club("CBC", "Calderbay City", "#E56B6F", "counter", 72),
+        Club("AVW", "Ashvale Wanderers", "#B58BD4", "low_block", 68),
     )
 }
 
@@ -69,6 +69,8 @@ LAST_NAMES: tuple[str, ...] = (
     "Glenwick", "Harthill", "Iverstone", "Jarrow", "Kestrel", "Larkspur",
     "Merewood", "Northcott", "Oakenfold", "Pinewell", "Quarryn", "Rookwell",
     "Sableford", "Thornby", "Umberley", "Vellum", "Westlin", "Yarrowby",
+    "Brackwell", "Corrigan", "Delamere", "Fenwright", "Galloway", "Hollins",
+    "Kilbride", "Lockhart", "Moorcroft", "Penhallow", "Ravensworth", "Tremayne",
 )
 
 _STARTING_XI: tuple[tuple[int, str], ...] = (
@@ -148,7 +150,7 @@ def _build_player(
     )
 
 
-def build_team(club_id: str, seed: int, exclude_names: frozenset[str] = frozenset()) -> Team:
+def build_team(club_id: str, seed: int, exclude_surnames: frozenset[str] = frozenset()) -> Team:
     """Build a deterministic 4-3-3 squad for a known fictional club.
 
     The same club, seed and exclusions always produce the same players and
@@ -158,8 +160,8 @@ def build_team(club_id: str, seed: int, exclude_names: frozenset[str] = frozense
     Args:
         club_id: Three-letter code of one of the clubs in :data:`CLUBS`.
         seed: Seed for the local random generator.
-        exclude_names: Names already used (e.g. by the opponent), so that every
-            player in a match has a unique name.
+        exclude_surnames: Surnames already used (e.g. by the opponent): every player
+            in a match has a unique surname, so commentary never confuses two players.
 
     Raises:
         ValueError: If ``club_id`` does not identify a known club.
@@ -172,13 +174,9 @@ def build_team(club_id: str, seed: int, exclude_names: frozenset[str] = frozense
         ) from exc
 
     rng = random.Random(f"{seed}:{club_id}")
-    names = [
-        f"{first} {last}"
-        for first in FIRST_NAMES
-        for last in LAST_NAMES
-        if f"{first} {last}" not in exclude_names
-    ]
-    selected_names = rng.sample(names, len(_STARTING_XI) + len(_BENCH_POSITIONS))
+    squad_size = len(_STARTING_XI) + len(_BENCH_POSITIONS)
+    surnames = rng.sample([s for s in LAST_NAMES if s not in exclude_surnames], squad_size)
+    selected_names = [f"{rng.choice(FIRST_NAMES)} {surname}" for surname in surnames]
 
     starters = tuple(
         _build_player(club, number, position, selected_names[index], rng)
@@ -198,7 +196,7 @@ def build_team(club_id: str, seed: int, exclude_names: frozenset[str] = frozense
 
 
 def build_fixture(home_id: str, away_id: str, seed: int) -> tuple[Team, Team]:
-    """Build both squads of a match, with no name shared between the two teams."""
+    """Build both squads of a match: every surname is unique across the two teams."""
     home = build_team(home_id, seed)
-    away = build_team(away_id, seed, exclude_names=frozenset(p.name for p in home.players))
+    away = build_team(away_id, seed, exclude_surnames=frozenset(p.name.split()[-1] for p in home.players))
     return home, away

@@ -7,7 +7,7 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 fill=%22%230b0b0b%22/%3E%3Ccircle cx=%2216%22 cy=%2216%22 r=%227%22 fill=%22%23ff3b30%22/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=IBM+Plex+Sans+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=IBM+Plex+Sans+Condensed:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,700;0,6..72,800;1,6..72,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/web/css/regie.css">
   <script type="importmap">
     { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
@@ -57,10 +57,12 @@
           <span class="sb-clock" id="clock">00:00</span>
         </div>
         <div class="gfx danger-gfx" id="danger"></div>
+        <div class="gfx metric" id="metric" hidden></div>
         <div class="gfx ov ov-top_right" id="ov-top_right"></div>
         <div class="gfx ov ov-lower_third" id="ov-lower_third"></div>
         <div class="gfx ov ov-banner" id="ov-banner"></div>
         <div class="replay-bug" id="replay-bug" hidden><i></i>REPLAY · <span id="replay-label">WHILE YOU WERE AWAY</span></div>
+        <div class="gazette" id="gazette" hidden></div>
         <div class="away-strip" id="away-veil" hidden><i></i><b>FAN AWAY · COMEBACK IS WATCHING</b>
           <span>will call them back before the big moment</span></div>
       </div>

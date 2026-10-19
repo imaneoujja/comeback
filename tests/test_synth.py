@@ -123,15 +123,15 @@ def test_generation_is_deterministic() -> None:
     assert generate_random(7) != generate_random(8)
 
 
-def test_player_names_are_unique_within_a_match() -> None:
+def test_player_surnames_are_unique_within_a_match() -> None:
     for seed in range(200):
-        home, away = build_fixture("RVR", "HLT", seed)
-        names = [p.name for p in home.players + away.players]
-        assert len(names) == len(set(names))
+        home, away = build_fixture("EMB", "SMC", seed)
+        surnames = [p.name.split()[-1] for p in home.players + away.players]
+        assert len(surnames) == len(set(surnames))
 
 
 def test_clubs_are_fictional_and_complete() -> None:
-    assert set(CLUBS) == {"RVR", "HLT", "NRA", "ELM", "CPC", "SVW"}
+    assert set(CLUBS) == {"EMB", "SMC", "LKA", "THU", "CBC", "AVW"}
 
 
 # ---------------------------------------------------------------- the demo
@@ -141,15 +141,15 @@ def test_demo_follows_the_comeback_script() -> None:
     goals = [(e["minute"], e["team"], e["scorer"], e["score_home"], e["score_away"])
              for e in _of_type(events, "goal")]
     assert goals == [
-        (18, "HLT", "HLT-9", 0, 1),
-        (39, "HLT", "HLT-11", 0, 2),
-        (71, "RVR", "RVR-9", 1, 2),
-        (84, "RVR", "RVR-15", 2, 2),
-        (92, "RVR", "RVR-10", 3, 2),
+        (18, "SMC", "SMC-9", 0, 1),
+        (39, "SMC", "SMC-11", 0, 2),
+        (71, "EMB", "EMB-9", 1, 2),
+        (84, "EMB", "EMB-15", 2, 2),
+        (92, "EMB", "EMB-10", 3, 2),
     ]
     reds = [e for e in _of_type(events, "card") if e["color"] == "red"]
-    assert [(e["minute"], e["player"]) for e in reds] == [(62, "HLT-4")]
+    assert [e["player"] for e in reds] == ["SMC-4"] and reds[0]["minute"] in (62, 63)   # beat at 62.8'
     shape = [e for e in _of_type(events, "substitution") if e.get("formation")]
-    assert [(e["minute"], e["player_in"], e["formation"]) for e in shape] == [(55, "RVR-15", "4-2-4")]
-    missed = [e for e in _of_type(events, "shot") if e["player"] == "RVR-9" and e["minute"] == 68]
+    assert [(e["minute"], e["player_in"], e["formation"]) for e in shape] == [(55, "EMB-15", "4-2-4")]
+    missed = [e for e in _of_type(events, "shot") if e["player"] == "EMB-9" and e["minute"] == 68]
     assert missed and missed[0]["outcome"] == "saved" and missed[0]["xg"] >= 0.2

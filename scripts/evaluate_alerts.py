@@ -6,7 +6,9 @@ and compare with a chance baseline: random instants in the same matches. We also
 measure, for every goal, whether an alert for the scoring team came in the
 previous 5 minutes ("goal coverage") and how early ("lead time").
 
-Validated on synthetic data only; real-data validation is future work.
+Only unscripted matches are used (no story beats); the scripted demo match is
+never part of these numbers. Validated on synthetic data only; real-data
+validation is future work.
 
 Usage:
     python scripts/evaluate_alerts.py [--matches 50] [--first-seed 1001]
@@ -33,6 +35,7 @@ GOAL_LOOKBACK_S = 300.0
 def evaluate_match(seed: int, rule: AlertRule, rng: random.Random) -> dict[str, list]:
     """Run the engine on one match and collect alerts, chances and goals."""
     meta, *events = generate_random(seed)
+    assert meta["scenario"] is None, "alert performance is measured on unscripted matches only"
     engine = MatchEngine(meta)
     trackers = {code: AlertTracker(rule) for code in engine.danger}
     alerts: list[tuple[float, str]] = []

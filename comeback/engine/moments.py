@@ -235,6 +235,8 @@ class MomentDetector:
                 "pass_accuracy": round(ts.passes_completed / ts.passes, 2) if ts.passes else None,
                 "corners": ts.corners,
             }
+        facts["goals"] = [{"minute": m.minute, "team": m.team, "scorer_name": m.facts["scorer_name"],
+                           "score_after": m.facts["score_after"]} for m in self.moments if m.type == "goal"]
         mtype, importance = ("half_time", 50) if e["period"] == 1 else ("full_time", 70)
         return [self._new(e, mtype, None, [], importance, facts, [e["id"]])]
 

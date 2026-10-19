@@ -62,12 +62,23 @@ class MatchBrain:
         return card
 
     async def catchup(self, profile: FanProfile, from_t: float, to_t: float,
-                      late_join: bool = False, trace: Tracer | None = None) -> dict[str, Any]:
+                      late_join: bool = False, trace: Tracer | None = None, final: bool = False) -> dict[str, Any]:
         """Personalised catch-up for the window ``[from_t, to_t]``."""
         cards = sorted(self.cards.values(), key=lambda c: c["t"])
         in_window = [c for c in cards if from_t <= c["t"] <= to_t]
-        bucket = length_bucket(to_t - from_t, late_join)
+        bucket = length_bucket(to_t - from_t, late_join or final)
         selected = select_cards(cards, from_t, to_t, profile, bucket)
         delta = build_delta(self.engine.timeline, self.engine.snapshot(), from_t, self.team_names, in_window)
-        task = CatchupTask(profile, bucket, selected, delta, self.team_names, self.roster, late_join)
+        task = CatchupTask(profile, bucket, selected, delta, self.team_names, self.roster, late_join, final)
         return await write_catchup(task, self.gateway, trace)
+
+    async def final_recap(self, profile: FanProfile, trace: Tracer | None = None) -> dict[str, Any]:
+        """Full-time recap of the whole match for one fan ("Gazette"), plus the key moments it draws on."""
+        recap = await self.catchup(profile, 0.0, self.engine.state.t, trace=trace, final=True)
+        cards = sorted(self.cards.values(), key=lambda c: c["t"])
+        key = sorted((c for c in cards if c["type"] not in ("danger_peak", "full_time", "half_time")),
+                     key=lambda c: c["importance"], reverse=True)[:6]
+        key.sort(key=lambda c: c["t"])
+        recap["key_moments"] = [{"minute": c["minute"], "type": c["type"], "team": c["team"],
+                                 "headline": c["headline"]} for c in key]
+        return recap

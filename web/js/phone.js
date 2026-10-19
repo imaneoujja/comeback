@@ -72,6 +72,7 @@ function connect() {
   on("presence", (p) => { st.present = p.present; if (!p.present) $("#catchup").hidden = true; render(); });
   on("notification", (n) => { st.notes.unshift(n); renderNotes(); takeover(n); });
   on("catchup", renderCatchup);
+  on("gazette", (g) => renderCatchup({ ...g, final: true }));
 }
 
 /* ------------------------------------------------------------------ render */
@@ -119,7 +120,7 @@ function renderCatchup(c) {
   const el = $("#catchup");
   el.hidden = false;
   el.innerHTML = `<div class="ck">PREVIOUSLY ON…</div>
-    <div class="ct">${c.late_join ? "The story so far" : `You were away ${d.away_minutes} min`}</div>
+    <div class="ct">${c.final ? esc(c.headline || "Full-time") : c.late_join ? "The story so far" : `You were away ${d.away_minutes} min`}</div>
     <div class="cx">${esc(c.text)}</div>
     <div class="cf"><span>${c.source === "llm" ? "✓ STORYTELLER → VERIFIER" : "TEMPLATE · VERIFIED FACTS"}</span>
     <button class="btn" id="listen">▶ LISTEN</button></div>`;

@@ -195,6 +195,29 @@ export function createProgram(canvas) {
   ring.rotation.x = -Math.PI / 2; ring.position.y = 0.03;
   scene.add(ring);
 
+  /* ---------------------------------------------------------------- player focus */
+  const favCanvas = document.createElement("canvas");
+  favCanvas.width = 512; favCanvas.height = 128;
+  const favTex = new THREE.CanvasTexture(favCanvas);
+  favTex.colorSpace = THREE.SRGBColorSpace;
+  const favLabel = new THREE.Sprite(new THREE.SpriteMaterial({ map: favTex, depthTest: false, transparent: true }));
+  favLabel.scale.set(7, 1.75, 1);
+  favLabel.renderOrder = 10;
+  const favRing = new THREE.Mesh(new THREE.RingGeometry(1.35, 1.7, 40), new THREE.MeshBasicMaterial({ color: 0xffb000 }));
+  favRing.rotation.x = -Math.PI / 2; favRing.position.y = 0.035;
+  scene.add(favLabel, favRing);
+  let favourite = null;
+  function setFavourite(pid) {
+    favourite = pid;
+    if (!pid || !app.roster[pid]) return;
+    const g = favCanvas.getContext("2d");
+    g.clearRect(0, 0, 512, 128);
+    g.fillStyle = "#ffb000"; g.fillRect(0, 18, 512, 92);
+    g.fillStyle = "#0a0a0a"; g.font = "700 60px 'IBM Plex Sans Condensed', sans-serif"; g.textAlign = "center"; g.textBaseline = "middle";
+    g.fillText(`★ ${app.roster[pid].name.split(" ").at(-1).toUpperCase()}`, 256, 66);
+    favTex.needsUpdate = true;
+  }
+
   /* ---------------------------------------------------------------- camera director */
   const cam = { mode: "main", x: 0, fov: 24, side: 1 };
   function setCamera(mode, opts = {}) { cam.mode = mode; if (opts.side) cam.side = opts.side; }
@@ -265,6 +288,12 @@ export function createProgram(canvas) {
     for (const pid of Object.keys(meshes)) if (!seen.has(pid)) meshes[pid].visible = false;
 
     ball.position.set(toX(app.ball.x), 0.3 + app.ball.z, toZ(app.ball.y));
+    const fp = favourite && app.pos[favourite];
+    favLabel.visible = favRing.visible = Boolean(fp);
+    if (fp) {
+      favLabel.position.set(toX(fp.x), 4.3, toZ(fp.y));
+      favRing.position.x = toX(fp.x); favRing.position.z = toZ(fp.y);
+    }
     const holder = app.holder && app.pos[app.holder];
     ring.visible = Boolean(holder);
     if (holder) {
@@ -278,7 +307,7 @@ export function createProgram(canvas) {
     renderer.render(scene, camera);
   }
 
-  return { render, setCamera, celebrate };
+  return { render, setCamera, celebrate, setFavourite };
 }
 
 /* Mowing stripes and line markings, drawn once into a texture (20 px per metre). */

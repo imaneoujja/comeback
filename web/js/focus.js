@@ -14,6 +14,7 @@ let auto = true;
 export function initFocus() {
   on("notification", () => request("fan", 7, 3));
   on("catchup", () => request("fan", 12, 3));
+  on("gazette", () => request("pgm", 30, 6));
   on("agent-shown", (s) => {
     if (s.agent === "Verifier") request("agents", s.step === "rejected" ? 5 : 3, s.step === "rejected" ? 2.5 : 1);
   });

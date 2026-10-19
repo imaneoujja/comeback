@@ -11,7 +11,7 @@ from typing import Any
 
 from comeback.agents.analyst import moment_player_ids, readable_facts
 from comeback.agents.llm import LLMGateway, parse_json_reply
-from comeback.agents.templates import CATCHUP_INTRO, NOTHING_HAPPENED, STORY_INTRO, moment_line
+from comeback.agents.templates import CATCHUP_INTRO, FINAL_INTRO, NOTHING_HAPPENED, STORY_INTRO, moment_line
 from comeback.agents.verifier import (
     allowed_numbers,
     check_length,
@@ -39,6 +39,8 @@ Write JSON only: {"text": "..."}.
 - Point of view: if the fan supports a club, talk to a supporter of that club
   (share their joy or frustration, never mock the opponent). If the fan follows a
   favourite player, put that player at the centre of the story.
+- If they were away, they did NOT see what happened: start with what happened while
+  they were away (or, for a late join, the story so far), then what it changes now.
 - Explain what CHANGED (use the delta block: score then/now, who was in control then/now).
 - Respect the word limit. Use ONLY names and numbers that appear in the input.
   Never invent events. Address the fan directly by first name at most once.
@@ -58,6 +60,7 @@ class CatchupTask:
     team_names: dict[str, str]
     roster: dict[str, dict[str, Any]]
     late_join: bool = False
+    final: bool = False          # full-time recap ("Gazette"): also needs a headline
 
 
 PROMPT_DELTA_KEYS = ("score_then", "score_now", "in_control_then", "in_control_now",
@@ -65,7 +68,7 @@ PROMPT_DELTA_KEYS = ("score_then", "score_now", "in_control_then", "in_control_n
 
 
 def labelled_score(score: str | None, team_names: dict[str, str]) -> str | None:
-    """'1-2' → 'Riverside Rovers 1-2 Harbour Lights FC' (home first), so no model misreads who leads."""
+    """'1-2' → 'Emberfield 1-2 Saltmarsh Comets' (home first), so no model misreads who leads."""
     if not score:
         return None
     home, away = team_names.values()
@@ -89,12 +92,18 @@ class StorytellerWriter:
     instructions = STORYTELLER_INSTRUCTIONS
 
     def label(self, task: CatchupTask) -> str:
-        what = "story so far" if task.late_join else task.bucket.replace("_", " ")
+        what = "full-time recap" if task.final else "story so far" if task.late_join else task.bucket.replace("_", " ")
         return f"{task.profile.name} · {task.profile.language} · {what}"
 
     def _favourite_name(self, task: CatchupTask) -> str | None:
         pid = task.profile.favourite_player_id
         return task.roster[pid]["name"] if pid in task.roster else None
+
+    @staticmethod
+    def _situation(task: CatchupTask) -> str:
+        if task.final:
+            return "the match is over: write their full-time recap, with a newspaper headline"
+        return "joined the match late" if task.late_join else "was away and just came back"
 
     def prompt(self, task: CatchupTask, feedback: list[str]) -> str:
         p = task.profile
@@ -104,7 +113,7 @@ class StorytellerWriter:
                 "supports": task.team_names.get(p.club_id) if p.club_id else None,
                 "favourite_player": self._favourite_name(task),
             },
-            "situation": "joined the match late" if task.late_join else "was away and just came back",
+            "situation": self._situation(task),
             "word_limit": WORD_LIMITS[task.bucket],
             "delta": prompt_delta(task.delta, task.late_join, task.team_names),
             "moments": [
@@ -116,45 +125,58 @@ class StorytellerWriter:
                 for c in task.cards
             ],
         }
+        if task.final:
+            payload["output"] = 'JSON {"headline": "...max 10 words, from the fan\'s side...", "text": "..."}'
         if feedback:
             payload["fix_these_problems_from_your_previous_draft"] = feedback
         return json.dumps(payload, ensure_ascii=False)
 
     def parse(self, text: str) -> dict[str, Any]:
-        return {"text": str(parse_json_reply(text)["text"]).strip()}
+        data = parse_json_reply(text)
+        out = {"text": str(data["text"]).strip()}
+        if data.get("headline"):
+            out["headline"] = str(data["headline"]).strip()
+        return out
 
     def verify(self, task: CatchupTask, output: dict[str, Any]) -> list[str]:
-        text = output.get("text", "")
+        text = f"{output.get('headline', '')}\n{output.get('text', '')}".strip()
         players = set().union(*(moment_player_ids(c) for c in task.cards)) if task.cards else set()
         if task.profile.favourite_player_id:
             players.add(task.profile.favourite_player_id)
         allowed = allowed_numbers([c["facts"] for c in task.cards], [c["minute"] for c in task.cards],
                                   task.delta, WORD_LIMITS[task.bucket])
-        issues = check_length(text, CHAR_LIMITS[task.bucket], "text")
+        issues = check_length(output.get("text", ""), CHAR_LIMITS[task.bucket], "text")
+        if task.final:
+            issues += check_length(output.get("headline", ""), 90, "headline")
         issues += check_numbers(text, allowed)
         issues += check_names(text, players, task.roster, set(task.team_names.values()),
                               {c.name for c in CLUBS.values()})
         on_pitch = task.delta.get("players_on_pitch_now") or {name: 11 for name in task.team_names.values()}
         issues += check_numerical_claims(text, on_pitch)
         issues += check_scope(text)
-        issues += check_no_final_result(text, any(c["type"] == "full_time" for c in task.cards))
+        issues += check_no_final_result(text, task.final or any(c["type"] == "full_time" for c in task.cards))
         return issues
 
     def fallback(self, task: CatchupTask) -> dict[str, Any]:
         lang = task.profile.language
-        intro = (STORY_INTRO if task.late_join else CATCHUP_INTRO)[lang].format(
+        intro = (FINAL_INTRO if task.final else STORY_INTRO if task.late_join else CATCHUP_INTRO)[lang].format(
             minute=task.delta["minute_now"], **{k: task.delta[k] for k in ("away_minutes", "score_then", "score_now")})
         lines = [moment_line(c, lang, task.team_names) for c in task.cards]
         if not lines:
             lines = [NOTHING_HAPPENED[lang].format(score_now=task.delta["score_now"])]
-        return {"text": " ".join([intro, *lines])}
+        out = {"text": " ".join([intro, *lines])}
+        if task.final:
+            home, away = task.team_names.values()
+            out["headline"] = f"{home} {task.delta['score_now']} {away}"
+        return out
 
 
 async def write_catchup(task: CatchupTask, gateway: LLMGateway, trace: Tracer | None = None) -> dict[str, Any]:
     """Catch-up text plus provenance (via the verified-writing workflow)."""
     result: WrittenResult = await run_verified(StorytellerWriter(), task, gateway, trace)
     return {
-        "text": result.output["text"], "source": result.source, "verified": result.verified,
+        "text": result.output["text"], "headline": result.output.get("headline"),
+        "source": result.source, "verified": result.verified, "final": task.final,
         "attempts": result.attempts, "fallback_reason": result.fallback_reason,
         "bucket": task.bucket, "language": task.profile.language,
         "moment_ids": [c["moment_id"] for c in task.cards], "delta": task.delta,

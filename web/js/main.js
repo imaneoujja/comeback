@@ -1,7 +1,10 @@
 /* COMEBACK control room: boot, SSE stream, controls and the render loop. */
 
-import { $, app, MATCH_ID, SPEEDS, post, newSessionId, applyEvent, step, emit } from "./state.js";
-import { renderScore, renderTimecode, showCue, expireOverlays, refreshBanner, clearOverlays, put } from "./graphics.js";
+import { $, app, MATCH_ID, SPEEDS, post, newSessionId, applyEvent, step, emit, profile } from "./state.js";
+import {
+  renderScore, renderTimecode, showCue, expireOverlays, refreshBanner, clearOverlays, put, favouriteTag, renderMetric,
+  renderGazette,
+} from "./graphics.js";
 import {
   renderData, renderRundown, drawTimeline, renderProfiles, renderPresence, renderNotes, renderCatchup, hideCatchup, buzz,
 } from "./panels.js";
@@ -110,8 +113,15 @@ function connect() {
   on("event", (e) => {
     applyEvent(e);
     if (e.type === "goal" && program) program.celebrate(e.team);
+    if (e.type === "sprint") app.topSpeed[e.player] = Math.max(app.topSpeed[e.player] || 0, e.speed_kmh);
+    const fav = profile()?.favourite_player_id;           // player focus: the followed player is tagged all match
+    if (fav && e.player === fav && ["pass", "carry", "shot"].includes(e.type) && performance.now() - app.lastFavTag > 20000) {
+      app.lastFavTag = performance.now();
+      favouriteTag(fav);
+    }
   });
-  on("snapshot", (s) => { app.snapshot = s; app.snapshotAt = performance.now(); renderScore(); });
+  on("snapshot", (s) => { app.snapshot = s; app.snapshotAt = performance.now(); renderScore(); renderMetric(profile()); });
+  on("gazette", (g) => { renderGazette(g, profile()); renderCatchup({ ...g, late_join: false }); });
   on("cue", showCue);
   on("card", (c) => { app.cards.set(c.moment_id, c); renderRundown(); refreshBanner(c); });
   on("timeline", (t) => app.timeline.push(t));
@@ -137,6 +147,8 @@ function onState(s) {
     possession: s.snapshot.possession,
   });
   renderControls(); renderScore(); renderProfiles(); renderPresence(); renderNotes(); renderRundown(); renderData();
+  renderMetric(profile());
+  if (program) program.setFavourite(profile()?.favourite_player_id || null);
   $("#btn-join").disabled = s.snapshot.period === 2 && s.snapshot.minute >= 60;
 }
 

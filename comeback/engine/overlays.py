@@ -7,6 +7,7 @@ Cue format::
      "data": {...}, "priority": 0-100, "audience": "all|analyst|casual"}
 """
 
+import math
 from typing import Any
 
 from comeback.engine.moments import Moment
@@ -15,7 +16,8 @@ from comeback.engine.state import MatchState
 PLAYER_TAG_GAP_S = 15.0
 PASS_QUALITY_MIN = 65
 PASS_QUALITY_ALL = 80
-SPRINT_TAG_KMH = 32.0
+SPRINT_TAG_KMH = 32.0          # speed threshold for a speed tag
+DISTANCE_TAG_STEP_M = 100.0    # distance threshold: every 100 m a player covers with the ball
 _KEY_TAG_TYPES = {"shot", "goal", "card"}
 
 
@@ -54,14 +56,28 @@ class OverlayBuilder:
                 "shot_speed_kmh": e["shot_speed_kmh"], "xg": e["xg"], "outcome": e["outcome"],
             }, 70, "all"))
         elif e["type"] == "sprint" and e["speed_kmh"] >= SPRINT_TAG_KMH:
-            new.append(self._cue(e["t"], 4, "top_right", "sprint", {
-                "team": e["team"], "player": e["player"], "player_name": self.state.player_name(e["player"]),
-                "speed_kmh": e["speed_kmh"], "distance_m": e["distance_m"],
-            }, 40, "all"))
+            new.append(self._cue(e["t"], 4, "lower_third", "sprint", {
+                **self._who(e["player"]), "speed_kmh": e["speed_kmh"], "distance_m": e["distance_m"],
+                "distance_with_ball_m": round(self.state.players[e["player"]].distance_with_ball_m),
+            }, 55, "all"))
+        elif e["type"] == "carry":
+            covered = self.state.players[e["player"]].distance_with_ball_m
+            before = covered - math.dist((e["x"], e["y"]), (e["end_x"], e["end_y"]))
+            if int(covered // DISTANCE_TAG_STEP_M) > int(before // DISTANCE_TAG_STEP_M):
+                new.append(self._cue(e["t"], 4, "lower_third", "distance", {
+                    **self._who(e["player"]), "distance_with_ball_m": round(covered),
+                    "threshold_m": int(covered // DISTANCE_TAG_STEP_M * DISTANCE_TAG_STEP_M),
+                    "top_speed_kmh": self.state.players[e["player"]].top_speed_kmh,
+                }, 45, "all"))
         for m in moments:
             new.append(self._moment_cue(m))
         self.cues += new
         return new
+
+    def _who(self, player: str) -> dict[str, Any]:
+        info = self.state.roster[player]
+        return {"team": info["team"], "player": player, "player_name": info["name"], "number": info["number"],
+                "position": info["position"]}
 
     def _cue(self, t: float, duration: float, layer: str, template: str, data: dict[str, Any],
              priority: int, audience: str) -> dict[str, Any]:

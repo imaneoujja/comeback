@@ -175,6 +175,12 @@ STORY_INTRO = {
     "es": "La historia hasta ahora (min. {minute}): {score_now}.",
 }
 
+FINAL_INTRO = {
+    "en": "Full-time: {score_now}.",
+    "fr": "Coup de sifflet final : {score_now}.",
+    "es": "Final del partido: {score_now}.",
+}
+
 NOTHING_HAPPENED = {
     "en": "Nothing major happened — still {score_now}.",
     "fr": "Rien de majeur — toujours {score_now}.",

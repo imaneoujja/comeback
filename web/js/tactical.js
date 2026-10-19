@@ -38,6 +38,11 @@ export function drawTactical(canvas, { numbers = true } = {}) {
     if (pid === app.holder) { ctx.strokeStyle = "#fff"; ctx.lineWidth = 2 * dpr; ctx.stroke(); }
     if (numbers && r > 5) { ctx.fillStyle = gk ? colour : "#0a0a0a"; ctx.fillText(String(info.number), X(p.x), Y(p.y) + 0.5); }
   }
+  const fav = app.profiles.find((p) => p.id === app.profileId)?.favourite_player_id;
+  if (fav && app.pos[fav]) {                      // player focus: ring around the followed player
+    ctx.strokeStyle = "#ffb000"; ctx.lineWidth = 2 * dpr;
+    ctx.beginPath(); ctx.arc(X(app.pos[fav].x), Y(app.pos[fav].y), r * 1.9, 0, Math.PI * 2); ctx.stroke();
+  }
   ctx.fillStyle = "#fff";
   ctx.beginPath(); ctx.arc(X(app.ball.x), Y(app.ball.y), Math.max(2 * dpr, 0.7 * scale), 0, Math.PI * 2); ctx.fill();
 }

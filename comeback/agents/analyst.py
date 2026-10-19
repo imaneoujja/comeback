@@ -63,6 +63,8 @@ def readable_facts(facts: dict[str, Any], team_names: dict[str, str]) -> dict[st
     def named(value: Any) -> Any:
         if isinstance(value, dict):
             return {team_names.get(k, k): named(v) for k, v in value.items()}
+        if isinstance(value, list):
+            return [named(v) for v in value]
         return team_names.get(value, value) if isinstance(value, str) else value
 
     return {k: named(v) for k, v in facts.items() if k not in id_keys}
