@@ -15,3 +15,6 @@ __pycache__/
 
 # Runtime state (the LLM cache is committed on purpose)
 data/llm_budget.json
+
+# Generated random matches (regenerate with: python -m comeback.synth.cli random)
+data/matches/random-*.jsonl
