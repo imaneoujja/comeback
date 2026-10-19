@@ -3,102 +3,110 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>COMEBACK — the AI that watches the match for you</title>
+  <title>COMEBACK — Matchday control room</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 fill=%22%230b0b0b%22/%3E%3Ccircle cx=%2216%22 cy=%2216%22 r=%227%22 fill=%22%23ff3b30%22/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%227%22 fill=%22%2307090d%22/%3E%3Ccircle cx=%2216%22 cy=%2216%22 r=%227%22 fill=%22%23ff4d5e%22/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="/web/styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=IBM+Plex+Sans+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/web/css/regie.css">
+  <script type="importmap">
+    { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
+  </script>
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand">
-      <span class="logo">COME<span>BACK</span></span>
-      <span class="tagline">The AI that watches the match for you while you're away</span>
+  <header class="bar">
+    <div class="bar-left">
+      <span class="tally on-air"><i></i>ON AIR</span>
+      <span class="wordmark">COMEBACK</span>
+      <span class="sub">MATCHDAY CONTROL ROOM · SYNTHETIC FEED</span>
     </div>
-    <div class="controls">
-      <span class="control-label">Replay</span>
-      <div class="segmented" id="speeds" role="group" aria-label="Replay speed"></div>
-      <button class="icon-btn" id="pause" title="Pause / play" aria-label="Pause">❚❚</button>
-      <button class="ghost-btn" id="restart" title="Restart the match">Restart</button>
+    <div class="bar-mid">
+      <span class="tc-label">TC</span><span class="tc" id="timecode">00:00:00:00</span>
+      <span class="bar-score" id="bar-score"></span>
+    </div>
+    <div class="bar-right">
+      <span class="ctl-label">RATE</span>
+      <div class="seg" id="speeds" role="group" aria-label="Replay speed"></div>
+      <button class="key" id="pause" aria-label="Pause">PAUSE</button>
+      <button class="key" id="restart">RESTART</button>
     </div>
   </header>
 
-  <main class="layout">
-    <section class="broadcast">
-      <div class="tv">
-        <canvas id="pitch" aria-label="Animated top-down view of the match"></canvas>
-
-        <div class="scorebug" id="scorebug">
-          <div class="sb-team home"><i class="sb-chip"></i><span class="sb-code"></span><span class="sb-reds"></span></div>
-          <div class="sb-score"><span class="sb-home">0</span><span class="sb-sep">–</span><span class="sb-away">0</span></div>
-          <div class="sb-team away"><span class="sb-reds"></span><span class="sb-code"></span><i class="sb-chip"></i></div>
-          <div class="sb-clock" id="clock">00:00</div>
+  <main class="gallery">
+    <section class="mon pgm" aria-label="Program monitor">
+      <div class="mon-label"><span class="tally red"><i></i>PGM</span><span class="src" id="pgm-src">CAM 1 · MAIN STAND</span><span class="src right" id="pgm-mode">LIVE</span></div>
+      <div class="screen" id="pgm">
+        <canvas id="pgm-canvas"></canvas>
+        <div class="gfx scorebug" id="scorebug">
+          <span class="sb-chip h"></span><span class="sb-code h"></span><span class="sb-reds h"></span><span class="sb-num h">0</span>
+          <span class="sb-num a">0</span><span class="sb-reds a"></span><span class="sb-code a"></span><span class="sb-chip a"></span>
+          <span class="sb-clock" id="clock">00:00</span>
         </div>
-
-        <div class="danger" id="danger">
-          <div class="danger-title">DANGER</div>
-          <div class="danger-row home"><span class="dr-code"></span><div class="dr-bar"><i></i></div><span class="dr-val">0</span></div>
-          <div class="danger-row away"><span class="dr-code"></span><div class="dr-bar"><i></i></div><span class="dr-val">0</span></div>
-        </div>
-
-        <div class="ov ov-top-right" id="ov-top_right"></div>
-        <div class="ov ov-lower-third" id="ov-lower_third"></div>
-        <div class="ov ov-banner" id="ov-banner"></div>
-        <div class="live-pill"><i></i>LIVE · SYNTHETIC MATCH</div>
+        <div class="gfx danger-gfx" id="danger"></div>
+        <div class="gfx ov ov-top_right" id="ov-top_right"></div>
+        <div class="gfx ov ov-lower_third" id="ov-lower_third"></div>
+        <div class="gfx ov ov-banner" id="ov-banner"></div>
+        <div class="replay-bug" id="replay-bug" hidden><i></i>REPLAY · <span id="replay-label">WHILE YOU WERE AWAY</span></div>
         <div class="away-veil" id="away-veil" hidden>
-          <div class="veil-card"><div class="veil-dot"></div><b>You're away</b>
-            <span>COMEBACK keeps watching for you — and will call you back <em>before</em> the big moment.</span></div>
+          <div class="veil-card"><span class="veil-dot"></span><b>FAN AWAY</b>
+            <span>COMEBACK keeps watching — and calls them back <em>before</em> the big moment.</span></div>
         </div>
-      </div>
-
-      <div class="panel timeline-panel">
-        <div class="panel-head">
-          <span>Match timeline</span>
-          <span class="legend">
-            <span><i class="lg-home"></i><b class="lg-home-name"></b> control</span>
-            <span><i class="lg-away"></i><b class="lg-away-name"></b> control</span>
-            <span><i class="lg-alert"></i>“Come back” alert</span>
-            <span><i class="lg-awayband"></i>You were away</span>
-          </span>
-        </div>
-        <canvas id="timeline" aria-label="Momentum timeline with key moments"></canvas>
-      </div>
-
-      <div class="panel studio">
-        <div class="panel-head">
-          <span>Studio feed</span>
-          <span class="muted">Written once by the Analyst agent · fact-checked by the Verifier · shared by every fan</span>
-        </div>
-        <div class="cards" id="cards"></div>
       </div>
     </section>
 
-    <aside class="phone-col">
-      <div class="phone" id="phone">
-        <div class="phone-notch"></div>
-        <div class="phone-screen">
-          <div class="phone-status"><span id="phone-clock">0'</span><span class="phone-app">COMEBACK</span><span>●●●</span></div>
-          <div class="profiles" id="profiles" role="tablist" aria-label="Fan profile"></div>
-          <div class="fan-card" id="fan-card"></div>
-          <div class="presence" id="presence"></div>
-          <div class="actions">
-            <button class="act" id="btn-away">I'm away</button>
-            <button class="act primary" id="btn-back">I'm back</button>
-            <button class="act" id="btn-join">Join at 60'</button>
-          </div>
-          <label class="auto"><input type="checkbox" id="auto-away" checked> Treat switching tabs as leaving</label>
-          <div class="catchup" id="catchup" hidden></div>
-          <div class="notes-head">Notifications</div>
-          <div class="notes" id="notes"><div class="empty">Nothing yet. Leave the match and COMEBACK will watch it for you.</div></div>
+    <section class="mon fan" aria-label="Fan device monitor">
+      <div class="mon-label"><span class="tally green" id="fan-tally"><i></i>FAN</span><span class="src" id="fan-src">DEVICE FEED</span></div>
+      <div class="screen fan-screen">
+        <div class="profiles" id="profiles" role="tablist" aria-label="Fan profile"></div>
+        <div class="fan-who" id="fan-card"></div>
+        <div class="presence" id="presence"></div>
+        <div class="actions">
+          <button class="key" id="btn-away">I'M AWAY</button>
+          <button class="key hot" id="btn-back">I'M BACK</button>
+          <button class="key" id="btn-join">JOIN AT 60'</button>
         </div>
+        <label class="auto"><input type="checkbox" id="auto-away" checked> switching tab = leaving</label>
+        <div class="catchup" id="catchup" hidden></div>
+        <div class="notes-head">NOTIFICATIONS</div>
+        <div class="notes" id="notes"></div>
       </div>
-    </aside>
+    </section>
+
+    <section class="mon small" aria-label="Tactical camera">
+      <div class="mon-label"><span class="tally amber"><i></i>CAM 2</span><span class="src">TACTICAL · TOP</span></div>
+      <div class="screen"><canvas id="tactical"></canvas></div>
+    </section>
+
+    <section class="mon small" aria-label="Match data">
+      <div class="mon-label"><span class="tally amber"><i></i>DATA</span><span class="src">MATCH ENGINE</span></div>
+      <div class="screen data" id="data"></div>
+    </section>
+
+    <section class="mon small" aria-label="Agents">
+      <div class="mon-label"><span class="tally amber" id="agents-tally"><i></i>AGENTS</span><span class="src">AGENT FRAMEWORK · FOUNDRY</span></div>
+      <div class="screen" id="agents"><div class="nosignal"><div class="bars"></div><span>NO SIGNAL</span></div></div>
+    </section>
+
+    <section class="mon small" aria-label="Audience">
+      <div class="mon-label"><span class="tally amber"><i></i>AUD</span><span class="src">AUDIENCE</span></div>
+      <div class="screen" id="audience"><div class="nosignal"><div class="bars"></div><span>NO SIGNAL</span></div></div>
+    </section>
+
+    <section class="mon wide" aria-label="Timeline">
+      <div class="mon-label"><span class="tally amber"><i></i>TL</span><span class="src">MOMENTUM · MOMENTS · ALERTS · ABSENCES</span>
+        <span class="legend">
+          <span><i class="lg-home"></i><b class="lg-home-name"></b></span><span><i class="lg-away"></i><b class="lg-away-name"></b></span>
+          <span><i class="lg-alert"></i>COME-BACK ALERT</span><span><i class="lg-awayband"></i>FAN AWAY</span>
+        </span></div>
+      <div class="screen"><canvas id="timeline"></canvas></div>
+    </section>
+
+    <section class="mon rundown-mon" aria-label="Rundown">
+      <div class="mon-label"><span class="tally amber"><i></i>RUNDOWN</span><span class="src">VERIFIED MOMENT CARDS</span></div>
+      <div class="screen rundown" id="cards"></div>
+    </section>
   </main>
 
-  <footer class="footer">
-    Synthetic data · fictional clubs and players · Microsoft Agent Framework agents on Microsoft Foundry
-  </footer>
-  <script src="/web/app.js"></script>
+  <script type="module" src="/web/js/main.js"></script>
 </body>
 </html>
