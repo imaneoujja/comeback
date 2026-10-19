@@ -2,6 +2,7 @@
 
 import { $, app, esc, teamColour, teamName, profile, sizeCanvas } from "./state.js";
 import { TYPE_LABEL, tag } from "./graphics.js";
+import { speak, stopSpeech } from "./voice.js";
 
 const LANG_LABEL = { en: "English", fr: "Français", es: "Español" };
 
@@ -169,14 +170,7 @@ export function renderCatchup(c) {
   $("#listen")?.addEventListener("click", () => speak(c.text, c.language));
 }
 
-function speak(text, lang) {
-  speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = { en: "en-GB", fr: "fr-FR", es: "es-ES" }[lang] || "en-GB";
-  speechSynthesis.speak(u);
-}
-
 export function hideCatchup() {
-  if ("speechSynthesis" in window) speechSynthesis.cancel();
+  stopSpeech();
   const el = $("#catchup"); el.hidden = true; el.innerHTML = "";
 }

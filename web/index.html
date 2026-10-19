@@ -25,6 +25,7 @@
       <span class="bar-score" id="bar-score"></span>
     </div>
     <div class="bar-right">
+      <button class="key on" id="auto-direct" title="One monitor on air at a time">AUTO DIRECT</button>
       <span class="ctl-label">RATE</span>
       <div class="seg" id="speeds" role="group" aria-label="Replay speed"></div>
       <button class="key" id="pause" aria-label="Pause">PAUSE</button>
@@ -32,8 +33,21 @@
     </div>
   </header>
 
+  <div class="welcome" id="welcome" role="dialog" aria-label="Welcome">
+    <div class="wl">
+      <div class="wl-k">COMEBACK · MATCHDAY CONTROL ROOM</div>
+      <ol>
+        <li><span>1</span>Watch the match.</li>
+        <li><span>2</span>Leave.</li>
+        <li><span>3</span>COMEBACK calls you back.</li>
+      </ol>
+      <div class="wl-go">CLICK ANYWHERE TO GO LIVE</div>
+      <div class="wl-f">Synthetic match · fictional clubs and players · Microsoft Agent Framework agents on Microsoft Foundry</div>
+    </div>
+  </div>
+
   <main class="gallery">
-    <section class="mon pgm" aria-label="Program monitor">
+    <section class="mon pgm" data-mon="pgm" aria-label="Program monitor">
       <div class="mon-label"><span class="tally red"><i></i>PGM</span><span class="src" id="pgm-src">CAM 1 · MAIN STAND</span><span class="src right" id="pgm-mode">LIVE</span></div>
       <div class="screen" id="pgm">
         <canvas id="pgm-canvas"></canvas>
@@ -54,7 +68,7 @@
       </div>
     </section>
 
-    <section class="mon fan" aria-label="Fan device monitor">
+    <section class="mon fan" data-mon="fan" aria-label="Fan device monitor">
       <div class="mon-label"><span class="tally green" id="fan-tally"><i></i>FAN</span><span class="src" id="fan-src">DEVICE FEED</span>
         <button class="pair-btn" id="pair-btn">PAIR PHONE</button></div>
       <div class="pair-box" id="pair-box" hidden></div>
@@ -74,27 +88,27 @@
       </div>
     </section>
 
-    <section class="mon small" aria-label="Tactical camera">
+    <section class="mon small" data-mon="cam2" aria-label="Tactical camera">
       <div class="mon-label"><span class="tally amber"><i></i>CAM 2</span><span class="src">TACTICAL · TOP</span></div>
       <div class="screen"><canvas id="tactical"></canvas></div>
     </section>
 
-    <section class="mon small" aria-label="Match data">
+    <section class="mon small" data-mon="data" aria-label="Match data">
       <div class="mon-label"><span class="tally amber"><i></i>DATA</span><span class="src">MATCH ENGINE</span></div>
       <div class="screen data" id="data"></div>
     </section>
 
-    <section class="mon small" aria-label="Agents">
+    <section class="mon small" data-mon="agents" aria-label="Agents">
       <div class="mon-label"><span class="tally amber" id="agents-tally"><i></i>AGENTS</span><span class="src">AGENT FRAMEWORK · FOUNDRY</span></div>
       <div class="screen" id="agents"><div class="nosignal"><div class="bars"></div><span>NO SIGNAL</span></div></div>
     </section>
 
-    <section class="mon small" aria-label="Audience">
+    <section class="mon small" data-mon="aud" aria-label="Audience">
       <div class="mon-label"><span class="tally amber"><i></i>AUD</span><span class="src">AUDIENCE</span></div>
       <div class="screen" id="audience"><div class="nosignal"><div class="bars"></div><span>NO SIGNAL</span></div></div>
     </section>
 
-    <section class="mon wide" aria-label="Timeline">
+    <section class="mon wide" data-mon="tl" aria-label="Timeline">
       <div class="mon-label"><span class="tally amber"><i></i>TL</span><span class="src">MOMENTUM · MOMENTS · ALERTS · ABSENCES</span>
         <span class="legend">
           <span><i class="lg-home"></i><b class="lg-home-name"></b></span><span><i class="lg-away"></i><b class="lg-away-name"></b></span>
@@ -103,7 +117,7 @@
       <div class="screen"><canvas id="timeline"></canvas></div>
     </section>
 
-    <section class="mon rundown-mon" aria-label="Rundown">
+    <section class="mon rundown-mon" data-mon="rundown" aria-label="Rundown">
       <div class="mon-label"><span class="tally amber"><i></i>RUNDOWN</span><span class="src">VERIFIED MOMENT CARDS</span></div>
       <div class="screen rundown" id="cards"></div>
     </section>

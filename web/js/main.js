@@ -9,6 +9,8 @@ import { drawTactical } from "./tactical.js";
 import { initAgents } from "./agents.js";
 import { initAudience } from "./audience.js";
 import { initPairing } from "./pairing.js";
+import { initFocus } from "./focus.js";
+import { unlockSpeech } from "./voice.js";
 
 let program = null;          // 3D renderer, or null → 2D fallback on the PGM canvas
 let lastFrame = performance.now();
@@ -45,8 +47,18 @@ async function boot() {
   initAgents();
   initAudience();
   initPairing();
-  connect();
+  initFocus();
   requestAnimationFrame(frame);
+  const goLive = () => {           // the match starts when the viewer is ready (and audio gets unlocked)
+    const w = $("#welcome");
+    if (w.classList.contains("gone")) return;
+    w.classList.add("gone");
+    setTimeout(() => w.remove(), 500);
+    unlockSpeech();
+    connect();
+  };
+  $("#welcome").addEventListener("click", goLive);
+  document.addEventListener("keydown", goLive, { once: true });
 }
 
 function buildControls() {

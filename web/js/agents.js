@@ -2,7 +2,7 @@
  * Steps arrive in bursts (cached LLM replies are instant), so they are replayed
  * one by one with a short delay: the viewer can actually follow a rejection. */
 
-import { $, esc, on } from "./state.js";
+import { $, esc, on, emit } from "./state.js";
 
 const NODES = [
   ["Engine", "ENGINE"], ["Analyst", "ANALYST"], ["Verifier", "VERIFIER"],
@@ -56,6 +56,7 @@ function show(s) {
     <span class="s">${STEP_LABEL[s.step] || s.step.toUpperCase()}${attempt}</span>
     <span class="d">${esc(s.label || "")}${s.detail ? ` · ${esc(s.detail)}` : ""}${s.cached ? " <i>cache</i>" : ""}</span></div>`);
   log.length = Math.min(log.length, 40);
+  emit("agent-shown", s);
   $("#ag-log").innerHTML = log.join("");
   renderCounts();
 }

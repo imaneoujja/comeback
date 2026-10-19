@@ -2,12 +2,14 @@
  * iPhone Safari cannot vibrate, so a call-back takes over the screen, rings, and
  * speaks the reason out loud in the fan's language (unlocked by the first tap). */
 
+import { speak, unlockSpeech, stopSpeech } from "./voice.js";
+
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-const VOICE_LANG = { en: "en-GB", fr: "fr-FR", es: "es-ES" };
 const session = new URLSearchParams(location.search).get("session");
 const st = { profile: null, present: true, notes: [], snapshot: null, teams: {} };
 let audio = null;
+let pendingSpeech = null;            // text waiting for the profile (its language) to arrive
 
 if (!session) {
   $("#pair-hint").textContent = "Open this page by scanning the QR code shown in the COMEBACK control room.";
@@ -34,7 +36,7 @@ function unlockSound() {
   audio = new (window.AudioContext || window.webkitAudioContext)();
   const buf = audio.createBuffer(1, 1, 22050);
   const src = audio.createBufferSource(); src.buffer = buf; src.connect(audio.destination); src.start(0);
-  if ("speechSynthesis" in window) speechSynthesis.speak(new SpeechSynthesisUtterance(" "));
+  unlockSpeech();
 }
 
 function ring(notes = [880, 1320, 880, 1320]) {
@@ -49,11 +51,8 @@ function ring(notes = [880, 1320, 880, 1320]) {
 }
 
 function say(text) {
-  if (!("speechSynthesis" in window)) return;
-  speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = VOICE_LANG[st.profile?.language] || "en-GB";
-  speechSynthesis.speak(u);
+  if (!st.profile) { pendingSpeech = text; return; }      // never guess the language
+  speak(text, st.profile.language);
 }
 
 /* ------------------------------------------------------------------ stream */
@@ -67,6 +66,7 @@ function connect() {
     Object.assign(st, { profile: s.profile, present: s.present, notes: [...s.notifications].reverse(), snapshot: s.snapshot });
     $("#pair").hidden = true; $("#main").hidden = false;
     render();
+    if (pendingSpeech) { const text = pendingSpeech; pendingSpeech = null; say(text); }
   });
   on("snapshot", (s) => { st.snapshot = s; renderScore(); });
   on("presence", (p) => { st.present = p.present; if (!p.present) $("#catchup").hidden = true; render(); });
@@ -111,7 +111,7 @@ function takeover(n) {
   setTimeout(() => say(n.text), 900);
 }
 
-function closeTakeover() { $("#takeover").hidden = true; }
+function closeTakeover() { $("#takeover").hidden = true; stopSpeech(); }
 
 function renderCatchup(c) {
   closeTakeover();
@@ -123,5 +123,5 @@ function renderCatchup(c) {
     <div class="cx">${esc(c.text)}</div>
     <div class="cf"><span>${c.source === "llm" ? "✓ STORYTELLER → VERIFIER" : "TEMPLATE · VERIFIED FACTS"}</span>
     <button class="btn" id="listen">▶ LISTEN</button></div>`;
-  $("#listen").addEventListener("click", () => say(c.text));
+  $("#listen").addEventListener("click", () => speak(c.text, c.language || st.profile?.language));
 }
