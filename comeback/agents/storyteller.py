@@ -20,7 +20,7 @@ from comeback.agents.verifier import (
     check_numerical_claims,
     check_scope,
 )
-from comeback.agents.workflow import WrittenResult, run_verified
+from comeback.agents.workflow import Tracer, WrittenResult, run_verified
 from comeback.fans.catchup import Bucket
 from comeback.fans.profiles import FanProfile
 from comeback.synth.teams import CLUBS
@@ -87,6 +87,10 @@ class StorytellerWriter:
     agent_name = "Storyteller"
     instructions = STORYTELLER_INSTRUCTIONS
 
+    def label(self, task: CatchupTask) -> str:
+        what = "story so far" if task.late_join else task.bucket.replace("_", " ")
+        return f"{task.profile.name} · {task.profile.language} · {what}"
+
     def _favourite_name(self, task: CatchupTask) -> str | None:
         pid = task.profile.favourite_player_id
         return task.roster[pid]["name"] if pid in task.roster else None
@@ -144,9 +148,9 @@ class StorytellerWriter:
         return {"text": " ".join([intro, *lines])}
 
 
-async def write_catchup(task: CatchupTask, gateway: LLMGateway) -> dict[str, Any]:
+async def write_catchup(task: CatchupTask, gateway: LLMGateway, trace: Tracer | None = None) -> dict[str, Any]:
     """Catch-up text plus provenance (via the verified-writing workflow)."""
-    result: WrittenResult = await run_verified(StorytellerWriter(), task, gateway)
+    result: WrittenResult = await run_verified(StorytellerWriter(), task, gateway, trace)
     return {
         "text": result.output["text"], "source": result.source, "verified": result.verified,
         "attempts": result.attempts, "fallback_reason": result.fallback_reason,

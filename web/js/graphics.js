@@ -40,12 +40,12 @@ export function renderTimecode(now) {
 }
 
 export function tag(item, kind = "Analyst") {
-  if (!item || item.pending) return `<span class="tag wait">${kind.toUpperCase()} WRITING…</span>`;
+  if (!item || item.pending) return `<span class="tags"><span class="tag wait">${kind.toUpperCase()} WRITING…</span></span>`;
   if (item.source === "llm") {
     const rev = item.attempts > 1 ? ` <span class="tag rev">REVISED ${item.attempts - 1}×</span>` : "";
-    return `<span class="tag">✓ ${kind.toUpperCase()} → VERIFIER</span>${rev}`;
+    return `<span class="tags"><span class="tag">✓ ${kind.toUpperCase()} → VERIFIER</span>${rev}</span>`;
   }
-  return `<span class="tag tpl">TEMPLATE · VERIFIED FACTS</span>`;
+  return `<span class="tags"><span class="tag tpl">TEMPLATE · VERIFIED FACTS</span></span>`;
 }
 
 export function showCue(cue) {

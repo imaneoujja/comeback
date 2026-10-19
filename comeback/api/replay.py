@@ -65,6 +65,11 @@ class ReplaySession:
         for queue in self._subscribers:
             queue.put_nowait({"type": kind, "data": data})
 
+    def trace(self, step: dict[str, Any]) -> None:
+        """Publish one step of the agents' work for the AGENTS monitor."""
+        st = self.brain.engine.state
+        self.publish("agent", {**step, "minute": st.minute, "period": st.period})
+
     # ------------------------------------------------------------ control
 
     def set_profile(self, profile: FanProfile) -> None:
@@ -110,6 +115,8 @@ class ReplaySession:
     def go_away(self) -> dict[str, Any]:
         t = self.brain.engine.state.t
         self.fan.go_away(t)
+        self.trace({"agent": "Watcher", "step": "watching", "label": self.fan.profile.name,
+                    "detail": "fan left · watching " + " & ".join(self.watcher.teams)})
         self.away_bands.append({"from_t": t, "to_t": None})
         self.publish("presence", {"present": False, "t": t, "away_bands": self.away_bands})
         return {"present": False, "t": t}
@@ -123,7 +130,9 @@ class ReplaySession:
             self.away_bands[-1]["to_t"] = t
         self.publish("presence", {"present": True, "t": t, "away_bands": self.away_bands})
         await self._drain_cards()
-        catchup = await self.brain.catchup(self.fan.profile, *window)
+        self.trace({"agent": "Watcher", "step": "back", "label": self.fan.profile.name,
+                    "detail": f"back after {round((window[1] - window[0]) / 60)} min → Storyteller"})
+        catchup = await self.brain.catchup(self.fan.profile, *window, trace=self.trace)
         catchup |= {"from_t": window[0], "to_t": window[1]}
         self.publish("catchup", catchup)
         return catchup
@@ -143,7 +152,9 @@ class ReplaySession:
         self.away_bands.append({"from_t": 0.0, "to_t": t, "late_join": True})
         await self._drain_cards()
         self.publish("state", self.state_message())
-        catchup = await self.brain.catchup(self.fan.profile, 0.0, t, late_join=True)
+        self.trace({"agent": "Watcher", "step": "join", "label": self.fan.profile.name,
+                    "detail": "joined late → Storyteller: the story so far"})
+        catchup = await self.brain.catchup(self.fan.profile, 0.0, t, late_join=True, trace=self.trace)
         catchup |= {"from_t": 0.0, "to_t": t, "late_join": True}
         self.publish("catchup", catchup)
         self._wake.set()
@@ -165,11 +176,21 @@ class ReplaySession:
                 self.publish("cue", cue)
         for moment in update.moments:
             self.publish("card", self.brain.cards[moment.moment_id])
+            if moment.importance >= 50 and moment.type != "danger_peak":
+                label = f"{moment.minute}' {moment.type.replace('_', ' ')}"
+                detail = f"{moment.team or 'match'} · importance {moment.importance} · {len(moment.facts)} facts"
+                self.trace({"agent": "Engine", "step": "moment", "label": label, "detail": detail})
         timeline = self.brain.engine.timeline
         if timeline and timeline[-1]["t"] == event["t"]:
             self.publish("timeline", timeline[-1])
         for note in self.watcher.on_update(self.brain.engine, update):
             self.publish("notification", note.__dict__)
+            if note.kind == "come_back":
+                detail = (f"{note.team} danger {note.facts['danger']} & rising · "
+                          f"{note.facts['box_entries']} box entries in 2' → alert sent")
+            else:
+                detail = f"goal while away ({note.facts['score']}) → notified"
+            self.trace({"agent": "Watcher", "step": note.kind, "label": self.fan.profile.name, "detail": detail})
         self.publish("snapshot", self.brain.engine.snapshot())
         return update
 
@@ -199,7 +220,7 @@ class ReplaySession:
         while True:
             moment = await self._card_queue.get()
             try:
-                card = await self.brain.write_card(moment)
+                card = await self.brain.write_card(moment, trace=self.trace)
                 self.publish("card", card)
             except Exception:
                 log.exception("card writing failed for %s", moment.moment_id)

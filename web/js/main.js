@@ -6,6 +6,7 @@ import {
   renderData, renderRundown, drawTimeline, renderProfiles, renderPresence, renderNotes, renderCatchup, hideCatchup, buzz,
 } from "./panels.js";
 import { drawTactical } from "./tactical.js";
+import { initAgents } from "./agents.js";
 
 let program = null;          // 3D renderer, or null → 2D fallback on the PGM canvas
 let lastFrame = performance.now();
@@ -39,6 +40,7 @@ async function boot() {
     $("#pgm-src").textContent = "CAM 2 · TACTICAL (3D UNAVAILABLE)";
   }
   buildControls();
+  initAgents();
   connect();
   requestAnimationFrame(frame);
 }
@@ -104,6 +106,7 @@ function connect() {
     renderPresence();
   });
   on("catchup", renderCatchup);
+  on("agent", () => {});         // forwarded to the AGENTS monitor through emit()
   on("end", () => put("banner", `<div class="bn" style="--team:#ecebe6"><div class="bn-k">FULL-TIME</div>
       <div class="bn-t">${app.teams[app.home].name} ${app.snapshot?.score_str ?? ""} ${app.teams[app.away].name}</div></div>`, 120, 999));
 }

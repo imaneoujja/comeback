@@ -185,3 +185,12 @@ def test_catchup_length_adapts_to_the_absence() -> None:
     assert length_bucket(600) == "key_moments"
     assert length_bucket(1500) == "full_story"
     assert length_bucket(30, late_join=True) == "full_story"
+
+
+def test_workflow_traces_each_step_for_the_control_room() -> None:
+    bad = card("Kestrel scores his 9th", "A 1-2 that changes everything.")
+    steps = []
+    asyncio.run(run_verified(AnalystWriter(), task(), FakeGateway([bad, GOOD]), steps.append))
+    assert [(s["agent"], s["step"]) for s in steps] == [
+        ("Analyst", "draft"), ("Verifier", "rejected"), ("Analyst", "draft"), ("Verifier", "verified")]
+    assert "9" in steps[1]["detail"] and steps[0]["label"] == "71' goal"

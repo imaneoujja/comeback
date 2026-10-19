@@ -12,6 +12,7 @@ from comeback.agents.analyst import AnalystTask, needs_analyst, write_moment_car
 from comeback.agents.llm import LLMGateway
 from comeback.agents.storyteller import CatchupTask, write_catchup
 from comeback.agents.templates import moment_card_text
+from comeback.agents.workflow import Tracer
 from comeback.engine.match import EngineUpdate, MatchEngine
 from comeback.engine.moments import Moment
 from comeback.fans.catchup import build_delta, length_bucket, select_cards
@@ -51,17 +52,17 @@ class MatchBrain:
         return {"score": f"{self.team_names[st.home]} {st.score_str()} {self.team_names[st.away]}",
                 "players_on_pitch": {self.team_names[c]: n for c, n in st.players_on_pitch.items()}}
 
-    async def write_card(self, moment: Moment) -> dict[str, Any]:
+    async def write_card(self, moment: Moment, trace: Tracer | None = None) -> dict[str, Any]:
         """Run Analyst → Verifier for one moment and upgrade the stored card."""
         data = moment.to_dict()
         situation = self._situations.get(moment.moment_id) or self._situation()
         task = AnalystTask(data, self.team_names, self.roster, self._recent_headlines(moment.t), situation)
-        card = {**await write_moment_card(task, self.gateway), "pending": False}
+        card = {**await write_moment_card(task, self.gateway, trace), "pending": False}
         self.cards[moment.moment_id] = card
         return card
 
     async def catchup(self, profile: FanProfile, from_t: float, to_t: float,
-                      late_join: bool = False) -> dict[str, Any]:
+                      late_join: bool = False, trace: Tracer | None = None) -> dict[str, Any]:
         """Personalised catch-up for the window ``[from_t, to_t]``."""
         cards = sorted(self.cards.values(), key=lambda c: c["t"])
         in_window = [c for c in cards if from_t <= c["t"] <= to_t]
@@ -69,4 +70,4 @@ class MatchBrain:
         selected = select_cards(cards, from_t, to_t, profile, bucket)
         delta = build_delta(self.engine.timeline, self.engine.snapshot(), from_t, self.team_names, in_window)
         task = CatchupTask(profile, bucket, selected, delta, self.team_names, self.roster, late_join)
-        return await write_catchup(task, self.gateway)
+        return await write_catchup(task, self.gateway, trace)

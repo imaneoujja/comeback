@@ -19,7 +19,7 @@ from comeback.agents.verifier import (
     check_numerical_claims,
     check_scope,
 )
-from comeback.agents.workflow import WrittenResult, run_verified
+from comeback.agents.workflow import Tracer, WrittenResult, run_verified
 from comeback.synth.teams import CLUBS
 
 ANALYST_MIN_IMPORTANCE = 50
@@ -81,6 +81,9 @@ class AnalystWriter:
     agent_name = "Analyst"
     instructions = ANALYST_INSTRUCTIONS
 
+    def label(self, task: AnalystTask) -> str:
+        return f"{task.moment['minute']}' {task.moment['type'].replace('_', ' ')}"
+
     def prompt(self, task: AnalystTask, feedback: list[str]) -> str:
         m = task.moment
         payload: dict[str, Any] = {
@@ -134,11 +137,11 @@ def to_card(moment: dict[str, Any], result: WrittenResult) -> dict[str, Any]:
     }
 
 
-async def write_moment_card(task: AnalystTask, gateway: LLMGateway) -> dict[str, Any]:
+async def write_moment_card(task: AnalystTask, gateway: LLMGateway, trace: Tracer | None = None) -> dict[str, Any]:
     """Moment Card via Analyst → Verifier workflow (or a direct template for minor moments)."""
     if not needs_analyst(task.moment):
         result = WrittenResult(moment_card_text(task.moment, task.team_names), "template", True, 0, [],
                                "minor moment: no LLM call")
     else:
-        result = await run_verified(AnalystWriter(), task, gateway)
+        result = await run_verified(AnalystWriter(), task, gateway, trace)
     return to_card(task.moment, result)
