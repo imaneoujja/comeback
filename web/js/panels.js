@@ -39,7 +39,8 @@ export function renderData() {
 /* ------------------------------------------------------------------ RUNDOWN */
 
 export function renderRundown() {
-  const list = [...app.cards.values()].filter((c) => c.importance >= 50 && c.type !== "danger_peak").sort((x, y) => y.t - x.t);
+  const list = [...app.cards.values()].filter((c) => (c.importance >= 50 && c.type !== "danger_peak") || c.type === "milestone")
+    .sort((x, y) => y.t - x.t);
   $("#cards").innerHTML = list.length ? list.map((c) => `
     <div class="rd" style="--team:${teamColour(c.team)}"><span class="tcx">${c.minute}'</span><span class="ty">${TYPE_LABEL[c.type] || c.type}</span>
     <span class="hl" title="${esc(c.why_it_matters)}">${esc(c.headline)}</span>${tag(c)}</div>`).join("")

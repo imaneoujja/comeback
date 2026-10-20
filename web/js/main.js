@@ -3,7 +3,7 @@
 import { $, app, MATCH_ID, SPEEDS, post, newSessionId, applyEvent, step, emit, on as onMessage, profile } from "./state.js";
 import {
   renderScore, renderTimecode, showCue, expireOverlays, refreshBanner, clearOverlays, put, favouriteTag, renderMetric,
-  renderGazette,
+  renderGazette, milestoneTag,
 } from "./graphics.js";
 import {
   renderData, renderRundown, drawTimeline, renderProfiles, renderPresence, renderNotes, renderCatchup, hideCatchup, buzz,
@@ -17,8 +17,11 @@ import { initFocus } from "./focus.js";
 import { unlockSpeech } from "./voice.js";
 import { isReplaying, buffer, playReplay, playVoice, interruptForLive, unlockAudio } from "./replay.js";
 import { initPicker, openPicker } from "./picker.js";
-import { initStory, startStory, exitStory, storyActive, nightClock } from "./story.js";
+import { initStory, startStory, exitStory, storyActive, storyClock } from "./story.js";
+import { initStoryViews } from "./storyviews.js";
 import { initFactCheck } from "./factcheck.js";
+import { initDecisions } from "./decision.js";
+import { initCues } from "./cues.js";
 
 let program = null;          // 3D renderer, or null → 2D fallback on the PGM canvas
 const LATE_JOIN = { reda: 60 }; // demo fans who join the match late (minute)
@@ -59,6 +62,9 @@ async function boot() {
   initPairing();
   initFocus();
   initFactCheck();
+  initDecisions();
+  initCues();
+  initStoryViews();
   initToast();
   initPicker({ onPick: pick, onStory: playStory });
   initStory({ restart, setMode, setSpeed, pick, openPicker });
@@ -127,7 +133,7 @@ function buildControls() {
   $("#tk-open").addEventListener("click", () => setMode("studio"));
   $("#outage-btn").addEventListener("click", () => post(`outage?down=${!app.outage}`));
   onMessage("open-picker", openPicker);
-  const clock = () => { $("#ph-time").textContent = nightClock() || new Date().toTimeString().slice(0, 5); };
+  const clock = () => { $("#ph-time").textContent = storyClock() || new Date().toTimeString().slice(0, 5); };
   clock(); setInterval(clock, 1000);
   document.addEventListener("visibilitychange", () => {
     if (!$("#auto-away").checked || !app.es || storyActive()) return;   // the guided story drives presence itself
@@ -158,6 +164,8 @@ function connect() {
   const on = (type, fn) => es.addEventListener(type, (m) => { const d = JSON.parse(m.data); fn(d); emit(type, d); });
   on("state", onState);
   on("event", (e) => {
+    app.eventsById.set(e.id, e);                  // the decision chain cites events by id
+    if (app.eventsById.size > 900) app.eventsById.delete(app.eventsById.keys().next().value);
     if (isReplaying()) {                        // the program feed is showing a replay
       buffer(e);
       if (e.type !== "goal") return;
@@ -177,7 +185,11 @@ function connect() {
   on("snapshot", (s) => { app.snapshot = s; app.snapshotAt = performance.now(); renderScore(); renderMetric(profile()); });
   on("gazette", (g) => { renderGazette(g, profile()); renderCatchup({ ...g, late_join: false }); playVoice(g); });
   on("cue", (c) => { if (!isReplaying()) showCue(c); });   // live graphics wait during a replay
-  on("card", (c) => { app.cards.set(c.moment_id, c); renderRundown(); refreshBanner(c); });
+  on("card", (c) => {
+    const isNew = !app.cards.has(c.moment_id);
+    app.cards.set(c.moment_id, c); renderRundown(); refreshBanner(c);
+    if (isNew && c.type === "milestone" && !isReplaying()) milestoneTag(c);
+  });
   on("timeline", (t) => app.timeline.push(t));
   on("notification", (n) => { app.notes.unshift(n); renderNotes(); buzz(n.kind === "come_back"); toast(n); });
   on("presence", (p) => {
@@ -192,7 +204,7 @@ function connect() {
     playReplay(c, program);
   });
   on("agent", () => {});         // forwarded to the AGENTS monitor through emit()
-  on("crowd", () => {});         // forwarded to the AUD monitor
+  on("crowd", (c) => { app.crowd = c; });   // also drawn by the AUD monitor
   on("device", () => {});        // phone paired / unpaired
   on("outage", (o) => renderOutage(o.down));
   on("end", () => put("banner", `<div class="bn" style="--team:#ecebe6"><div class="bn-k">FULL-TIME</div>
@@ -204,11 +216,18 @@ function onState(s) {
     speed: s.speed, paused: s.paused, profileId: s.profile.id, present: s.present, awayBands: s.away_bands,
     snapshot: s.snapshot, snapshotAt: performance.now(), timeline: s.timeline, lineup: s.lineup,
     cards: new Map(s.cards.map((c) => [c.moment_id, c])), notes: [...s.notifications].reverse(),
-    possession: s.snapshot.possession,
+    possession: s.snapshot.possession, crowd: s.crowd,
   });
   renderControls(); renderScore(); renderProfiles(); renderPresence(); renderNotes(); renderRundown(); renderData();
   renderMetric(profile());
   renderOutage(Boolean(s.outage));
+  const fav = profile()?.favourite_player_id;               // sprints before a join or a seek were not streamed
+  if (fav) {
+    fetch(`/api/session/${app.session}/player/${fav}`).then((r) => r.json()).then((pl) => {
+      app.topSpeed[fav] = Math.max(app.topSpeed[fav] || 0, pl.stats.top_speed_kmh || 0) || undefined;
+      renderMetric(profile());
+    }).catch(() => {});
+  }
   if (program) program.setFavourite(profile()?.favourite_player_id || null);
   $("#btn-join").disabled = s.snapshot.period === 2 && s.snapshot.minute >= 60;
   joinIfLate();

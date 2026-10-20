@@ -5,7 +5,7 @@ import { $, app, esc, teamColour, teamName } from "./state.js";
 
 const LANG = { en: "English", fr: "Français", es: "Español" };
 const HOOK = {
-  omar: "Watching a 4 a.m. kick-off from another time zone. Leave whenever you like: COMEBACK calls Omar back.",
+  omar: "Steps away at 63' for a kids' match next door. COMEBACK calls Omar back before the big moment.",
   sofia: "Supports the other side. Same match, another story, in English.",
   reda: "Follows one striker. Joins at 60' and gets the story so far, in Spanish.",
 };
@@ -30,7 +30,7 @@ export function initPicker({ onPick, onStory }) {
   $("#wl-story").addEventListener("click", () => { closePicker(); handlers.onStory(); });
   $("#welcome").classList.remove("loading");          // the match is loaded: the choices become live
   $("#wl-story").disabled = false;
-  $("#wl-story-t").textContent = "Play the 90-second story";
+  $("#wl-story-t").textContent = "Play the story";
   $("#wl-story").focus();
   $("#wl-x").addEventListener("click", closePicker);
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("#wl-x").hidden) closePicker(); });

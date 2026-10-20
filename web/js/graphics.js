@@ -23,11 +23,32 @@ export function renderScore() {
   $("#clock").textContent = clockText(s);
   $("#bar-score").innerHTML = `<b style="color:${teamColour(s.home)}">${s.home}</b><span>${s.score[s.home]}–${s.score[s.away]}</span>
     <b style="color:${teamColour(s.away)}">${s.away}</b><span class="m">${clockText(s)}</span>`;
-  $("#danger").innerHTML = `<div class="dg-title">DANGER · LAST 2 MIN · 0–100</div>` + [s.home, s.away].map((code) => {
+  const analyst = level() === "analyst";          // numbers for analysts, words for casual fans
+  const word = (d) => (d >= 44 ? "HIGH" : d >= 25 ? "BUILDING" : "CALM");
+  const trend = (sl) => (sl > 2 ? " ▲" : sl < -2 ? " ▼" : "");
+  $("#danger").innerHTML = `<div class="dg-title">${analyst ? "DANGER · LAST 2 MIN · 0–100" : "HOW CLOSE TO A CHANCE"}</div>` + [s.home, s.away].map((code) => {
     const t = s.teams[code];
     const hot = t.danger >= 55 && t.danger_slope > 0;
-    return `<div class="dg-row ${hot ? "hot" : ""}"><b>${code}</b><div class="dg-bar"><i style="width:${Math.min(100, t.danger)}%;background:${teamColour(code)}"></i></div><span class="dg-val">${Math.round(t.danger)}</span></div>`;
+    return `<div class="dg-row ${hot ? "hot" : ""}"><b>${code}</b><div class="dg-bar"><i style="width:${Math.min(100, t.danger)}%;background:${teamColour(code)}"></i></div><span class="dg-val">${analyst ? Math.round(t.danger) + trend(t.danger_slope) : word(t.danger)}</span></div>`;
   }).join("");
+  renderControl();
+}
+
+/** Control vs chaos, live: who controls ball and passing (last 5 min), and how broken the game is. */
+export function renderControl() {
+  const s = app.snapshot;
+  if (!s) return;
+  const h = s.teams[s.home].control, a = s.teams[s.away].control;
+  const share = h + a > 0 ? h / (h + a) : 0.5;
+  const chaos = s.chaos_per_min;
+  const mood = chaos >= 3.2 ? "end to end, chaotic" : chaos >= 2 ? "open game" : "calm, controlled";
+  const leader = share >= 0.6 ? s.home : share <= 0.4 ? s.away : null;
+  const bar = `<div class="cc-bar"><i style="width:${(share * 100).toFixed(0)}%;background:${teamColour(s.home)}"></i><i style="background:${teamColour(s.away)}"></i></div>`;
+  $("#control").innerHTML = level() === "analyst"
+    ? `<div class="cc-k">CONTROL vs CHAOS · 5 MIN</div>${bar}
+       <div class="cc-v">${s.home} <b>${h.toFixed(2)}</b> · ${s.away} <b>${a.toFixed(2)}</b> · chaos <b>${chaos.toFixed(1)}</b>/min</div>`
+    : `<div class="cc-k">THE GAME RIGHT NOW</div>${bar}
+       <div class="cc-v">${leader ? `<b>${esc(teamName(leader))}</b> in control` : "Nobody in control"} · ${mood}</div>`;
 }
 
 /** SMPTE-style timecode (25 fps) running between snapshots. */
@@ -195,4 +216,17 @@ export function momentBanner(card) {
   return `<div class="bn ${goal ? "goal" : ""}" style="--team:${teamColour(card.team)}">
     <div class="bn-k">${TYPE_LABEL[card.type] || ""} · ${card.minute}'${esc(score)}</div>
     <div class="bn-t">${esc(card.headline || TYPE_LABEL[card.type])}</div>${why}<div class="bn-f">${tag(card)}</div></div>`;
+}
+
+/** Milestones (top speed, 50 completed passes, fastest shot so far): a short top-right graphic. */
+export function milestoneTag(card) {
+  const f = card.facts || {};
+  const [title, value] = {
+    top_speed_so_far: ["TOP SPEED OF THE MATCH", `${f.speed_kmh} KM/H`],
+    "50_completed_passes": ["50 COMPLETED PASSES", `${Math.round((f.pass_accuracy || 0) * 100)}% ACCURACY`],
+    fastest_shot_so_far: ["FASTEST SHOT OF THE MATCH", `${f.shot_speed_kmh} KM/H`],
+  }[f.milestone] || ["MILESTONE", ""];
+  put("top_right", `<div class="stat" style="--team:${teamColour(card.team)}"><div class="stat-k">MILESTONE · ${title}</div>
+    <div class="stat-m" style="font-size:20px;font-weight:700">${esc(f.player_name || "")}</div>
+    <div class="stat-s">${value}</div></div>`, 4, 45);
 }

@@ -24,7 +24,7 @@ export function initFactCheck() {
 
 function show(s) {
   if (current?.label === s.label) return;                  // already on screen: the outcome will follow
-  if (storyActive() && storyStep() < 7) return;            // the guided story shows its own fact-check later
+  if (storyActive() && storyStep() < 8) return;            // the guided story shows its fact-check in act 3
   const { quote, reason } = parse(s.detail);
   const el = $("#factcheck");
   el.innerHTML = `<div class="fc-k"><span>AI CREW · FACT-CHECK</span><span>${esc(s.label.toUpperCase())}</span></div>

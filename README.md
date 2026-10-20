@@ -341,7 +341,10 @@ corners, high regains and successful pressure, squashed with tanh.
 
 ## Broadcast overlay API
 
-`GET /api/overlays/demo-comeback?profile=omar` returns timed, renderer-agnostic cues:
+Every endpoint is documented live by FastAPI at **`/docs`** (OpenAPI), on the
+[public demo](https://comeback.lemonforest-f9ddbdf8.switzerlandnorth.azurecontainerapps.io/docs) or locally at
+http://localhost:8000/docs. The STUDIO view's **CUES** monitor shows the same cues streaming as the match is
+rendered. `GET /api/overlays/demo-comeback?profile=omar` returns timed, renderer-agnostic cues:
 
 ```json
 {"cue_id": "c00352", "t_in": 4425.2, "t_out": 4430.2, "layer": "top_right",

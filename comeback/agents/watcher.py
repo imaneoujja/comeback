@@ -86,8 +86,28 @@ class Watcher:
             pressure = pressure_texts(lang, reasons["box_entries"], reasons["shots"])
             text = ALERT_TEXT["defending"][lang].format(team=names[club], opponent=names[team], **pressure)
         facts = {"danger": round(danger), "score": st.score_str(),
-                 **{k: v for k, v in reasons.items() if k != "evidence_event_ids"}}
+                 **{k: v for k, v in reasons.items() if k != "evidence_event_ids"},
+                 "decision": self._decision(engine, team, e, club)}
         return Notification("come_back", e["t"], e["minute"], team, text, facts, list(reasons["evidence_event_ids"]))
+
+    def _decision(self, engine: MatchEngine, team: str, e: dict[str, Any], club: str | None) -> dict[str, Any]:
+        """Why this fan, why now: every condition the rule checked, for the visible decision chain."""
+        rule = self.trackers[team].rule
+        _, slope = engine.danger_now(team)
+        away_since = self.session.away_since
+        return {
+            "threshold": rule.threshold, "slope": round(slope, 1), "min_slope": rule.min_slope,
+            "since_own_shot_s": round(min(engine.state.seconds_since_shot(team), 9999)),
+            "quiet_after_shot_s": rule.quiet_after_shot_s, "cooldown_s": rule.cooldown_s,
+            "away_for_s": round(e["t"] - away_since) if away_since is not None else None,
+            "relation": "attacking" if club == team else "defending" if club else "neutral",
+            "fan_team": club, "alert_number": self.session.alerts_this_absence + 1,
+            "max_alerts": MAX_ALERTS_PER_ABSENCE,
+        }
+
+    def phrase_for(self, engine: MatchEngine, team: str, e: dict[str, Any], danger: float) -> str:
+        """The call-back text this fan would get for the same moment (used to show personalisation side by side)."""
+        return self._come_back(engine, team, e, danger).text
 
     def _called_it(self, e: dict[str, Any]) -> Notification | None:
         """A goal right after a call-back for the scoring team, with the fan back: the alert was right."""

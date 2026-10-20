@@ -17,7 +17,7 @@ export const app = {
   snapshot: null, snapshotAt: performance.now(), timeline: [], cards: new Map(), notes: [], awayBands: [], present: true,
   lineup: {}, possession: null, holder: null,
   ball: { x: L / 2, y: W / 2, z: 0 }, ballAnim: null, pos: {},
-  events: [], durationT: 5700, listeners: {}, topSpeed: {}, lastFavTag: 0,
+  events: [], durationT: 5700, listeners: {}, topSpeed: {}, lastFavTag: 0, eventsById: new Map(), crowd: null,
 };
 
 window.__comeback = app;   // read-only handle for automated UI checks and debugging

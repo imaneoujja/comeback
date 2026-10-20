@@ -41,13 +41,15 @@
   <div class="welcome loading" id="welcome" role="dialog" aria-modal="true" aria-labelledby="wl-h">
     <div class="wl">
       <button class="wl-x" id="wl-x" aria-label="Close" hidden>×</button>
-      <div class="wl-k">COMEBACK</div>
-      <h1 class="wl-h" id="wl-h">You can't stay up for 90 minutes.<br><em>COMEBACK wakes you up for the 10 that matter.</em></h1>
-      <p class="wl-p">A 4 a.m. kick-off in your time zone? Go to sleep. COMEBACK watches the match, wakes you
-        <b>before</b> the big moments with the reason, and tells you what you missed: in your language, from your side.</p>
-      <p class="wl-promise">The stream asks you to watch. COMEBACK lets you not watch, without missing what matters.</p>
+      <div class="wl-k">COMEBACK · AN AI MATCH INSIGHTS ENGINE FOR STUDIO AND STREAMING</div>
+      <h1 class="wl-h" id="wl-h">You left the match.<br><em>COMEBACK didn't.</em></h1>
+      <p class="wl-p">It reads every event live, explains why moments matter and personalizes them for each fan: their
+        language, their side, and what they saw or missed. Step away, and it calls you back <b>before</b> the big moment,
+        then shows you what changed.</p>
+      <p class="wl-promise">Put your phone away. COMEBACK will tell you when it matters.</p>
       <button class="wl-story" id="wl-story" disabled><span class="wl-play">▶</span>
-        <span><b id="wl-story-t">Loading the match…</b><small>A 4 a.m. kick-off. Omar falls asleep at 63'. The phone buzzes before the goal.</small></span></button>
+        <span><b id="wl-story-t">Loading the match…</b><small>Omar goes pitchside for a kids' match. One buzz at the right
+          time, a replay, the goal live, then backstage.</small></span></button>
       <div class="wl-or">or pick a fan and watch the match yourself</div>
       <div class="wl-fans" id="wl-fans"></div>
       <dl class="wl-proof">
@@ -55,7 +57,9 @@
         <div><dt>60 s</dt><dd>median warning before those goals</dd></div>
         <div><dt>5.0/5</dt><dd>groundedness of the 23 AI-written texts in the demo (Microsoft Foundry evaluations)</dd></div>
       </dl>
-      <div class="wl-f">Synthetic match · fictional clubs and players · Microsoft Agent Framework · Microsoft Foundry · Azure AI Speech</div>
+      <div class="wl-vision">The future of football isn't more screens. It's a match that fits your life.</div>
+      <div class="wl-f">Demo match: scripted storyline · alert metrics measured on unscripted matches · fictional clubs and players ·
+        Microsoft Agent Framework · Microsoft Foundry · Azure AI Speech</div>
     </div>
   </div>
 
@@ -84,6 +88,21 @@
         <div class="replay-bug" id="replay-bug" hidden><i></i>REPLAY · <span id="replay-label">WHILE YOU WERE AWAY</span></div>
         <div class="gazette" id="gazette" hidden></div>
         <div class="factcheck" id="factcheck" hidden></div>
+        <div class="gfx control-gfx" id="control"></div>
+        <div class="pitchside" id="pitchside" hidden>
+          <div class="ps-scene">
+            <div class="ps-k">ACT 1 · PITCHSIDE</div>
+            <div class="ps-t">Omar is at a kids' match next door.</div>
+            <div class="ps-s">TV off · phone in the pocket · COMEBACK keeps watching</div>
+            <div class="ps-pitch" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><b></b></div>
+          </div>
+          <div class="ps-live">
+            <div class="ps-lk"><span class="tally live"><i></i></span>WHAT COMEBACK SEES · LIVE EVENTS</div>
+            <div class="ps-feed" id="ps-feed"></div>
+            <div class="ps-dc" id="ps-dc"></div>
+          </div>
+        </div>
+        <div class="personalize" id="personalize" hidden></div>
         <div class="outage-badge" id="outage-badge" hidden><i></i>LLM OFFLINE · FAILURE DRILL · AGENTS ON VERIFIED TEMPLATES</div>
         <div class="away-strip" id="away-veil" hidden><i></i><b>FAN AWAY · COMEBACK IS WATCHING</b>
           <span>will call them back before the big moment</span></div>
@@ -149,6 +168,18 @@
     <section class="mon rundown-mon" data-mon="rundown" aria-label="Rundown">
       <div class="mon-label"><span class="tally amber"><i></i>RUNDOWN</span><span class="src">VERIFIED MOMENT CARDS</span></div>
       <div class="screen rundown" id="cards"></div>
+    </section>
+
+    <section class="mon half" data-mon="cues" aria-label="Overlay cue feed">
+      <div class="mon-label"><span class="tally amber" id="cues-tally"><i></i>CUES</span><span class="src">OVERLAY CUE FEED · TIMED JSON FOR A BROADCAST RENDERER</span>
+        <a class="src right mono-link" href="/api/overlays/demo-comeback" target="_blank" rel="noopener">GET /api/overlays</a>
+        <a class="src mono-link" href="/docs" target="_blank" rel="noopener">/docs</a></div>
+      <div class="screen cues" id="cues"><div class="empty">Cues appear as the match is rendered…</div></div>
+    </section>
+
+    <section class="mon half" data-mon="decisions" aria-label="Watcher decisions">
+      <div class="mon-label"><span class="tally amber" id="decisions-tally"><i></i>DECISIONS</span><span class="src">WATCHER · WHY THIS FAN, WHY NOW</span></div>
+      <div class="screen decisions" id="decisions"><div class="empty">No call-back yet. Leave the match and the Watcher's reasoning appears here.</div></div>
     </section>
   </main>
 

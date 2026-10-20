@@ -17,6 +17,12 @@ export function initFocus() {
   on("replay-start", () => request("pgm", 90, 7));            // the replay is the shot
   on("replay-end", () => { if (current.id === "pgm") current.until = 0; request("fan", 10, 3); });
   on("gazette", () => request("pgm", 30, 6));
+  on("focus", ({ id, seconds }) => {                           // the guided story points at a monitor: at once
+    if (!auto) return;
+    queue = [];
+    current = { id, until: performance.now() + seconds * 1000, priority: 9 };
+    apply();
+  });
   on("agent-shown", (s) => {
     if (s.agent === "Verifier") request("agents", s.step === "rejected" ? 5 : 3, s.step === "rejected" ? 2.5 : 1);
   });

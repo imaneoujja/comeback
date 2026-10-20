@@ -193,14 +193,24 @@ def test_a_scheduled_absence_is_applied_at_exact_minutes() -> None:
             if event["period"] == 2 and event["minute"] >= 72:
                 break
         await replay.stop()
-        catchups = []
+        catchups, calls = [], []
         while not queue.empty():
             message = queue.get_nowait()
             if message["type"] == "catchup":
                 catchups.append(message["data"])
-        return replay.away_bands, catchups[0] if catchups else None
+            elif message["type"] == "notification" and message["data"]["kind"] == "come_back":
+                calls.append(message["data"])
+        return replay.away_bands, catchups[0] if catchups else None, calls
 
-    bands, catchup = asyncio.run(scenario())
+    bands, catchup, calls = asyncio.run(scenario())
+    # every call-back carries its decision chain and the same moment as the other demo fans get it
+    decision = calls[-1]["facts"]["decision"]
+    assert decision["relation"] == "attacking" and decision["alert_number"] == 2 and decision["away_for_s"] > 0
+    assert calls[-1]["facts"]["danger"] >= decision["threshold"] and decision["slope"] >= decision["min_slope"]
+    assert calls[-1]["evidence_event_ids"]
+    variants = calls[-1]["variants"]
+    assert {v["language"] for v in variants.values()} == {"fr", "en", "es"}
+    assert len({v["text"] for v in variants.values()}) == 3
     (band,) = bands
     assert 7 * 60 <= band["to_t"] - band["from_t"] <= 8 * 60          # 63' → 70.5'
     assert catchup and catchup["source"] == "llm" and catchup["audio"] and catchup["delta"]["away_minutes"] == 7

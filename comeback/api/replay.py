@@ -18,7 +18,7 @@ from comeback.agents.speech import SpeechGateway
 from comeback.agents.watcher import Watcher
 from comeback.engine.match import EngineUpdate, load_match
 from comeback.fans.crowd import Crowd
-from comeback.fans.profiles import FanProfile
+from comeback.fans.profiles import FanProfile, load_profiles
 from comeback.fans.session import FanSession
 
 log = logging.getLogger(__name__)
@@ -50,6 +50,7 @@ class ReplaySession:
         self.brain = MatchBrain(self.meta, self.llm)
         self.crowd = Crowd(self.brain.engine, CROWD_SIZE)
         self.speech = SpeechGateway()
+        self.demo_profiles = load_profiles()
         self.speed = speed if speed in SPEEDS else 10
         self.index = 0
         self.paused = False
@@ -263,7 +264,10 @@ class ReplaySession:
         if timeline and timeline[-1]["t"] == event["t"]:
             self.publish("timeline", timeline[-1])
         for note in self.watcher.on_update(self.brain.engine, update):
-            self.publish("notification", note.__dict__)
+            payload = note.__dict__
+            if note.kind == "come_back":   # the same moment as every demo fan would get it: language, level, side
+                payload = {**payload, "variants": self._variants(note, event)}
+            self.publish("notification", payload)
             if note.kind == "come_back":
                 detail = (f"{note.team} danger {note.facts['danger']} & rising · "
                           f"{note.facts['box_entries']} box entries in 2' → alert sent")
@@ -309,6 +313,16 @@ class ReplaySession:
                 log.exception("card writing failed for %s", moment.moment_id)
             finally:
                 self._card_queue.task_done()
+
+    def _variants(self, note: Any, event: dict[str, Any]) -> dict[str, dict[str, Any]]:
+        engine, out = self.brain.engine, {}
+        for pid, profile in self.demo_profiles.items():
+            if pid == self.fan.profile.id:
+                text = note.text
+            else:
+                text = Watcher(FanSession(profile), engine).phrase_for(engine, note.team, event, note.facts["danger"])
+            out[pid] = {"name": profile.name, "language": profile.language, "level": profile.level, "text": text}
+        return out
 
     def replay_clips(self, from_t: float, to_t: float) -> list[dict[str, Any]]:
         """The missed moments worth replaying on the 3D feed, with the events around each of them."""
