@@ -34,6 +34,8 @@ h1 { font-size: 40px; line-height: 1.02; margin: 0; font-weight: 700; }
 .note.come_back { border-color: rgba(255, 59, 48, .6); }
 .note .nh { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 11px; letter-spacing: .14em; color: var(--dim); margin-bottom: 4px; }
 .note.come_back .nh b { color: var(--red); }
+.note.called_it { border-color: rgba(48, 209, 88, .55); }
+.note.called_it .nh b { color: #30d158; }
 .note .nx { font-size: 17px; line-height: 1.4; }
 .empty { color: var(--dim); font-size: 15px; }
 .takeover { position: fixed; inset: 0; z-index: 10; background: var(--red); color: #fff; display: flex; flex-direction: column; justify-content: center;

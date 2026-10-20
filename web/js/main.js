@@ -1,6 +1,6 @@
 /* COMEBACK control room: boot, SSE stream, controls and the render loop. */
 
-import { $, app, MATCH_ID, SPEEDS, post, newSessionId, applyEvent, step, emit, profile } from "./state.js";
+import { $, app, MATCH_ID, SPEEDS, post, newSessionId, applyEvent, step, emit, on as onMessage, profile } from "./state.js";
 import {
   renderScore, renderTimecode, showCue, expireOverlays, refreshBanner, clearOverlays, put, favouriteTag, renderMetric,
   renderGazette,
@@ -15,8 +15,13 @@ import { initPairing } from "./pairing.js";
 import { initFocus } from "./focus.js";
 import { unlockSpeech } from "./voice.js";
 import { isReplaying, buffer, playReplay, playVoice, interruptForLive } from "./replay.js";
+import { initPicker, openPicker } from "./picker.js";
+import { initStory, startStory, exitStory, storyActive } from "./story.js";
+import { initFactCheck } from "./factcheck.js";
 
 let program = null;          // 3D renderer, or null → 2D fallback on the PGM canvas
+const LATE_JOIN = { reda: 60 }; // demo fans who join the match late (minute)
+let pendingJoin = null;
 let lastFrame = performance.now();
 let lastSlow = 0;
 
@@ -52,17 +57,47 @@ async function boot() {
   initAudience();
   initPairing();
   initFocus();
+  initFactCheck();
+  initPicker({ onPick: pick, onStory: () => { unlockSpeech(); startStory(); } });
+  initStory({ restart, setMode, setSpeed, pick, openPicker });
+  setMode(new URLSearchParams(location.search).get("view") === "studio" ? "studio" : "fan");
   requestAnimationFrame(frame);
-  const goLive = () => {           // the match starts when the viewer is ready (and audio gets unlocked)
-    const w = $("#welcome");
-    if (w.classList.contains("gone")) return;
-    w.classList.add("gone");
-    setTimeout(() => w.remove(), 500);
-    unlockSpeech();
-    connect();
-  };
-  $("#welcome").addEventListener("click", goLive);
-  document.addEventListener("keydown", goLive, { once: true });
+}
+
+/** Watch as one demo fan: the first pick starts the match, later picks switch fan on the same match. */
+async function pick(id) {
+  unlockSpeech();
+  exitStory();
+  const first = !app.es;
+  app.profileId = id;
+  pendingJoin = LATE_JOIN[id] ?? null;
+  if (first) { app.speed = 10; connect(); return; }
+  const s = app.snapshot;
+  if (pendingJoin != null && s && s.period === 2 && s.minute >= pendingJoin) { restart(); return; }  // too late to join late
+  hideCatchup();
+  $("#gazette").hidden = true;
+  await post(`profile?id=${id}`);
+  joinIfLate();
+}
+
+function joinIfLate() {
+  const s = app.snapshot;
+  if (pendingJoin == null || !s) return;
+  const minute = pendingJoin;
+  pendingJoin = null;
+  if (s.period === 1 || s.minute < minute) { hideCatchup(); post(`join?minute=${minute}`); }
+}
+
+function setMode(mode) {
+  document.body.dataset.mode = mode;
+  for (const b of document.querySelectorAll("#view button")) b.classList.toggle("on", b.dataset.view === mode);
+  emit("view", { mode });
+}
+
+function setSpeed(speed) {
+  app.speed = speed;
+  renderControls();
+  return post(`speed?value=${speed}`);
 }
 
 function buildControls() {
@@ -73,19 +108,19 @@ function buildControls() {
     app.speed = s; renderControls(); post(`speed?value=${s}`);
   });
   $("#pause").addEventListener("click", () => { app.paused = !app.paused; renderControls(); post(`pause?paused=${app.paused}`); });
-  $("#restart").addEventListener("click", restart);
+  $("#restart").addEventListener("click", () => { exitStory(); restart(); });
   $("#btn-away").addEventListener("click", () => app.present && post("away"));
   $("#btn-back").addEventListener("click", () => !app.present && post("back"));
   $("#btn-join").addEventListener("click", () => { hideCatchup(); post("join?minute=60"); });
-  $("#profiles").addEventListener("click", (e) => {
-    const btn = e.target.closest("[data-profile]");
-    if (!btn || btn.dataset.profile === app.profileId) return;
-    app.profileId = btn.dataset.profile;
-    hideCatchup();
-    post(`profile?id=${app.profileId}`);
-  });
+  $("#view").addEventListener("click", (e) => { if (e.target.dataset.view) setMode(e.target.dataset.view); });
+  $("#story-btn").addEventListener("click", () => { unlockSpeech(); startStory(); });
+  $("#tk-open").addEventListener("click", () => setMode("studio"));
+  $("#outage-btn").addEventListener("click", () => post(`outage?down=${!app.outage}`));
+  onMessage("open-picker", openPicker);
+  const clock = () => { $("#ph-time").textContent = new Date().toTimeString().slice(0, 5); };
+  clock(); setInterval(clock, 15000);
   document.addEventListener("visibilitychange", () => {
-    if (!$("#auto-away").checked) return;
+    if (!$("#auto-away").checked || !app.es || storyActive()) return;   // the guided story drives presence itself
     if (document.hidden) { if (app.present) post("away"); } else if (!app.present) post("back");
   });
 }
@@ -98,8 +133,9 @@ function renderControls() {
 function restart() {
   if (app.es) app.es.close();
   app.session = newSessionId();
-  Object.assign(app, { cards: new Map(), notes: [], timeline: [], awayBands: [], present: true, holder: null, pos: {} });
+  Object.assign(app, { cards: new Map(), notes: [], timeline: [], awayBands: [], present: true, holder: null, pos: {}, topSpeed: {} });
   hideCatchup(); clearOverlays();
+  $("#gazette").hidden = true;
   connect();
 }
 
@@ -133,7 +169,7 @@ function connect() {
   on("cue", (c) => { if (!isReplaying()) showCue(c); });   // live graphics wait during a replay
   on("card", (c) => { app.cards.set(c.moment_id, c); renderRundown(); refreshBanner(c); });
   on("timeline", (t) => app.timeline.push(t));
-  on("notification", (n) => { app.notes.unshift(n); renderNotes(); buzz(); });
+  on("notification", (n) => { app.notes.unshift(n); renderNotes(); buzz(n.kind === "come_back"); });
   on("presence", (p) => {
     app.present = p.present; app.awayBands = p.away_bands;
     if (!p.present) hideCatchup();
@@ -147,6 +183,7 @@ function connect() {
   on("agent", () => {});         // forwarded to the AGENTS monitor through emit()
   on("crowd", () => {});         // forwarded to the AUD monitor
   on("device", () => {});        // phone paired / unpaired
+  on("outage", (o) => renderOutage(o.down));
   on("end", () => put("banner", `<div class="bn" style="--team:#ecebe6"><div class="bn-k">FULL-TIME</div>
       <div class="bn-t">${app.teams[app.home].name} ${app.snapshot?.score_str ?? ""} ${app.teams[app.away].name}</div></div>`, 120, 999));
 }
@@ -160,8 +197,18 @@ function onState(s) {
   });
   renderControls(); renderScore(); renderProfiles(); renderPresence(); renderNotes(); renderRundown(); renderData();
   renderMetric(profile());
+  renderOutage(Boolean(s.outage));
   if (program) program.setFavourite(profile()?.favourite_player_id || null);
   $("#btn-join").disabled = s.snapshot.period === 2 && s.snapshot.minute >= 60;
+  joinIfLate();
+}
+
+/** Failure drill: the LLM is cut for this session; agents keep the show going on verified templates. */
+function renderOutage(down) {
+  app.outage = down;
+  $("#outage-badge").hidden = !down;
+  $("#outage-btn").classList.toggle("on", down);
+  $("#outage-btn").textContent = down ? "⚡ RESTORE THE LLM" : "⚡ CUT THE LLM";
 }
 
 /* ------------------------------------------------------------------ render loop */

@@ -16,6 +16,7 @@ export function initAudience() {
     <div class="aud-side" id="aud-side"></div></div>`;
   on("crowd", render);
   on("state", (s) => s.crowd && render(s.crowd));
+  on("view", () => requestAnimationFrame(() => last && render(last)));   // the canvas was hidden in the fan view
   fetch(`/api/scale/${MATCH_ID}`).then((r) => r.json()).then((d) => { curve = d.curve; if (last) render(last); }).catch(() => {});
 }
 

@@ -70,7 +70,7 @@ function connect() {
   });
   on("snapshot", (s) => { st.snapshot = s; renderScore(); });
   on("presence", (p) => { st.present = p.present; if (!p.present) $("#catchup").hidden = true; render(); });
-  on("notification", (n) => { st.notes.unshift(n); renderNotes(); takeover(n); });
+  on("notification", (n) => { st.notes.unshift(n); renderNotes(); if (n.kind !== "called_it") takeover(n); });
   on("catchup", renderCatchup);
   on("gazette", (g) => renderCatchup({ ...g, final: true }));
 }
@@ -98,7 +98,7 @@ function renderScore() {
 
 function renderNotes() {
   $("#notes").innerHTML = st.notes.length ? st.notes.slice(0, 8).map((n) => `
-    <div class="note ${n.kind}"><div class="nh"><b>${n.kind === "come_back" ? "● COME BACK" : "● GOAL"}</b><span>${n.minute}'</span></div>
+    <div class="note ${n.kind}"><div class="nh"><b>${{ come_back: "● COME BACK", goal: "● GOAL", called_it: "✓ CALLED IT" }[n.kind] || n.kind}</b><span>${n.minute}'</span></div>
     <div class="nx">${esc(n.text)}</div></div>`).join("") : `<div class="empty">Leave the match: COMEBACK will call you back before the big moment.</div>`;
 }
 

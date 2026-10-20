@@ -1,6 +1,7 @@
 /* AGENTS monitor: the multi-agent system working live — a lit pipeline and a log.
  * Steps arrive in bursts (cached LLM replies are instant), so they are replayed
- * one by one with a short delay: the viewer can actually follow a rejection. */
+ * one by one with a short delay: the viewer can actually follow a rejection.
+ * In the fan view, the same steps feed a one-line "AI CREW" ticker under the match. */
 
 import { $, esc, on, emit } from "./state.js";
 
@@ -9,10 +10,14 @@ const NODES = [
   ["Watcher", "WATCHERS"], ["Storyteller", "STORYTELLER"], ["Fallback", "FALLBACK"],
 ];
 const STEP_LABEL = {
-  moment: "MOMENT", draft: "DRAFT", rejected: "✗ REJECTED", verified: "✓ VERIFIED", template: "TEMPLATE",
-  unavailable: "LLM DOWN", come_back: "▲ CALL BACK", goal: "GOAL ALERT", watching: "WATCHING", back: "FAN BACK", join: "LATE JOIN",
+  moment: "MOMENT", draft: "DRAFT", voice: "VOICE", full_time: "FULL-TIME", rejected: "✗ REJECTED", verified: "✓ VERIFIED", template: "TEMPLATE",
+  unavailable: "LLM DOWN", restored: "LLM BACK", called_it: "✓ CALLED IT", come_back: "▲ CALL BACK", goal: "GOAL ALERT", watching: "WATCHING", back: "FAN BACK", join: "LATE JOIN",
 };
+const IMPORTANT = new Set(["rejected", "come_back", "back", "join", "voice", "unavailable", "restored", "template", "watching",
+  "called_it"]);
 const queue = [];
+const ticks = [];
+let tickTimer = null;
 const log = [];
 const counts = { cards: 0, revised: 0, fallback: 0, alerts: 0, stories: 0 };
 let timer = null;
@@ -51,7 +56,7 @@ function show(s) {
   show.idle = setTimeout(() => { document.querySelector("#agents-tally").className = "tally amber"; }, 1500);
 
   const attempt = s.attempt ? ` #${s.attempt}` : "";
-  const cls = s.step === "rejected" || s.step === "unavailable" ? "bad" : s.step === "verified" ? "ok" : s.step === "come_back" ? "hot" : "";
+  const cls = lineClass(s);
   log.unshift(`<div class="ag-line ${cls}"><span class="m">${s.minute ?? ""}'</span><span class="a">${s.agent.toUpperCase()}</span>
     <span class="s">${STEP_LABEL[s.step] || s.step.toUpperCase()}${attempt}</span>
     <span class="d">${esc(s.label || "")}${s.detail ? ` · ${esc(s.detail)}` : ""}${s.cached ? " <i>cache</i>" : ""}</span></div>`);
@@ -59,6 +64,33 @@ function show(s) {
   emit("agent-shown", s);
   $("#ag-log").innerHTML = log.join("");
   renderCounts();
+  ticker(s);
+}
+
+function lineClass(s) {
+  if (s.step === "rejected" || s.step === "unavailable") return "bad";
+  return s.step === "verified" || s.step === "called_it" || s.step === "restored" ? "ok" : s.step === "come_back" ? "hot" : "";
+}
+
+/* the fan view's ticker: important steps stay longer, routine ones are dropped when they pile up */
+function ticker(s) {
+  ticks.push(s);
+  while (ticks.length > 4) {
+    const routine = ticks.findIndex((x) => !IMPORTANT.has(x.step));
+    ticks.splice(routine === -1 ? 0 : routine, 1);
+  }
+  if (!tickTimer) pumpTicker();
+}
+
+function pumpTicker() {
+  const s = ticks.shift();
+  if (!s) { tickTimer = null; return; }
+  const el = $("#tk-line");
+  el.className = `tk-line ${lineClass(s)}`;
+  el.innerHTML = `<span class="a">${s.agent.toUpperCase()}</span><span class="s">${STEP_LABEL[s.step] || s.step.toUpperCase()}${
+    s.attempt ? ` #${s.attempt}` : ""}</span>${esc(s.label || "")}${s.detail ? ` · ${esc(s.detail)}` : ""}`;
+  el.style.animation = "none"; void el.offsetWidth; el.style.animation = "";
+  tickTimer = setTimeout(pumpTicker, IMPORTANT.has(s.step) ? 3200 : 1300);
 }
 
 function renderCounts() {

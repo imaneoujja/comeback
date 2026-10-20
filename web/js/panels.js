@@ -1,11 +1,12 @@
 /* Gallery monitors: DATA, RUNDOWN, TIMELINE and the FAN device feed. */
 
-import { $, app, esc, teamColour, teamName, profile, sizeCanvas } from "./state.js";
+import { $, app, esc, teamColour, teamName, profile, sizeCanvas, emit } from "./state.js";
 import { TYPE_LABEL, tag } from "./graphics.js";
 import { stopSpeech } from "./voice.js";
 import { playVoice, stopVoice } from "./replay.js";
 
 const LANG_LABEL = { en: "English", fr: "Français", es: "Español" };
+const NOTE_LABEL = { come_back: "● COME BACK", goal: "● GOAL", called_it: "✓ CALLED IT" };
 
 /* ------------------------------------------------------------------ DATA */
 
@@ -106,18 +107,17 @@ export function drawTimeline() {
 
 /* ------------------------------------------------------------------ FAN DEVICE */
 
+/** The fan this screen belongs to (chosen in the "who are you?" picker). */
 export function renderProfiles() {
-  $("#profiles").innerHTML = app.profiles.map((p) => {
-    const team = p.club_id || app.roster[p.favourite_player_id]?.team;
-    return `<button class="profile ${p.id === app.profileId ? "on" : ""}" data-profile="${p.id}" role="tab"
-      aria-selected="${p.id === app.profileId}"><b><i style="background:${teamColour(team)}"></i>${esc(p.name)}</b>
-      ${p.language.toUpperCase()} · ${p.level.toUpperCase()}</button>`;
-  }).join("");
   const p = profile();
   if (!p) return;
-  const who = p.club_id ? `supports <b>${esc(teamName(p.club_id))}</b>`
-    : `follows <b>${esc(app.roster[p.favourite_player_id]?.name)}</b> (${esc(app.roster[p.favourite_player_id]?.team)})`;
-  $("#fan-card").innerHTML = `<b>${esc(p.name)}</b> ${who} · ${p.level} view · ${LANG_LABEL[p.language]}`;
+  const fav = app.roster[p.favourite_player_id];
+  const team = p.club_id || fav?.team;
+  const who = p.club_id ? `${teamName(p.club_id)} fan` : `follows ${fav?.name} (${teamName(fav?.team)})`;
+  $("#fan-card").innerHTML = `<span class="av" style="background:${teamColour(team)}">${esc(p.name[0])}</span>
+    <span class="who-t"><b>${esc(p.name)}</b><small>${esc(who)} · ${p.level} · ${LANG_LABEL[p.language]}</small></span>
+    <button class="key switch" id="switch-fan">SWITCH</button>`;
+  $("#switch-fan").addEventListener("click", () => emit("open-picker", {}));
   $("#fan-src").textContent = `DEVICE FEED · ${p.name.toUpperCase()} · ${p.language.toUpperCase()}`;
 }
 
@@ -146,13 +146,18 @@ export function renderNotes() {
   const el = $("#notes");
   if (!app.notes.length) { el.innerHTML = `<div class="empty">Nothing yet. Leave the match and COMEBACK watches it for you.</div>`; return; }
   el.innerHTML = app.notes.slice(0, 6).map((n) => `
-    <div class="note ${n.kind}"><div class="note-h"><b>${n.kind === "come_back" ? "● COME BACK" : "● GOAL"}</b><span>${n.minute}'</span></div>
+    <div class="note ${n.kind}"><div class="note-h"><b>${NOTE_LABEL[n.kind] || n.kind}</b><span>${n.minute}'</span></div>
     <div class="note-x">${esc(n.text)}</div></div>`).join("");
 }
 
-export function buzz() {
+export function buzz(ringing = false) {
   const fan = document.querySelector(".mon.fan");
   fan.classList.remove("buzz"); void fan.offsetWidth; fan.classList.add("buzz");
+  if (ringing) {                                 // a call-back: the on-screen phone lights up for a few seconds
+    fan.classList.add("ringing");
+    clearTimeout(buzz.timer);
+    buzz.timer = setTimeout(() => fan.classList.remove("ringing"), 4500);
+  }
 }
 
 export function renderCatchup(c) {

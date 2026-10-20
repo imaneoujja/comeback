@@ -244,6 +244,19 @@ async def join(session_id: str, minute: float = 60) -> dict[str, Any]:
     return await _session(session_id).join_at(minute)
 
 
+@app.post("/api/session/{session_id}/seek")
+def seek(session_id: str, minute: float) -> dict[str, Any]:
+    """Skip ahead while the fan keeps watching (used by the guided story)."""
+    return _session(session_id).seek(minute)
+
+
+@app.post("/api/session/{session_id}/outage")
+def outage(session_id: str, down: bool = True) -> dict[str, Any]:
+    """Failure drill: simulate an LLM outage for this session (agents fall back to verified templates)."""
+    _session(session_id).set_outage(down)
+    return {"down": down}
+
+
 @app.post("/api/session/{session_id}/speed")
 def set_speed(session_id: str, value: int) -> dict[str, Any]:
     if value not in SPEEDS:

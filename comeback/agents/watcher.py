@@ -2,19 +2,28 @@
 
 It reads the shared match brain (engine state + danger index) and decides, with
 deterministic rules, when to call the fan back *before* the big moment, and why.
-It also sends an after-the-fact goal notification. No LLM call: decisions must be
-instant and cost-free per fan, which is what lets the design scale to every viewer.
+It also sends an after-the-fact goal notification, and a "called it" receipt when a
+goal follows one of its call-backs and the fan is back in time. No LLM call: decisions
+must be instant and cost-free per fan, which is what lets the design scale to every viewer.
 """
 
 from dataclasses import dataclass, field
 from typing import Any
 
-from comeback.agents.templates import ALERT_TEXT, GOAL_ALERT_TEXT, SIDE_TEXT, SIDE_WORDS, pressure_texts
+from comeback.agents.templates import (
+    ALERT_TEXT,
+    CALLED_IT_TEXT,
+    GOAL_ALERT_TEXT,
+    SIDE_TEXT,
+    SIDE_WORDS,
+    pressure_texts,
+)
 from comeback.engine.alerts import AlertRule, AlertTracker
 from comeback.engine.match import EngineUpdate, MatchEngine
 from comeback.fans.session import FanSession
 
 MAX_ALERTS_PER_ABSENCE = 2
+CALLED_IT_WINDOW_S = 300.0  # a call-back "called" a goal scored by the same team within 5 minutes
 _DEFENDING_SIDE = {"left": "right", "right": "left"}  # attacking left channel = defenders' right side
 
 
@@ -22,7 +31,7 @@ _DEFENDING_SIDE = {"left": "right", "right": "left"}  # attacking left channel =
 class Notification:
     """A message pushed to the fan's phone."""
 
-    kind: str  # "come_back" | "goal"
+    kind: str  # "come_back" | "goal" | "called_it"
     t: float
     minute: int
     team: str
@@ -42,10 +51,13 @@ class Watcher:
         self.trackers = {team: AlertTracker(rule) for team in self.teams}
 
     def on_update(self, engine: MatchEngine, update: EngineUpdate) -> list[Notification]:
-        """React to one processed event; returns notifications for this fan (if away)."""
-        if self.session.present:
-            return []
+        """React to one processed event; returns notifications for this fan."""
         e, out = update.event, []
+        if self.session.present:
+            receipt = self._called_it(e) if e["type"] == "goal" else None
+            if receipt:
+                self.session.notifications.append(receipt.__dict__)
+            return [receipt] if receipt else []
         if e["type"] == "goal":
             out.append(self._goal(e))
         elif self.session.alerts_this_absence < MAX_ALERTS_PER_ABSENCE:
@@ -76,6 +88,19 @@ class Watcher:
         facts = {"danger": round(danger), "score": st.score_str(),
                  **{k: v for k, v in reasons.items() if k != "evidence_event_ids"}}
         return Notification("come_back", e["t"], e["minute"], team, text, facts, list(reasons["evidence_event_ids"]))
+
+    def _called_it(self, e: dict[str, Any]) -> Notification | None:
+        """A goal right after a call-back for the scoring team, with the fan back: the alert was right."""
+        alerts = [n for n in self.session.notifications if n["kind"] == "come_back" and n["team"] == e["team"]
+                  and 0 < e["t"] - n["t"] <= CALLED_IT_WINDOW_S]
+        if not alerts:
+            return None
+        alert = alerts[-1]
+        lang = self.session.profile.language
+        text = CALLED_IT_TEXT[lang].format(alert_minute=alert["minute"], minute=e["minute"])
+        facts = {"alert_minute": alert["minute"], "goal_minute": e["minute"], "lead_s": round(e["t"] - alert["t"]),
+                 "score": self.state.score_str()}
+        return Notification("called_it", e["t"], e["minute"], e["team"], text, facts, [e["id"]])
 
     def _goal(self, e: dict[str, Any]) -> Notification:
         st, lang = self.state, self.session.profile.language

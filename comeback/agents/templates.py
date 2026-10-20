@@ -163,6 +163,12 @@ GOAL_ALERT_TEXT = {
     "es": "¡Gol! {scorer_name} (min. {minute}) — {home} {score} {away}.",
 }
 
+CALLED_IT_TEXT = {  # a goal that came after a call-back, with the fan back in time
+    "en": "COMEBACK called it: alert at {alert_minute}', goal at {minute}'. You were back in time.",
+    "fr": "COMEBACK l'avait senti : alerte à la {alert_minute}e, but à la {minute}e. Tu étais là à temps.",
+    "es": "COMEBACK lo vio venir: aviso en el {alert_minute}', gol en el {minute}'. Volviste a tiempo.",
+}
+
 CATCHUP_INTRO = {
     "en": "While you were away ({away_minutes} min): {score_then} → {score_now}.",
     "fr": "Pendant ton absence ({away_minutes} min) : {score_then} → {score_now}.",
@@ -220,5 +226,6 @@ def moment_card_text(moment: dict[str, Any], team_names: dict[str, str]) -> dict
     values = moment_values(moment, team_names)
     values["situation_text"] = _SITUATION_TEXT.get(values.get("situation"), "goal")
     headline = moment_line(moment, "en", team_names).split(" — ", 1)[-1]
+    headline = headline[:1].upper() + headline[1:]  # the line's tail starts lower case ("the game turns…")
     why = _WHY_EN.get(moment["type"], "A notable moment for {team}.").format_map(_Defaults(values))
     return {"headline": headline, "why_it_matters": why}

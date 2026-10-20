@@ -126,9 +126,13 @@ class VerifierExecutor(Executor):
                     ctx: WorkflowContext[WriteRequest | FallbackRequest, WrittenResult]) -> None:
         request = draft.request
         issues = [draft.error] if draft.error else self.writer.verify(request.task, draft.output or {})
-        self.trace({"agent": "Verifier", "step": "rejected" if issues else "verified",
-                    "label": self.writer.label(request.task), "attempt": request.attempt,
-                    "detail": issues[0] if issues else self.writer.agent_name})
+        step = {"agent": "Verifier", "step": "rejected" if issues else "verified",
+                "label": self.writer.label(request.task), "attempt": request.attempt,
+                "detail": issues[0] if issues else self.writer.agent_name}
+        if issues and draft.output:  # the rejected text itself, for the live fact-check display
+            parts = ("headline", "why_it_matters", "text")
+            step["draft"] = " ".join(str(draft.output[k]) for k in parts if draft.output.get(k))
+        self.trace(step)
         if not issues:
             await ctx.yield_output(WrittenResult(draft.output or {}, "llm", True, request.attempt, request.history))
             return

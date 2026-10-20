@@ -13,19 +13,24 @@
     { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
   </script>
 </head>
-<body>
+<body data-mode="fan">
   <header class="bar">
     <div class="bar-left">
       <span class="tally on-air"><i></i>ON AIR</span>
       <span class="wordmark">COMEBACK</span>
-      <span class="sub">MATCHDAY CONTROL ROOM · SYNTHETIC FEED</span>
+      <span class="sub" id="bar-sub">SYNTHETIC MATCH · FICTIONAL CLUBS</span>
     </div>
     <div class="bar-mid">
       <span class="tc-label">TC</span><span class="tc" id="timecode">00:00:00:00</span>
       <span class="bar-score" id="bar-score"></span>
     </div>
     <div class="bar-right">
-      <button class="key on" id="auto-direct" title="One monitor on air at a time">AUTO DIRECT</button>
+      <button class="key story-btn" id="story-btn">▶ PLAY THE STORY</button>
+      <div class="seg view" id="view" role="group" aria-label="View">
+        <button data-view="fan" class="on">FAN VIEW</button><button data-view="studio">STUDIO</button>
+      </div>
+      <button class="key on studio-only" id="auto-direct" title="One monitor on air at a time">AUTO DIRECT</button>
+      <button class="key studio-only" id="outage-btn" title="Failure drill: cut the LLM for this session">⚡ CUT THE LLM</button>
       <span class="ctl-label">RATE</span>
       <div class="seg" id="speeds" role="group" aria-label="Replay speed"></div>
       <button class="key" id="pause" aria-label="Pause">PAUSE</button>
@@ -33,20 +38,26 @@
     </div>
   </header>
 
-  <div class="welcome" id="welcome" role="dialog" aria-label="Welcome">
+  <div class="welcome" id="welcome" role="dialog" aria-label="Choose how to watch">
     <div class="wl">
-      <div class="wl-k">COMEBACK · MATCHDAY CONTROL ROOM</div>
-      <ol>
-        <li><span>1</span>Watch the match.</li>
-        <li><span>2</span>Leave.</li>
-        <li><span>3</span>COMEBACK calls you back.</li>
-      </ol>
-      <div class="wl-go">CLICK ANYWHERE TO GO LIVE</div>
-      <div class="wl-f">Synthetic match · fictional clubs and players · Microsoft Agent Framework agents on Microsoft Foundry</div>
+      <button class="wl-x" id="wl-x" aria-label="Close" hidden>×</button>
+      <div class="wl-k">COMEBACK</div>
+      <h1 class="wl-h">You left the match.<br><em>COMEBACK didn't.</em></h1>
+      <p class="wl-p">It watches the game while you're away, calls you back <b>before</b> the big moment,
+        and tells you what you missed: in your language, from your side.</p>
+      <button class="wl-story" id="wl-story"><span class="wl-play">▶</span>
+        <span><b>Play the 90-second story</b><small>Omar leaves at 63'. The phone rings before the goal.</small></span></button>
+      <div class="wl-or">or pick a fan and watch the match yourself</div>
+      <div class="wl-fans" id="wl-fans"></div>
+      <div class="wl-f">Synthetic match · fictional clubs and players · Microsoft Agent Framework · Microsoft Foundry · Azure AI Speech</div>
     </div>
   </div>
 
   <main class="gallery">
+    <section class="storybar" id="storybar" aria-live="polite">
+      <div class="st-step" id="st-step"></div><div class="st-text" id="st-text"></div><div class="st-act" id="st-act"></div>
+    </section>
+
     <section class="mon pgm" data-mon="pgm" aria-label="Program monitor">
       <div class="mon-label"><span class="tally red"><i></i>PGM</span><span class="src" id="pgm-src">CAM 1 · MAIN STAND</span><span class="src right" id="pgm-mode">LIVE</span></div>
       <div class="screen" id="pgm">
@@ -64,17 +75,24 @@
         <div class="stinger" id="stinger"></div>
         <div class="replay-bug" id="replay-bug" hidden><i></i>REPLAY · <span id="replay-label">WHILE YOU WERE AWAY</span></div>
         <div class="gazette" id="gazette" hidden></div>
+        <div class="factcheck" id="factcheck" hidden></div>
+        <div class="outage-badge" id="outage-badge" hidden><i></i>LLM OFFLINE · FAILURE DRILL · AGENTS ON VERIFIED TEMPLATES</div>
         <div class="away-strip" id="away-veil" hidden><i></i><b>FAN AWAY · COMEBACK IS WATCHING</b>
           <span>will call them back before the big moment</span></div>
       </div>
     </section>
 
+    <section class="ticker" id="ticker" aria-label="What the AI agents are doing">
+      <span class="tk-k"><i></i>AI CREW</span><span class="tk-line" id="tk-line">Waiting for the first key moment…</span>
+      <button class="tk-open" id="tk-open">SEE THE AGENTS ▸</button>
+    </section>
+
     <section class="mon fan" data-mon="fan" aria-label="Fan device monitor">
       <div class="mon-label"><span class="tally green" id="fan-tally"><i></i>FAN</span><span class="src" id="fan-src">DEVICE FEED</span>
-        <button class="pair-btn" id="pair-btn">PAIR PHONE</button></div>
+        <button class="pair-btn" data-pair>PAIR PHONE</button></div>
       <div class="pair-box" id="pair-box" hidden></div>
       <div class="screen fan-screen">
-        <div class="profiles" id="profiles" role="tablist" aria-label="Fan profile"></div>
+        <div class="ph-bar"><span id="ph-time">20:45</span><span class="ph-island"></span><span class="ph-sig">5G ▮▮▮</span></div>
         <div class="fan-who" id="fan-card"></div>
         <div class="presence" id="presence"></div>
         <div class="actions">
@@ -86,6 +104,7 @@
         <div class="catchup" id="catchup" hidden></div>
         <div class="notes-head">NOTIFICATIONS</div>
         <div class="notes" id="notes"></div>
+        <button class="ph-pair" data-pair>Use your real phone: PAIR</button>
       </div>
     </section>
 
@@ -110,7 +129,7 @@
     </section>
 
     <section class="mon wide" data-mon="tl" aria-label="Timeline">
-      <div class="mon-label"><span class="tally amber"><i></i>TL</span><span class="src">MOMENTUM · MOMENTS · ALERTS · ABSENCES</span>
+      <div class="mon-label"><span class="tally amber"><i></i>TL</span><span class="src">MATCH TIMELINE · MOMENTUM · KEY MOMENTS · CALL-BACKS · WHEN THE FAN WAS AWAY</span>
         <span class="legend">
           <span><i class="lg-home"></i><b class="lg-home-name"></b></span><span><i class="lg-away"></i><b class="lg-away-name"></b></span>
           <span><i class="lg-alert"></i>COME-BACK ALERT</span><span><i class="lg-awayband"></i>FAN AWAY</span>

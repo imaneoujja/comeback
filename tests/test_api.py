@@ -82,3 +82,66 @@ def test_phone_pairing_needs_an_existing_session() -> None:
     assert client.get("/phone").status_code == 200
     assert client.get("/api/stream?session=nobody&device=true").status_code == 404
     assert "url" in client.get("/api/lan").json()
+
+
+def test_guided_story_seek_then_away_and_back_hits_the_cache() -> None:
+    """The guided story: Omar watches from 59', leaves at 63', is called back twice, returns at 70.5'."""
+    async def scenario() -> tuple[list[dict], dict, list[str]]:
+        gateway = LLMGateway(LLMSettings(mode=LLMMode.OFFLINE))
+        replay = ReplaySession("story", "demo-comeback", load_profiles()["omar"], gateway)
+        queue = replay.subscribe()
+        replay.set_paused(True)
+        replay.start()
+        replay.seek(59)
+        assert replay.fan.present and not replay.away_bands
+
+        def play_until(minute: float) -> None:  # up to and including the first event at ``minute``
+            while True:
+                event = replay.events[replay.index]
+                replay._process(event)
+                replay.index += 1
+                if event["period"] == 2 and event["minute"] + event["second"] / 60 >= minute:
+                    return
+
+        play_until(63)
+        replay.go_away()
+        play_until(70.5)
+        back = await replay.come_back()
+        play_until(71.4)  # the 71' goal (71:20), seen live
+        await replay.stop()
+        kinds = []
+        while not queue.empty():
+            kinds.append(queue.get_nowait()["type"])
+        return replay.fan.notifications, back, kinds
+
+    notes, back, kinds = asyncio.run(scenario())
+    calls = [n for n in notes if n["kind"] == "come_back"]
+    assert [n["minute"] for n in calls] == [65, 69] and all(n["team"] == "EMB" for n in calls)
+    assert back["source"] == "llm" and back["audio"] and back["replay"]
+    assert "catchup" in kinds
+    receipt = [n for n in notes if n["kind"] == "called_it"]
+    assert len(receipt) == 1 and receipt[0]["facts"]["alert_minute"] == 69 and receipt[0]["minute"] == 71
+    assert "69" in receipt[0]["text"]  # French: "alerte à la 69e, but à la 71e"
+
+
+def test_failure_drill_falls_back_to_verified_templates() -> None:
+    """Cutting the LLM for one session: moment cards and catch-ups still arrive, flagged as templates."""
+    async def scenario() -> tuple[list[dict], dict, list[dict]]:
+        gateway = LLMGateway(LLMSettings(mode=LLMMode.OFFLINE))
+        replay = ReplaySession("drill", "demo-comeback", load_profiles()["sofia"], gateway)
+        queue = replay.subscribe()
+        replay.set_paused(True)
+        replay.start()
+        replay.set_outage(True)
+        joined = await replay.join_at(30)
+        await replay.stop()
+        messages = []
+        while not queue.empty():
+            messages.append(queue.get_nowait())
+        return list(replay.brain.cards.values()), joined, messages
+
+    cards, joined, messages = asyncio.run(scenario())
+    assert cards and all(c["source"] == "template" for c in cards if not c["pending"])
+    assert joined["source"] == "template" and joined["text"]
+    assert {"type": "outage", "data": {"down": True}} in messages
+    assert any(m["type"] == "agent" and m["data"]["step"] == "unavailable" for m in messages)

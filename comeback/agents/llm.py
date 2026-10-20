@@ -252,3 +252,23 @@ def parse_json_reply(text: str) -> dict[str, Any]:
     if start < 0 or end <= start:
         raise ValueError("no JSON object in reply")
     return json.loads(text[start:end + 1])
+
+
+class SwitchableGateway:
+    """One session's view of the shared gateway, with a switch to simulate an LLM outage.
+
+    Used for the failure drill: while ``down`` is set, every agent call fails exactly as a
+    real outage would (:class:`LLMUnavailable`), so the workflow's fallback path is exercised live.
+    """
+
+    def __init__(self, inner: LLMGateway) -> None:
+        self.inner = inner
+        self.down = False
+
+    async def ask(self, agent_name: str, instructions: str, prompt: str) -> LLMReply:
+        if self.down:
+            raise LLMUnavailable("simulated outage (failure drill)")
+        return await self.inner.ask(agent_name, instructions, prompt)
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self.inner, name)

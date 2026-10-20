@@ -13,7 +13,7 @@ from typing import Any
 
 from comeback.agents.analyst import needs_analyst
 from comeback.agents.brain import MatchBrain
-from comeback.agents.llm import LLMGateway
+from comeback.agents.llm import LLMGateway, SwitchableGateway
 from comeback.agents.speech import SpeechGateway
 from comeback.agents.watcher import Watcher
 from comeback.engine.match import EngineUpdate, load_match
@@ -46,7 +46,8 @@ class ReplaySession:
         self.session_id = session_id
         self.match_id = match_id
         self.meta, self.events = load_match(MATCHES_DIR / f"{match_id}.jsonl")
-        self.brain = MatchBrain(self.meta, gateway)
+        self.llm = SwitchableGateway(gateway)  # per session, so a failure drill never affects other viewers
+        self.brain = MatchBrain(self.meta, self.llm)
         self.crowd = Crowd(self.brain.engine, CROWD_SIZE)
         self.speech = SpeechGateway()
         self.speed = speed if speed in SPEEDS else 10
@@ -107,6 +108,14 @@ class ReplaySession:
         self.paused = paused
         self._wake.set()
 
+    def set_outage(self, down: bool) -> None:
+        """Failure drill: cut (or restore) the LLM for this session; agents fall back to templates."""
+        self.llm.down = down
+        self.publish("outage", {"down": down})
+        self.trace({"agent": "Fallback", "step": "unavailable" if down else "restored", "label": "LLM",
+                    "detail": "simulated outage: texts fall back to verified templates" if down
+                    else "LLM restored: agents write again"})
+
     def start(self) -> None:
         if self._task is None:
             self._task = asyncio.create_task(self._run())
@@ -130,7 +139,7 @@ class ReplaySession:
             "timeline": self.brain.engine.timeline,
             "cards": sorted(self.brain.cards.values(), key=lambda c: c["t"]),
             "notifications": self.fan.notifications, "finished": st.finished,
-            "crowd": self.crowd_snapshot(), "devices": len(self._devices),
+            "crowd": self.crowd_snapshot(), "devices": len(self._devices), "outage": self.llm.down,
         }
 
     def crowd_snapshot(self) -> dict[str, Any]:
@@ -165,15 +174,29 @@ class ReplaySession:
         self.publish("catchup", catchup)
         return catchup
 
-    async def join_at(self, minute: float) -> dict[str, Any]:
-        """Late join: fast-forward silently to ``minute`` (second half if > 45), then tell the story so far."""
-        target_period = 2 if minute >= 45 else 1
+    def _fast_forward(self, minute: float) -> None:
+        """Process events silently up to ``minute`` of the match clock (second half if >= 45)."""
+        target = (2 if minute >= 45 else 1, minute)
+        st = self.brain.engine.state
+        if self.index and (st.period, st.minute + st.second / 60) >= target:
+            return
         while self.index < len(self.events):
             e = self.events[self.index]
             self._process(e, silent=True)
             self.index += 1
-            if (e["period"], e["minute"] + e["second"] / 60) >= (target_period, minute):
+            if (e["period"], e["minute"] + e["second"] / 60) >= target:
                 break
+
+    def seek(self, minute: float) -> dict[str, Any]:
+        """Skip ahead to ``minute`` with the fan watching all along (guided demo): no catch-up."""
+        self._fast_forward(minute)
+        self.publish("state", self.state_message())
+        self._wake.set()
+        return {"minute": self.brain.engine.state.minute}
+
+    async def join_at(self, minute: float) -> dict[str, Any]:
+        """Late join: fast-forward silently to ``minute`` (second half if > 45), then tell the story so far."""
+        self._fast_forward(minute)
         t = self.brain.engine.state.t
         self.set_profile(self.fan.profile)
         self.fan.joined_at = t
@@ -222,6 +245,9 @@ class ReplaySession:
             if note.kind == "come_back":
                 detail = (f"{note.team} danger {note.facts['danger']} & rising · "
                           f"{note.facts['box_entries']} box entries in 2' → alert sent")
+            elif note.kind == "called_it":
+                detail = (f"goal {note.facts['lead_s']} s after the {note.facts['alert_minute']}' call-back"
+                          " · fan back in time")
             else:
                 detail = f"goal while away ({note.facts['score']}) → notified"
             self.trace({"agent": "Watcher", "step": note.kind, "label": self.fan.profile.name, "detail": detail})

@@ -1,11 +1,11 @@
-/* Pair the fan's real phone: a QR code on the FAN monitor opens /phone on this session. */
+/* Pair the fan's real phone: a QR code on the fan's device panel opens /phone on this session. */
 
 import { $, app, on } from "./state.js";
 
 let paired = 0;
 
 export function initPairing() {
-  $("#pair-btn").addEventListener("click", toggle);
+  for (const btn of document.querySelectorAll("[data-pair]")) btn.addEventListener("click", toggle);
   on("device", (d) => setPaired(d.paired));
   on("state", (s) => setPaired(s.devices || 0));
 }
@@ -34,8 +34,10 @@ async function toggle() {
 
 function setPaired(n) {
   paired = n;
-  const btn = $("#pair-btn");
-  btn.textContent = paired ? "● PHONE PAIRED" : "PAIR PHONE";
-  btn.classList.toggle("paired", Boolean(paired));
+  for (const btn of document.querySelectorAll("[data-pair]")) {
+    const inPhone = btn.classList.contains("ph-pair");
+    btn.textContent = paired ? "● REAL PHONE PAIRED" : inPhone ? "Use your real phone: PAIR" : "PAIR PHONE";
+    btn.classList.toggle("paired", Boolean(paired));
+  }
   if (paired) $("#pair-box").hidden = true;
 }

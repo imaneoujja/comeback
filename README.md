@@ -10,11 +10,13 @@ club's side, sized to how long you were gone.
 
 And it does that for every fan at almost no extra cost: one shared match brain
 writes each key moment once, so serving **200,000** simulated fans takes about
-about **1,900** LLM calls instead of more than 600,000.
+**1,900** LLM calls instead of more than 600,000.
+
+**▶ Live demo: [comeback.lemonforest-f9ddbdf8.switzerlandnorth.azurecontainerapps.io](https://comeback.lemonforest-f9ddbdf8.switzerlandnorth.azurecontainerapps.io)** (Azure Container Apps; the first load can take ~20 s while it wakes up)
 
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/imaneoujja/comeback)
 
-![COMEBACK control room: the fan is called back before the goal and gets a catch-up of what changed](docs/screenshot.png)
+![Omar is back: the screen replays the missed 68' chance while the phone shows the French catch-up and the two call-backs that came before the goal](docs/screenshot.png)
 
 > Built for *Inside the Game: Developer Hackathon* (Microsoft × Premier League),
 > challenge "Synthetic Match Insights Engine". All data is **synthetic**; all
@@ -39,6 +41,10 @@ graphics renderer could consume.
 
 ## Try it (zero configuration, no API key)
 
+**Online:** open the [live demo](https://comeback.lemonforest-f9ddbdf8.switzerlandnorth.azurecontainerapps.io) in a desktop browser. Click **PAIR PHONE**
+and scan the QR code with your phone: it becomes the fan's device, from anywhere.
+The app scales to zero when nobody uses it, so the first request wakes it up.
+
 **GitHub Codespaces:** click the badge above. The server starts by itself; open
 the forwarded port **8000**.
 
@@ -55,20 +61,25 @@ It runs **offline by default**. The demo match is precomputed, and its verified
 LLM texts are committed in `data/llm_cache.jsonl`, so you see real model output
 without any key.
 
-### A 3-minute guided tour
+### What to try
 
-1. Click the welcome screen to go live, then set the replay to **×20**. The
-   auto-director puts one monitor ON AIR at a time (toggle **AUTO DIRECT**).
-2. **Reda** (Spanish, follows striker Halen Merewood): pick his profile. His player
-   carries a ★ label all match. Press **Join at 60'** for the story so far.
-3. **Omar** (French, analyst, Emberfield fan): press **I'm away** at about 63' (or just
-   switch browser tab). At 65' and 69' his phone gets "come back" alerts. Press
-   **I'm back** at about 70', read the catch-up, then watch the 71' goal.
-4. Optional: **PAIR PHONE** shows a QR code. Scan it with your phone on the same
-   Wi-Fi, and the alerts ring and speak on your real phone.
-5. **Sofia** (English, casual, Saltmarsh Comets fan): away at about 76', back at
-   about 86'. Same match, a completely different story.
-6. Let it run to full-time: each fan gets their own front page.
+1. **▶ Play the 90-second story** on the first screen. Omar (Emberfield fan, French,
+   analyst) leaves at 63'. The phone rings at 65' and 69' with the reason. Omar is back
+   at 70': the screen replays what was missed while a neural voice reads the catch-up,
+   and the 71' goal is seen live. A caption explains each step.
+2. Or pick a fan and watch the match yourself:
+   - **Omar**: leave whenever you like (switch browser tab, or **I'M AWAY** on the
+     on-screen phone), for example from 63' to 70'.
+   - **Sofia** (English, casual, Saltmarsh Comets fan): away at about 76', back at
+     about 86'. Same match, a completely different story.
+   - **Reda** (Spanish, follows striker Halen Merewood): joins at 60' and gets the
+     story so far. The followed player carries a ★ label all match.
+3. **STUDIO** (top right) opens the full control room: tactical camera, match data,
+   the agents at work (drafts, Verifier rejections, revisions), a simulated audience
+   of 10,000 fans and the cost curve.
+4. Optional: **Use your real phone: PAIR** shows a QR code. Scan it, and the alerts
+   ring and speak on your own phone.
+5. Let it run to full-time: each fan gets their own front page.
 
 ## Related work
 
@@ -133,7 +144,7 @@ flowchart LR
 |---|---|---|---|
 | **Analyst** | Compact computed facts of one key moment (never the raw event log), plus the match situation | Headline + "why it matters" (English, neutral), cited event ids | Yes |
 | **Verifier** | A draft + the facts + the roster | Pass, or precise feedback for a retry | Rules (deterministic) |
-| **Watcher** (one per fan) | The live danger index, the fan's presence and profile | "Come back" decision + reason, goal notifications | No: instant and free per fan |
+| **Watcher** (one per fan) | The live danger index, the fan's presence and profile | "Come back" decision + reason, goal notifications, a "called it" receipt when a goal follows its call-back | No: instant and free per fan |
 | **Storyteller** | The verified cards of the away window, a "what changed" delta, the fan profile | Catch-up or full-time recap in the fan's language, level and point of view | Yes |
 
 - **Orchestration.** Analyst → Verifier → retry → fallback is a **Microsoft Agent
@@ -147,6 +158,21 @@ flowchart LR
   exhausted, invalid JSON, or three rejected drafts: each ends with a
   deterministic, fact-based template flagged `source: "template"`. Tests force
   every path.
+- **Failure drill, live.** In the STUDIO view, **⚡ CUT THE LLM** simulates an outage
+  for your session only (`POST /api/session/{id}/outage`): every agent call fails
+  as a real outage would, cards and catch-ups keep arriving as verified templates
+  (amber badge), the stream never stops, and **RESTORE** brings the writers back.
+- **Fact-checks on screen.** When the Verifier rejects a draft, the program feed
+  shows it: the wrong words struck through, the Verifier's reason, then the version
+  that went on air. In the demo, at 81' the Analyst gave the ten men "their
+  numerical advantage"; the Verifier caught it and only the corrected card aired.
+
+![Fact-check on the program feed: the Analyst's draft with "numerical advantage" struck through, the Verifier's reason, and the corrected card that went on air](docs/factcheck.png)
+
+The STUDIO view shows the whole crew at work: tactical camera, engine data, the
+agents' live log, the 10,000-fan audience and the rundown of verified cards.
+
+![STUDIO view: program feed, fan device, tactical camera, match data, agents log, simulated audience and rundown](docs/studio.png)
 
 ## One match brain for every fan
 
@@ -261,8 +287,9 @@ groundedness, so the 5/5 on real texts is not leniency. Details per text:
 | **Microsoft Foundry** | LLM inference: Azure OpenAI `gpt-4.1-mini`, Global Standard deployment, through Foundry's OpenAI-compatible v1 endpoint. A 30k TPM cap and a daily call budget protect the credit. |
 | **Microsoft Foundry evaluations** (`azure-ai-evaluation`) | Groundedness, coherence and fluency of every generated text, with a corrupted control set (`scripts/evaluate_texts.py`, results in `docs/evaluation.json`). |
 | **Azure AI Speech** (through the same Foundry resource) | Neural voices read each fan's catch-up and full-time recap in their language (`en-GB-RyanNeural`, `fr-FR-HenriNeural`, `es-ES-AlvaroNeural`) while the program feed replays the missed moments (`comeback/agents/speech.py`). The demo's audio is committed, so offline mode still speaks. |
+| **Azure Container Apps** | The public demo: the CI image from `ghcr.io`, Consumption plan, scale 0 → 1 replica (0.5 vCPU, 1 GiB), offline mode, so it costs nothing while idle. |
 | **GitHub Codespaces** | One-click, zero-config environment for judges (`.devcontainer/`). |
-| **GitHub Actions + GitHub Container Registry** | CI on every push (ruff, 48 tests), then the container image is built and published to `ghcr.io` (`.github/workflows/ci.yml`, `Dockerfile`). |
+| **GitHub Actions + GitHub Container Registry** | CI on every push (ruff, 50 tests), then the container image is built and published to `ghcr.io` (`.github/workflows/ci.yml`, `Dockerfile`). |
 | **Model Context Protocol** | `comeback/mcp_server.py`: any agent, including GitHub Copilot in VS Code, can query the live match. |
 | GitHub / GitHub Copilot | Development workflow. |
 
@@ -335,7 +362,7 @@ LLM_MODE=record python scripts/precompute.py     # re-record the demo cache
 ## Development
 
 ```bash
-pytest                        # 48 tests: realism, engine, verifier, workflow paths, watchers, crowd, API
+pytest                        # 50 tests: realism, engine, verifier, workflow paths, watchers, crowd, API, guided story, failure drill
 ruff check .
 python -m comeback.synth.cli random --count 5    # more synthetic matches
 python scripts/evaluate_alerts.py
