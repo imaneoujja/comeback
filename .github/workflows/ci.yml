@@ -33,8 +33,12 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      # a unique tag per commit: Azure Container Apps re-pulls an image only when its tag changes
+      - run: echo "SHORT_SHA=${GITHUB_SHA::7}" >> "$GITHUB_ENV"
       - uses: docker/build-push-action@v6
         with:
           context: .
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/comeback:latest
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/comeback:latest
+            ghcr.io/${{ github.repository_owner }}/comeback:${{ env.SHORT_SHA }}
