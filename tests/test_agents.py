@@ -192,7 +192,8 @@ def test_watcher_calls_omar_back_before_the_goal_and_respects_presence() -> None
     come_backs = [n for n in omar_notes if n.kind == "come_back"]
     assert come_backs and come_backs[0].minute < 71 and come_backs[0].text.startswith("Reviens")
     assert len(come_backs) <= 2
-    assert any(n.kind == "goal" and n.minute == 71 for n in omar_notes)
+    goal = next(n for n in omar_notes if n.minute == 71 and n.kind in ("goal", "big_moment"))
+    assert goal.kind == "big_moment" and "1-2" not in goal.text   # spoiler-free by default
 
 
 def test_catchup_length_adapts_to_the_absence() -> None:
@@ -305,4 +306,61 @@ def test_called_it_is_never_sent_while_the_fan_is_still_away() -> None:
         if event["period"] == 2 and event["minute"] >= 72:
             break
         kinds += [n.kind for n in watcher.on_update(brain.engine, update)]
-    assert "come_back" in kinds and "goal" in kinds and "called_it" not in kinds
+    assert "come_back" in kinds and "big_moment" in kinds and "called_it" not in kinds
+
+
+def _away_from(fan: str, minute: int, until: int, settings=None) -> list:
+    """Notifications a fan gets while away from ``minute`` to ``until`` (second half), under ``settings``."""
+    from comeback.fans.session import AlertSettings
+    meta, events = load_match(DEMO)
+    brain = MatchBrain(meta, LLMGateway(LLMSettings(mode=LLMMode.OFFLINE)))
+    session = FanSession(load_profiles()[fan], settings=settings or AlertSettings())
+    watcher = Watcher(session, brain.engine)
+    notes = []
+    for event in events:
+        update = brain.process(event)
+        if event["period"] == 2 and event["minute"] == minute and session.present:
+            session.go_away(event["t"])
+        if event["period"] == 2 and event["minute"] >= until:
+            break
+        notes += watcher.on_update(brain.engine, update)
+    return notes
+
+
+def test_spoilers_only_when_the_fan_asks_for_them() -> None:
+    from comeback.fans.session import AlertSettings
+    quiet = [n for n in _away_from("sofia", 75, 87) if n.minute == 84]
+    loud = [n for n in _away_from("sofia", 75, 87, AlertSettings(spoilers=True)) if n.minute == 84]
+    assert quiet[0].kind == "big_moment" and "2-2" not in quiet[0].text and quiet[0].facts["spoiler_free"]
+    assert loud[0].kind == "goal" and "2-2" in loud[0].text
+
+
+def test_only_alert_me_for_an_equaliser_or_a_winner() -> None:
+    from comeback.fans.session import AlertSettings
+    notes = _away_from("omar", 63, 90, AlertSettings(alert_for="equaliser"))
+    calls = [n for n in notes if n.kind == "come_back"]
+    assert calls and all(n.team == "EMB" and n.minute > 71 for n in calls)   # never while 0-2 down
+
+
+def test_night_mode_wakes_the_fan_once_for_the_strongest_pressure_and_silently_reports_goals() -> None:
+    from comeback.fans.session import AlertSettings
+    notes = _away_from("omar", 63, 90, AlertSettings(night=True))
+    calls = [n for n in notes if n.kind == "come_back"]
+    assert len(calls) <= 1 and all(n.facts["danger"] >= 55 for n in calls)
+    assert all(n.silent for n in notes if n.kind in ("goal", "big_moment"))
+
+
+def test_any_big_moment_includes_red_cards() -> None:
+    from comeback.fans.session import AlertSettings
+    notes = _away_from("omar", 60, 64, AlertSettings(alert_for="big", spoilers=True))
+    assert any(n.kind == "big_moment" and n.facts.get("red_card") == "SMC-4" and "Hollins" in n.text for n in notes)
+
+
+def test_against_ten_men_belongs_to_the_opponents_of_the_team_named_before() -> None:
+    """ "X ... while playing against ten men" is a correct claim when X has 11; it used to be rejected."""
+    from comeback.agents.verifier import check_numerical_claims
+    on_pitch = {"Emberfield": 11, "Saltmarsh Comets": 10}
+    ok = "Elderglen levels the score for Emberfield, completing the comeback while playing against ten men."
+    wrong = "Saltmarsh Comets hold on while playing against ten men."
+    assert check_numerical_claims(ok, on_pitch) == []
+    assert check_numerical_claims(wrong, on_pitch)

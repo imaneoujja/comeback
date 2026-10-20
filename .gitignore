@@ -18,6 +18,8 @@ data/llm_budget.json
 
 # Generated random matches (regenerate with: python -m comeback.synth.cli random)
 data/matches/random-*.jsonl
+# …except the unscripted match of "Try another match" (its agents' texts are in the committed cache)
+!data/matches/random-3112.jsonl
 
 # Built into the container image (scripts/scale_cache.py)
 data/scale/

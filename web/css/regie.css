@@ -639,3 +639,28 @@ a.mono-link:hover { text-decoration: underline; }
 [data-mode="studio"] .factcheck { bottom: auto; top: 4%; width: min(440px, 40%); padding: 8px 12px 9px; }
 [data-mode="studio"] .factcheck .fc-t { font-size: 14px; }
 [data-mode="studio"] .control-gfx { display: none; }
+
+/* ------------------------------------------------------------- level 2: alert rules, veil, AI label */
+.prefs { border: 1px solid #262626; background: #101010; padding: 6px 9px; font-size: 12px; }
+.prefs summary { cursor: pointer; display: flex; gap: 8px; align-items: baseline; font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; color: var(--label); }
+.prefs summary b { margin-left: auto; color: var(--amber); font-weight: 500; letter-spacing: .02em; }
+.pref-k { font-family: var(--mono); font-size: 9.5px; letter-spacing: .14em; color: var(--dim); margin: 8px 0 4px; }
+.pref-seg { display: grid; grid-template-columns: repeat(3, 1fr); }
+.pref-seg button { font-family: var(--cond); font-size: 12px; padding: 5px 4px; white-space: normal; line-height: 1.1; }
+.pref-seg button.on { background: var(--amber); color: #111; }
+.pref { display: flex; gap: 6px; align-items: center; margin-top: 6px; color: #cfcdc6; }
+.pref-n { margin-top: 6px; color: var(--dim); font-size: 11px; }
+.cu-text.veil { color: var(--amber); font-family: var(--mono); font-size: 13px; }
+.cu-ai { margin-top: 6px; font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em; color: var(--dim); }
+.note.big_moment { border-color: rgba(255, 176, 0, .5); }
+.note.big_moment .note-h b { color: var(--amber); }
+.story-on .fan .prefs { pointer-events: none; opacity: .35; }
+.wl-other { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+.wl-other a { color: var(--amber); font-family: var(--mono); font-size: 12px; letter-spacing: .04em; text-decoration: none; }
+.wl-other a:hover { text-decoration: underline; }
+.wl-other small { color: var(--label); margin-left: 6px; }
+.other-match #story-btn { display: none; }
+.wl-mobile { display: none; margin-bottom: 14px; padding: 10px 12px; border: 1px solid var(--amber); color: var(--amber);
+  font-family: var(--mono); font-size: 12px; line-height: 1.45; }
+@media (max-width: 760px) { .wl-mobile { display: block; } }
+.wl-story[hidden] { display: none; }

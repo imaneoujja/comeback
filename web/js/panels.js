@@ -6,7 +6,10 @@ import { stopSpeech } from "./voice.js";
 import { playVoice, stopVoice } from "./replay.js";
 
 const LANG_LABEL = { en: "English", fr: "Français", es: "Español" };
-const NOTE_LABEL = { come_back: "● COME BACK", goal: "● GOAL", called_it: "✓ CALLED IT", catchup: "PREVIOUSLY ON…" };
+const NOTE_LABEL = {
+  come_back: "● COME BACK", goal: "● GOAL", big_moment: "● BIG MOMENT", called_it: "✓ CALLED IT", catchup: "PREVIOUSLY ON…",
+};
+const FOR_LABEL = { threat: "goal threats", equaliser: "equaliser / winner", big: "any big moment" };
 let reading = false;          // a voice-over is playing
 let phoneVisible = true;      // the fan's device panel is on screen (not scrolled away on a small screen)
 
@@ -155,7 +158,7 @@ export function renderNotes() {
   const el = $("#notes");
   if (!app.notes.length) { el.innerHTML = `<div class="empty">Nothing yet. Leave the match and COMEBACK watches it for you.</div>`; return; }
   el.innerHTML = app.notes.slice(0, 6).map((n) => `
-    <div class="note ${n.kind}"><div class="note-h"><b>${NOTE_LABEL[n.kind] || n.kind}</b><span>${n.minute}'</span></div>
+    <div class="note ${n.kind}"><div class="note-h"><b>${NOTE_LABEL[n.kind] || n.kind}${n.silent ? " · SILENT" : ""}</b><span>${n.minute}'</span></div>
     <div class="note-x">${esc(n.text)}</div></div>`).join("");
 }
 
@@ -189,6 +192,23 @@ export function buzz(ringing = false) {
   }
 }
 
+/** The fan's alert rules on the phone (opt-in). */
+export function renderPrefs() {
+  const st = app.settings || { alert_for: "threat", spoilers: false, night: false };
+  for (const b of document.querySelectorAll("#pref-for button")) b.classList.toggle("on", b.dataset.for === st.alert_for);
+  $("#pref-night").checked = st.night;
+  $("#pref-spoilers").checked = st.spoilers;
+  $("#prefs-sum").textContent = `${FOR_LABEL[st.alert_for]}${st.night ? " · night" : ""} · ${st.spoilers ? "scores on" : "no spoilers"}`;
+}
+
+/** Spoiler-free return: if a goal happened while away, the story waits behind the replay. */
+export function renderVeiledCatchup() {
+  const el = $("#catchup");
+  el.hidden = false;
+  el.innerHTML = `<div class="cu-k"><span>PREVIOUSLY ON…</span></div><div class="cu-t">Something big happened</div>
+    <div class="cu-text veil">▶ Your replay is playing on the TV. The story and the score follow, spoiler-free.</div>`;
+}
+
 export function renderCatchup(c) {
   const d = c.delta || {};
   const title = c.final ? `Full-time · ${c.headline || ""}` : c.late_join ? "The story so far" : `While you were away · ${d.away_minutes} min`;
@@ -202,6 +222,7 @@ export function renderCatchup(c) {
   el.innerHTML = `<div class="cu-k"><span>PREVIOUSLY ON…</span><button aria-label="Close" id="cu-close">×</button></div>
     <div class="cu-t">${esc(title)}</div><div class="chips">${chips}</div>
     <div class="cu-text">${esc(c.text)}</div>
+    <div class="cu-ai">AI-generated · fact-checked against the match data${c.source === "template" ? " (template)" : ""}</div>
     <div class="cu-f">${tag(c, "Storyteller")}<button class="key ${reading ? "reading" : ""}" id="listen"
       aria-label="Read the catch-up aloud">${reading ? "■ STOP" : "▶ LISTEN"}</button></div>`;
   $("#cu-close").addEventListener("click", hideCatchup);

@@ -19,7 +19,8 @@ if (!session) {
 $("#pair-btn").addEventListener("click", async () => {
   unlockSound();
   try { await navigator.wakeLock?.request("screen"); } catch { /* not supported: fine */ }
-  const match = await fetch("/api/match/demo-comeback").then((r) => r.json());
+  const matchId = new URLSearchParams(location.search).get("match") || "demo-comeback";
+  const match = await fetch(`/api/match/${encodeURIComponent(matchId)}`).then((r) => r.json());
   for (const side of ["home", "away"]) st.teams[match[side].id] = match[side];
   connect();
 });
@@ -70,7 +71,7 @@ function connect() {
   });
   on("snapshot", (s) => { st.snapshot = s; renderScore(); });
   on("presence", (p) => { st.present = p.present; if (!p.present) $("#catchup").hidden = true; render(); });
-  on("notification", (n) => { st.notes.unshift(n); renderNotes(); if (n.kind !== "called_it") takeover(n); });
+  on("notification", (n) => { st.notes.unshift(n); renderNotes(); if (n.kind !== "called_it" && !n.silent) takeover(n); });
   on("catchup", renderCatchup);
   on("gazette", (g) => renderCatchup({ ...g, final: true }));
 }
@@ -98,14 +99,14 @@ function renderScore() {
 
 function renderNotes() {
   $("#notes").innerHTML = st.notes.length ? st.notes.slice(0, 8).map((n) => `
-    <div class="note ${n.kind}"><div class="nh"><b>${{ come_back: "● COME BACK", goal: "● GOAL", called_it: "✓ CALLED IT" }[n.kind] || n.kind}</b><span>${n.minute}'</span></div>
+    <div class="note ${n.kind}"><div class="nh"><b>${{ come_back: "● COME BACK", goal: "● GOAL", big_moment: "● BIG MOMENT", called_it: "✓ CALLED IT" }[n.kind] || n.kind}</b><span>${n.minute}'</span></div>
     <div class="nx">${esc(n.text)}</div></div>`).join("") : `<div class="empty">Leave the match: COMEBACK will call you back before the big moment.</div>`;
 }
 
 function takeover(n) {
   const el = $("#takeover");
-  el.className = `takeover ${n.kind === "goal" ? "goal" : ""}`;
-  $("#to-k").textContent = n.kind === "goal" ? `GOAL · ${n.minute}'` : `COME BACK · ${n.minute}'`;
+  el.className = `takeover ${n.kind === "goal" || n.kind === "big_moment" ? "goal" : ""}`;
+  $("#to-k").textContent = { goal: `GOAL · ${n.minute}'`, big_moment: `SOMETHING BIG · ${n.minute}'` }[n.kind] || `COME BACK · ${n.minute}'`;
   $("#to-t").textContent = n.text;
   el.hidden = false;
   ring(n.kind === "goal" ? [660, 990, 1320] : undefined);

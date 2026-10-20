@@ -1,6 +1,6 @@
 /* Pair the fan's real phone: a QR code on the fan's device panel opens /phone on this session. */
 
-import { $, app, on } from "./state.js";
+import { $, app, on, MATCH_ID } from "./state.js";
 
 let paired = 0;
 
@@ -16,7 +16,7 @@ async function phoneUrl() {
     const lan = await fetch("/api/lan").then((r) => r.json()).catch(() => ({}));
     if (lan.url) base = lan.url.replace(/:80$/, `:${location.port || 80}`);
   }
-  return `${base}/phone?session=${app.session}`;
+  return `${base}/phone?session=${app.session}&match=${encodeURIComponent(MATCH_ID)}`;
 }
 
 async function toggle() {

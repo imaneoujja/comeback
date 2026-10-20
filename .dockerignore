@@ -8,5 +8,7 @@
 docs
 tests
 data/matches/random-*.jsonl
+!data/matches/random-3112.jsonl
+data/experiments
 data/llm_budget.json
 CLAUDE.md

@@ -227,3 +227,55 @@ def test_session_endpoints_run_on_the_event_loop() -> None:
     assert session_routes
     assert all(inspect.iscoroutinefunction(r.endpoint) for r in session_routes), \
         [r.path for r in session_routes if not inspect.iscoroutinefunction(r.endpoint)]
+
+
+def test_the_simulated_audience_is_computed_once_per_match_and_shared() -> None:
+    """10,000 fans per viewer would not scale: every session of a match reads the same precomputed frames."""
+    from comeback.agents.brain import MatchBrain
+    from comeback.engine.match import load_match
+    from comeback.fans.crowd import Crowd
+
+    gateway = LLMGateway(LLMSettings(mode=LLMMode.OFFLINE))
+    a = ReplaySession("crowd-a", "demo-comeback", load_profiles()["omar"], gateway)
+    b = ReplaySession("crowd-b", "demo-comeback", load_profiles()["sofia"], gateway)
+    assert a._crowd_frames is b._crowd_frames
+    for replay in (a, b):
+        while replay.index < len(replay.events):
+            replay._process(replay.events[replay.index], silent=True)
+            replay.index += 1
+    meta, events = load_match("data/matches/demo-comeback.jsonl")
+    brain = MatchBrain(meta, gateway)
+    reference = Crowd(brain.engine, 10_000)   # the same audience, simulated directly
+    for event in events:
+        reference.on_event(brain.engine, brain.process(event), brain.cards)
+    final = a.crowd_snapshot()
+    assert final["grid"] == reference.snapshot(0)["grid"] and final["stories"] == len(reference.story_keys)
+    assert final["back_in_time"] == reference.back_in_time and b.crowd_snapshot()["grid"] == final["grid"]
+
+
+def test_fan_alert_settings_endpoint() -> None:
+    from comeback.api import server
+
+    replay = ReplaySession("prefs", "demo-comeback", load_profiles()["omar"],
+                           LLMGateway(LLMSettings(mode=LLMMode.OFFLINE)))
+    server.sessions["prefs"] = replay
+    try:
+        assert replay.state_message()["settings"] == {"alert_for": "threat", "spoilers": False, "night": False}
+        out = client.post("/api/session/prefs/settings?alert_for=equaliser&night=true").json()
+        assert out == {"alert_for": "equaliser", "spoilers": False, "night": True}
+        assert replay.watcher.max_alerts == 1 and replay.watcher.session.settings.night
+        assert client.post("/api/session/prefs/settings?alert_for=nonsense").json()["alert_for"] == "equaliser"
+    finally:
+        server.sessions.pop("prefs", None)
+
+
+def test_try_another_match_adapts_the_demo_fans_to_the_fixture() -> None:
+    listed = {m["match_id"]: m for m in client.get("/api/matches").json()}
+    assert listed["demo-comeback"]["scripted"] and not listed["random-3112"]["scripted"]
+    fans = {p["id"]: p for p in client.get("/api/profiles?match_id=random-3112").json()}
+    match = client.get("/api/match/random-3112").json()
+    home, away = match["home"]["id"], match["away"]["id"]
+    assert fans["omar"]["club_id"] == home and fans["sofia"]["club_id"] == away
+    assert fans["reda"]["favourite_player_id"] == f"{away}-9"
+    demo = {p["id"]: p for p in client.get("/api/profiles").json()}
+    assert demo["omar"]["club_id"] == "EMB" and demo["reda"]["favourite_player_id"] == "SMC-9"

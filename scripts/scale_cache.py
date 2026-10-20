@@ -19,10 +19,11 @@ SCALE_DIR = ROOT / "data" / "scale"
 
 def main() -> None:
     SCALE_DIR.mkdir(parents=True, exist_ok=True)
-    meta, events = load_match(ROOT / "data" / "matches" / "demo-comeback.jsonl")
-    curve = scaling_curve(meta, events)
-    (SCALE_DIR / "demo-comeback.json").write_text(json.dumps(curve))
-    print(f"scale curve: {len(curve)} audience sizes → {SCALE_DIR / 'demo-comeback.json'}")
+    for path in sorted((ROOT / "data" / "matches").glob("*.jsonl")):   # every replayable match
+        meta, events = load_match(path)
+        curve = scaling_curve(meta, events)
+        (SCALE_DIR / f"{path.stem}.json").write_text(json.dumps(curve))
+        print(f"scale curve: {len(curve)} audience sizes → {SCALE_DIR / f'{path.stem}.json'}")
 
 
 if __name__ == "__main__":

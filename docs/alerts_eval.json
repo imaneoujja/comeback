@@ -1,0 +1,90 @@
+{
+ "protocol": "Evaluate the \"come back\" alert rule on unscripted synthetic matches.\n\nProtocol (every number in the README comes from this script):\n\n* Matches: unscripted synthetic matches only (no story beats; the scripted demo match\n  is never used). Thresholds are tuned on seeds 1001-1050 and reported on held-out\n  seeds 2001-2050 (``--first-seed``).\n* Alert: the rule of ``comeback.engine.alerts`` (danger >= threshold, rising, not right\n  after the team's own shot, cooldown), evaluated for both teams on every event.\n* Precision: share of alerts followed by a shot with xG >= 0.1 by the same team within\n  90 s. False alerts = the others.\n* Recall (goal coverage): share of goals preceded by an alert for the scoring team within\n  the anticipation window (5 minutes). Lead time = goal time - last such alert.\n* Chance baselines: the SAME number of alerts placed at random instants (same teams),\n  scored with the same definitions and averaged over 20 random draws; lift = ours / random.\n* Alerts per fan: a 1,000-fan simulated audience per match (random absences, at most 2\n  calls per absence), the same model as the AUDIENCE monitor.\n* Latency: compute time from the event that pushes the danger over the threshold to the\n  alert decision (engine update + rule), p50/p95.\n\nValidated on synthetic data only; real-data validation is future work.\n\nUsage:\n    python scripts/evaluate_alerts.py                      # held-out matches, current threshold\n    python scripts/evaluate_alerts.py --first-seed 1001    # the tuning matches\n    python scripts/evaluate_alerts.py --curve              # threshold sweep + docs/alert_curve.svg\n",
+ "seeds": "seeds 2001-2050",
+ "threshold": 44.0,
+ "rows": {
+  "ours": {
+   "alerts": 731.0,
+   "precision": 0.20930232558139536,
+   "recall": 0.5426356589147286,
+   "goals": 129.0,
+   "goals_announced": 70.0,
+   "median_lead_s": 60.299999999999955,
+   "median_alert_to_chance_s": 16.5,
+   "false_alerts_per_match": 11.56,
+   "alerts_per_team_per_match": 7.31
+  },
+  "random": {
+   "alerts": 731.0,
+   "precision": 0.07599179206566348,
+   "recall": 0.3372093023255814,
+   "goals": 129.0,
+   "goals_announced": 43.5,
+   "median_lead_s": 132.70994051308753,
+   "median_alert_to_chance_s": 42.2845482163757,
+   "false_alerts_per_match": 13.509,
+   "alerts_per_team_per_match": 7.31
+  }
+ },
+ "alerts_per_fan_per_match": 1.87726,
+ "latency_ms": {
+  "p50": 0.020125065930187702,
+  "p95": 0.04512490704655647
+ },
+ "curve": [
+  {
+   "threshold": 30.0,
+   "recall": 0.813953488372093,
+   "precision": 0.17304860088365243,
+   "alerts_per_team_per_match": 13.58
+  },
+  {
+   "threshold": 36.0,
+   "recall": 0.6976744186046512,
+   "precision": 0.18651892890120036,
+   "alerts_per_team_per_match": 10.83
+  },
+  {
+   "threshold": 40.0,
+   "recall": 0.6511627906976745,
+   "precision": 0.18490153172866522,
+   "alerts_per_team_per_match": 9.14
+  },
+  {
+   "threshold": 44.0,
+   "recall": 0.5426356589147286,
+   "precision": 0.20930232558139536,
+   "alerts_per_team_per_match": 7.31
+  },
+  {
+   "threshold": 48.0,
+   "recall": 0.4496124031007752,
+   "precision": 0.21908127208480566,
+   "alerts_per_team_per_match": 5.66
+  },
+  {
+   "threshold": 52.0,
+   "recall": 0.35658914728682173,
+   "precision": 0.2458233890214797,
+   "alerts_per_team_per_match": 4.19
+  },
+  {
+   "threshold": 55.0,
+   "recall": 0.3178294573643411,
+   "precision": 0.22839506172839505,
+   "alerts_per_team_per_match": 3.24
+  },
+  {
+   "threshold": 60.0,
+   "recall": 0.18604651162790697,
+   "precision": 0.24864864864864866,
+   "alerts_per_team_per_match": 1.85
+  },
+  {
+   "threshold": 65.0,
+   "recall": 0.08527131782945736,
+   "precision": 0.2962962962962963,
+   "alerts_per_team_per_match": 0.81
+  }
+ ]
+}

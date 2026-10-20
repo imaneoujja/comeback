@@ -163,3 +163,23 @@ def scaling_curve(meta: dict[str, Any], events: list[dict[str, Any]],
             crowd.on_event(brain.engine, brain.process(event), brain.cards)
         curve.append(crowd.cost(sum(1 for c in brain.cards.values() if needs_analyst(c))))
     return curve
+
+
+def crowd_frames(meta: dict[str, Any], events: list[dict[str, Any]],
+                 size: int = 10_000) -> tuple[dict[str, Any], dict[int, dict[str, Any]]]:
+    """The simulated audience of a whole match, computed once: (initial view, view after event i at each tick).
+
+    The crowd only depends on the match, so every viewer of that match shares these frames
+    instead of simulating 10,000 fans again (``analyst_calls`` is filled in per viewer).
+    """
+    from comeback.agents.brain import MatchBrain
+    from comeback.agents.llm import LLMGateway, LLMMode, LLMSettings
+
+    brain = MatchBrain(meta, LLMGateway(LLMSettings(mode=LLMMode.OFFLINE)))
+    crowd = Crowd(brain.engine, size)
+    initial, frames = crowd.snapshot(0), {}
+    for index, event in enumerate(events):
+        crowd.on_event(brain.engine, brain.process(event), brain.cards)
+        if crowd.ticked or event["type"] in ("goal", "match_end"):
+            frames[index] = {**crowd.snapshot(0), "back_in_time": list(crowd.back_in_time)}
+    return initial, frames

@@ -37,10 +37,11 @@ function render(c) {
     <div class="aud-big">${fmt(c.size)} <small>VIEWERS</small></div>
     <div class="aud-row"><i style="background:${COLOURS[0]}"></i>${fmt(c.watching)}<i style="background:${COLOURS[1]}"></i>${fmt(c.away)}<i style="background:${COLOURS[2]}"></i>${fmt(c.called)}</div>
     <div class="aud-row">ALERTS SENT <b>${fmt(c.alerts_sent)}</b></div>
-    <div class="aud-row hot">${goal ? `BACK FOR ${goal.minute}' GOAL <b>${fmt(goal.fans)}</b>` : "BACK FOR A GOAL <b>–</b>"}</div>
+    <div class="aud-row hot" title="Simulation assumption: 65% of called-back fans return; a real figure needs an A/B test in production">${goal ? `BACK FOR ${goal.minute}' GOAL* <b>${fmt(goal.fans)}</b>` : "BACK FOR A GOAL* <b>–</b>"}</div>
     <div class="aud-row">CATCH-UPS <b>${fmt(c.catchups)}</b></div>
     <div class="aud-row">LLM STORIES <b class="ok">${fmt(c.stories)}</b></div>
-    ${curve ? curveSvg(curve) : `<div class="aud-row dim">computing scale curve…</div>`}`;
+    ${curve ? curveSvg(curve) : `<div class="aud-row dim">computing scale curve…</div>`}
+    <div class="aud-row dim">* simulated: 65% of called fans return</div>`;
 }
 
 /* LLM calls vs audience size (log-log): COMEBACK stays nearly flat, one-call-per-catch-up does not. */

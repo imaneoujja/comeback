@@ -12,8 +12,10 @@ from typing import Any
 
 from comeback.agents.templates import (
     ALERT_TEXT,
+    BIG_MOMENT_TEXT,
     CALLED_IT_TEXT,
     GOAL_ALERT_TEXT,
+    RED_CARD_ALERT_TEXT,
     SIDE_TEXT,
     SIDE_WORDS,
     pressure_texts,
@@ -23,6 +25,8 @@ from comeback.engine.match import EngineUpdate, MatchEngine
 from comeback.fans.session import FanSession
 
 MAX_ALERTS_PER_ABSENCE = 2
+NIGHT_THRESHOLD = 55.0      # night mode: only the strongest pressure wakes the fan
+NIGHT_MAX_ALERTS = 1
 CALLED_IT_WINDOW_S = 300.0  # a call-back "called" a goal scored by the same team within 5 minutes
 _DEFENDING_SIDE = {"left": "right", "right": "left"}  # attacking left channel = defenders' right side
 
@@ -31,13 +35,14 @@ _DEFENDING_SIDE = {"left": "right", "right": "left"}  # attacking left channel =
 class Notification:
     """A message pushed to the fan's phone."""
 
-    kind: str  # "come_back" | "goal" | "called_it"
+    kind: str  # "come_back" | "goal" | "big_moment" (spoiler-free goal, red card, penalty) | "called_it"
     t: float
     minute: int
     team: str
     text: str
     facts: dict[str, Any] = field(default_factory=dict)
     evidence_event_ids: list[str] = field(default_factory=list)
+    silent: bool = False   # night mode: delivered without buzzing the fan
 
 
 class Watcher:
@@ -48,6 +53,10 @@ class Watcher:
         self.state = engine.state
         st = engine.state
         self.teams = session.profile.relevant_teams(st.home, st.away)
+        settings = session.settings
+        if rule is None and settings.night:
+            rule = AlertRule(threshold=NIGHT_THRESHOLD)
+        self.max_alerts = NIGHT_MAX_ALERTS if settings.night else MAX_ALERTS_PER_ABSENCE
         self.trackers = {team: AlertTracker(rule) for team in self.teams}
 
     def on_update(self, engine: MatchEngine, update: EngineUpdate) -> list[Notification]:
@@ -58,10 +67,15 @@ class Watcher:
             if receipt:
                 self.session.notifications.append(receipt.__dict__)
             return [receipt] if receipt else []
+        settings = self.session.settings
         if e["type"] == "goal":
             out.append(self._goal(e))
-        elif self.session.alerts_this_absence < MAX_ALERTS_PER_ABSENCE:
+        elif settings.alert_for == "big" and (e["type"] == "card" and e.get("color") == "red"):
+            out.append(self._big_moment(e))
+        elif self.session.alerts_this_absence < self.max_alerts:
             for team in self.teams:
+                if not self._wanted(team):
+                    continue
                 danger, slope = engine.danger_now(team)
                 if self.trackers[team].check(e["t"], danger, slope, engine.state.seconds_since_shot(team)):
                     out.append(self._come_back(engine, team, e, danger))
@@ -69,6 +83,16 @@ class Watcher:
                     break
         self.session.notifications += [n.__dict__ for n in out]
         return out
+
+    def _wanted(self, team: str) -> bool:
+        """Does this fan want to hear about ``team`` pushing, under their own rules?"""
+        if self.session.settings.alert_for != "equaliser":
+            return True
+        club = self.session.profile.pov_team()
+        if club is None or team != club:
+            return False
+        st = self.state
+        return st.score[club] - st.score[st.opponent(club)] in (-1, 0)   # one goal away from levelling or winning
 
     def _come_back(self, engine: MatchEngine, team: str, e: dict[str, Any], danger: float) -> Notification:
         st, lang = self.state, self.session.profile.language
@@ -102,7 +126,8 @@ class Watcher:
             "away_for_s": round(e["t"] - away_since) if away_since is not None else None,
             "relation": "attacking" if club == team else "defending" if club else "neutral",
             "fan_team": club, "alert_number": self.session.alerts_this_absence + 1,
-            "max_alerts": MAX_ALERTS_PER_ABSENCE,
+            "max_alerts": self.max_alerts, "alert_for": self.session.settings.alert_for,
+            "night": self.session.settings.night,
         }
 
     def phrase_for(self, engine: MatchEngine, team: str, e: dict[str, Any], danger: float) -> str:
@@ -123,9 +148,21 @@ class Watcher:
         return Notification("called_it", e["t"], e["minute"], e["team"], text, facts, [e["id"]])
 
     def _goal(self, e: dict[str, Any]) -> Notification:
-        st, lang = self.state, self.session.profile.language
-        text = GOAL_ALERT_TEXT[lang].format(
-            scorer_name=st.player_name(e["scorer"]), minute=e["minute"], home=st.team_names[st.home],
-            away=st.team_names[st.away], score=st.score_str())
-        return Notification("goal", e["t"], e["minute"], e["team"], text,
-                            {"score": st.score_str(), "scorer": e["scorer"]}, [e["id"]])
+        """A goal while the fan is away: spoiler-free by default (the score waits for the replay)."""
+        st, lang, settings = self.state, self.session.profile.language, self.session.settings
+        facts = {"score": st.score_str(), "scorer": e["scorer"], "spoiler_free": not settings.spoilers}
+        if settings.spoilers:
+            text = GOAL_ALERT_TEXT[lang].format(
+                scorer_name=st.player_name(e["scorer"]), minute=e["minute"], home=st.team_names[st.home],
+                away=st.team_names[st.away], score=st.score_str())
+            return Notification("goal", e["t"], e["minute"], e["team"], text, facts, [e["id"]], settings.night)
+        return Notification("big_moment", e["t"], e["minute"], e["team"], BIG_MOMENT_TEXT[lang], facts, [e["id"]],
+                            settings.night)
+
+    def _big_moment(self, e: dict[str, Any]) -> Notification:
+        """A red card while the fan is away ("any big moment" rule)."""
+        st, lang, settings = self.state, self.session.profile.language, self.session.settings
+        text = RED_CARD_ALERT_TEXT[lang].format(player_name=st.player_name(e["player"]), team=st.team_names[e["team"]],
+                                                minute=e["minute"]) if settings.spoilers else BIG_MOMENT_TEXT[lang]
+        return Notification("big_moment", e["t"], e["minute"], e["team"], text,
+                            {"red_card": e["player"], "spoiler_free": not settings.spoilers}, [e["id"]], settings.night)

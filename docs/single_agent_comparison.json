@@ -1,0 +1,43 @@
+{
+ "matches": [
+  "demo (scripted)",
+  "unscripted #3001",
+  "unscripted #3002"
+ ],
+ "single_agent": {
+  "texts": 57,
+  "texts_with_a_problem_delivered": 7,
+  "moments_left_without_a_card": 47,
+  "moments_to_cover": 95,
+  "problems_by_rule": {
+   "invented or wrong number": 4,
+   "player or club not in the facts": 5,
+   "result announced before full time": 2
+  },
+  "calls": 9,
+  "usd_per_call": 0.0012804666666666666,
+  "seconds_per_call_median": null
+ },
+ "comeback": {
+  "texts": 57,
+  "texts_with_a_problem_delivered": 0,
+  "verified_llm_texts": 56,
+  "template_fallbacks": 1,
+  "problems_caught_by_verifier": {
+   "invented or wrong number": 3,
+   "numerical advantage on the wrong team": 5,
+   "result announced before full time": 1,
+   "player or club not in the facts": 3
+  },
+  "calls": 68,
+  "usd_per_call": 0.0003304058823529412,
+  "seconds_per_call_median": 1.5650193750625476
+ },
+ "at_200k_fans_demo_match": {
+  "fans": 200000,
+  "comeback_calls": 1854,
+  "comeback_usd": 0.6125725058823529,
+  "single_agent_calls": 628369,
+  "single_agent_usd": 804.6055588666666
+ }
+}

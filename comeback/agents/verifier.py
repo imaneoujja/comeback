@@ -171,8 +171,12 @@ def _misattributed(sentence: str, pattern: re.Pattern, expected: str, kind: str,
         before = [(claim.start() - end, team) for start, end, team in mentions if end <= claim.start()]
         after = [(start - claim.end(), team) for start, end, team in mentions if start >= claim.end()]
         owner = expected
-        if after and (_OPPOSING.search(sentence[:claim.start()]) or _FOR_TEAM.match(sentence[claim.end():])):
+        opposing = _OPPOSING.search(sentence[:claim.start()])
+        if after and (opposing or _FOR_TEAM.match(sentence[claim.end():])):
             attached = min(after)[1]          # explicit owner: "against ten-man X", "an advantage for X"
+        elif opposing and before:             # "X … against ten men": the ten men are X's opponents
+            nearest = min(before)[1]
+            attached = full if nearest == short else short
         elif before or after:
             attached = min(before or after)[1]
             if _OVERCOMING.search(sentence[:claim.start()]):   # "X won, overcoming a numerical advantage":

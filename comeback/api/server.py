@@ -18,10 +18,10 @@ from fastapi.staticfiles import StaticFiles
 
 from comeback.agents.llm import LLMGateway
 from comeback.agents.speech import AUDIO_DIR
-from comeback.api.replay import MATCHES_DIR, SPEEDS, ReplaySession, cue_visible
+from comeback.api.replay import MATCHES_DIR, SPEEDS, ReplaySession, cue_visible, shared_crowd
 from comeback.engine.match import load_match, run_engine
 from comeback.fans.crowd import scaling_curve
-from comeback.fans.profiles import load_profiles
+from comeback.fans.profiles import for_match, load_profiles
 
 WEB_DIR = Path(__file__).resolve().parents[2] / "web"
 SCALE_DIR = Path(__file__).resolve().parents[2] / "data" / "scale"
@@ -38,6 +38,8 @@ gateway = LLMGateway()
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    for path in sorted(MATCHES_DIR.glob("*.jsonl")):      # simulate each 10,000-fan audience once, before any viewer
+        await asyncio.to_thread(shared_crowd, path.stem)
     yield
     for session in sessions.values():
         await session.stop()
@@ -75,11 +77,18 @@ def _session(session_id: str) -> ReplaySession:
     return sessions[session_id]
 
 
-def _profile(profile_id: str):
+def _profile(profile_id: str, match_id: str = DEFAULT_MATCH):
+    """A demo fan, adapted to the fixture (the same side and shirt number in any match)."""
     profiles = load_profiles()
     if profile_id not in profiles:
         raise HTTPException(404, f"unknown profile {profile_id!r}")
-    return profiles[profile_id]
+    meta = _match_meta(match_id)
+    return for_match(profiles[profile_id], meta["home"]["id"], meta["away"]["id"])
+
+
+@cache
+def _match_meta(match_id: str) -> dict[str, Any]:
+    return load_match(_match_path(match_id))[0]
 
 
 @app.get("/", include_in_schema=False)
@@ -113,9 +122,20 @@ def match_info(match_id: str) -> dict[str, Any]:
     return meta
 
 
+@app.get("/api/matches")
+def matches() -> list[dict[str, Any]]:
+    """The matches this server can replay: the scripted demo and unscripted ones."""
+    out = []
+    for path in sorted(MATCHES_DIR.glob("*.jsonl")):
+        meta = _match_meta(path.stem)
+        out.append({"match_id": path.stem, "home": meta["home"]["name"], "away": meta["away"]["name"],
+                    "scripted": meta.get("scenario") is not None})
+    return out
+
+
 @app.get("/api/profiles")
-def profiles() -> list[dict[str, Any]]:
-    return [p.__dict__ for p in load_profiles().values()]
+def profiles(match_id: str = DEFAULT_MATCH) -> list[dict[str, Any]]:
+    return [_profile(pid, match_id).__dict__ for pid in load_profiles()]
 
 
 @cache
@@ -129,7 +149,7 @@ def overlays(match_id: str, profile: str | None = None) -> dict[str, Any]:
     """Timed, renderer-agnostic overlay cues for the whole match (optionally for one profile's level)."""
     cues = _overlays(match_id)
     if profile:
-        level = _profile(profile).level
+        level = _profile(profile, match_id).level
         cues = [c for c in cues if cue_visible(c, level)]
     return {"match_id": match_id, "count": len(cues), "cues": cues}
 
@@ -163,7 +183,7 @@ async def stream(request: Request, match_id: str = DEFAULT_MATCH, session: str |
     if device and replay is None:
         raise HTTPException(404, "no such session: scan the QR code shown in the control room")
     if replay is None or replay.match_id != match_id:
-        replay = ReplaySession(session_id, match_id, _profile(profile), gateway, speed)
+        replay = ReplaySession(session_id, match_id, _profile(profile, match_id), gateway, speed)
         sessions[session_id] = replay
     queue = replay.subscribe(device=device)
     replay.start()
@@ -259,6 +279,13 @@ async def schedule(session_id: str, away: float | None = None, back: float | Non
     return _session(session_id).schedule(away, back)
 
 
+@app.post("/api/session/{session_id}/settings")
+async def alert_settings(session_id: str, alert_for: str | None = None, spoilers: bool | None = None,
+                         night: bool | None = None) -> dict[str, Any]:
+    """The fan's alert rules: "threat" | "equaliser" | "big", spoilers on/off, night mode on/off."""
+    return _session(session_id).set_settings(alert_for, spoilers, night)
+
+
 @app.post("/api/session/{session_id}/outage")
 async def outage(session_id: str, down: bool = True) -> dict[str, Any]:
     """Failure drill: simulate an LLM outage for this session (agents fall back to verified templates)."""
@@ -283,7 +310,7 @@ async def pause(session_id: str, paused: bool = True) -> dict[str, Any]:
 @app.post("/api/session/{session_id}/profile")
 async def switch_profile(session_id: str, id: str) -> dict[str, Any]:
     replay = _session(session_id)
-    replay.set_profile(_profile(id))
+    replay.set_profile(_profile(id, replay.match_id))
     replay.away_bands = []  # viewing history belongs to the fan, not to the screen
     replay.publish("state", replay.state_message())
     return {"profile": id}

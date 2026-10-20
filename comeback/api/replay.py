@@ -7,7 +7,10 @@ to subscribers as typed messages, which the API turns into Server-Sent Events.
 
 import asyncio
 import contextlib
+import functools
 import logging
+import time
+from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
@@ -17,9 +20,9 @@ from comeback.agents.llm import LLMGateway, SwitchableGateway
 from comeback.agents.speech import SpeechGateway
 from comeback.agents.watcher import Watcher
 from comeback.engine.match import EngineUpdate, load_match
-from comeback.fans.crowd import Crowd
-from comeback.fans.profiles import FanProfile, load_profiles
-from comeback.fans.session import FanSession
+from comeback.fans.crowd import crowd_frames
+from comeback.fans.profiles import FanProfile, for_match, load_profiles
+from comeback.fans.session import ALERT_FOR, FanSession
 
 log = logging.getLogger(__name__)
 
@@ -31,6 +34,13 @@ CROWD_SIZE = 10_000
 REPLAYABLE = {"goal", "big_chance", "red_card", "penalty"}
 REPLAY_CLIPS = 3
 CLIP_BEFORE_S, CLIP_AFTER_S = 10.0, 2.5  # how long a catch-up waits for pending verified cards before using templates
+
+
+@functools.cache
+def shared_crowd(match_id: str) -> tuple[dict[str, Any], dict[int, dict[str, Any]]]:
+    """10,000 simulated fans for one match, simulated once and shared by every viewer of that match."""
+    meta, events = load_match(MATCHES_DIR / f"{match_id}.jsonl")
+    return crowd_frames(meta, events, CROWD_SIZE)
 
 
 def cue_visible(cue: dict[str, Any], level: str) -> bool:
@@ -48,9 +58,11 @@ class ReplaySession:
         self.meta, self.events = load_match(MATCHES_DIR / f"{match_id}.jsonl")
         self.llm = SwitchableGateway(gateway)  # per session, so a failure drill never affects other viewers
         self.brain = MatchBrain(self.meta, self.llm)
-        self.crowd = Crowd(self.brain.engine, CROWD_SIZE)
+        self._crowd_initial, self._crowd_frames = shared_crowd(match_id)
+        self._crowd = self._crowd_initial
         self.speech = SpeechGateway()
-        self.demo_profiles = load_profiles()
+        home, away = self.meta["home"]["id"], self.meta["away"]["id"]
+        self.demo_profiles = {pid: for_match(p, home, away) for pid, p in load_profiles().items()}
         self.speed = speed if speed in SPEEDS else 10
         self.index = 0
         self.paused = False
@@ -101,6 +113,20 @@ class ReplaySession:
         self.fan = FanSession(profile, joined_at=self.brain.engine.state.t)
         self.watcher = Watcher(self.fan, self.brain.engine)
 
+    def set_settings(self, alert_for: str | None = None, spoilers: bool | None = None,
+                     night: bool | None = None) -> dict[str, Any]:
+        """The fan's own alert rules (opt-in): what to be called back for, spoilers, night mode."""
+        settings = self.fan.settings
+        if alert_for in ALERT_FOR:
+            settings.alert_for = alert_for
+        if spoilers is not None:
+            settings.spoilers = spoilers
+        if night is not None:
+            settings.night = night
+        self.watcher = Watcher(self.fan, self.brain.engine)
+        self.publish("settings", asdict(settings))
+        return asdict(settings)
+
     def set_speed(self, speed: int) -> None:
         if speed in SPEEDS:
             self.speed = speed
@@ -135,7 +161,7 @@ class ReplaySession:
         st = self.brain.engine.state
         return {
             "session": self.session_id, "match_id": self.match_id, "speed": self.speed, "paused": self.paused,
-            "profile": self.fan.profile.__dict__, "present": self.fan.present,
+            "profile": self.fan.profile.__dict__, "present": self.fan.present, "settings": asdict(self.fan.settings),
             "away_bands": self.away_bands, "snapshot": self.brain.engine.snapshot(),
             "lineup": st.lineup,
             "timeline": self.brain.engine.timeline,
@@ -146,7 +172,9 @@ class ReplaySession:
 
     def crowd_snapshot(self) -> dict[str, Any]:
         analyst_calls = sum(c.get("attempts") or 1 for c in self.brain.cards.values() if needs_analyst(c))
-        return self.crowd.snapshot(analyst_calls)
+        llm_calls = analyst_calls + self._crowd["stories"]
+        return {**self._crowd, "analyst_calls": analyst_calls, "llm_calls": llm_calls,
+                "llm_calls_per_1000_fans": round(1000 * llm_calls / self._crowd["size"], 2)}
 
     # -------------------------------------------------------- fan actions
 
@@ -242,10 +270,12 @@ class ReplaySession:
         for moment in update.moments:
             if self.brain.cards[moment.moment_id]["pending"]:
                 self._card_queue.put_nowait(moment)
-        self.crowd.on_event(self.brain.engine, update, self.brain.cards)
+        frame = self._crowd_frames.get(self.index)   # the shared audience, computed once per match
+        if frame is not None:
+            self._crowd = frame
         if silent:
             return update
-        if self.crowd.ticked:
+        if frame is not None:
             self.publish("crowd", self.crowd_snapshot())
         level = self.fan.profile.level
         self.publish("event", event)
@@ -264,9 +294,9 @@ class ReplaySession:
         if timeline and timeline[-1]["t"] == event["t"]:
             self.publish("timeline", timeline[-1])
         for note in self.watcher.on_update(self.brain.engine, update):
-            payload = note.__dict__
+            payload = {**note.__dict__, "decided_at": time.time()}   # for end-to-end latency measurements
             if note.kind == "come_back":   # the same moment as every demo fan would get it: language, level, side
-                payload = {**payload, "variants": self._variants(note, event)}
+                payload["variants"] = self._variants(note, event)
             self.publish("notification", payload)
             if note.kind == "come_back":
                 detail = (f"{note.team} danger {note.facts['danger']} & rising · "

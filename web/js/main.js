@@ -1,13 +1,13 @@
 /* COMEBACK control room: boot, SSE stream, controls and the render loop. */
 
-import { $, app, MATCH_ID, SPEEDS, post, newSessionId, applyEvent, step, emit, on as onMessage, profile } from "./state.js";
+import { $, app, MATCH_ID, IS_DEMO, SPEEDS, post, newSessionId, applyEvent, step, emit, on as onMessage, profile } from "./state.js";
 import {
   renderScore, renderTimecode, showCue, expireOverlays, refreshBanner, clearOverlays, put, favouriteTag, renderMetric,
   renderGazette, milestoneTag,
 } from "./graphics.js";
 import {
   renderData, renderRundown, drawTimeline, renderProfiles, renderPresence, renderNotes, renderCatchup, hideCatchup, buzz,
-  initToast, toast,
+  initToast, toast, renderPrefs, renderVeiledCatchup,
 } from "./panels.js";
 import { drawTactical } from "./tactical.js";
 import { initAgents } from "./agents.js";
@@ -32,7 +32,7 @@ let lastSlow = 0;
 async function boot() {
   const [match, profiles] = await Promise.all([
     fetch(`/api/match/${MATCH_ID}`).then((r) => r.json()),
-    fetch("/api/profiles").then((r) => r.json()),
+    fetch(`/api/profiles?match_id=${MATCH_ID}`).then((r) => r.json()),
   ]);
   app.match = match;
   app.profiles = profiles;
@@ -47,6 +47,10 @@ async function boot() {
   document.documentElement.style.setProperty("--home", app.teams[app.home].colour);
   document.documentElement.style.setProperty("--away", app.teams[app.away].colour);
   $(".lg-home-name").textContent = app.teams[app.home].name.toUpperCase();
+  document.body.classList.toggle("other-match", !IS_DEMO);
+  for (const a of document.querySelectorAll("[data-overlays]")) a.href = `/api/overlays/${MATCH_ID}`;
+  $("#bar-sub").textContent = IS_DEMO ? "DEMO MATCH · SCRIPTED STORYLINE · FICTIONAL CLUBS"
+    : `UNSCRIPTED MATCH · ${app.teams[app.home].name.toUpperCase()} v ${app.teams[app.away].name.toUpperCase()}`;
   $(".lg-away-name").textContent = app.teams[app.away].name.toUpperCase();
 
   try {
@@ -132,6 +136,9 @@ function buildControls() {
   $("#story-btn").addEventListener("click", playStory);
   $("#tk-open").addEventListener("click", () => setMode("studio"));
   $("#outage-btn").addEventListener("click", () => post(`outage?down=${!app.outage}`));
+  $("#pref-for").addEventListener("click", (e) => { if (e.target.dataset.for) post(`settings?alert_for=${e.target.dataset.for}`); });
+  $("#pref-night").addEventListener("change", (e) => post(`settings?night=${e.target.checked}`));
+  $("#pref-spoilers").addEventListener("change", (e) => post(`settings?spoilers=${e.target.checked}`));
   onMessage("open-picker", openPicker);
   const clock = () => { $("#ph-time").textContent = storyClock() || new Date().toTimeString().slice(0, 5); };
   clock(); setInterval(clock, 1000);
@@ -191,16 +198,30 @@ function connect() {
     if (isNew && c.type === "milestone" && !isReplaying()) milestoneTag(c);
   });
   on("timeline", (t) => app.timeline.push(t));
-  on("notification", (n) => { app.notes.unshift(n); renderNotes(); buzz(n.kind === "come_back"); toast(n); });
+  on("notification", (n) => {
+    app.notes.unshift(n); renderNotes();
+    if (!n.silent) { buzz(n.kind === "come_back"); toast(n); }   // night mode: delivered without a buzz
+  });
+  on("settings", (st) => { app.settings = st; renderPrefs(); });
   on("presence", (p) => {
     app.present = p.present; app.awayBands = p.away_bands;
     if (!p.present) hideCatchup();
     renderPresence();
   });
   on("catchup", (c) => {
-    renderCatchup(c);
+    const d = c.delta || {};
+    const spoiler = !app.settings?.spoilers && !c.late_join && d.score_then !== d.score_now && (c.replay || []).length;
     toast({ kind: "catchup", text: c.late_join ? "The story so far is ready on the phone." : "Your catch-up is ready on the phone." });
-    playVoice(c);
+    if (spoiler) {                       // the score waits for the replay
+      renderVeiledCatchup();
+      let shown = false;
+      const reveal = () => { if (shown) return; shown = true; renderCatchup(c); playVoice(c); };
+      onMessage("replay-end", reveal);
+      setTimeout(reveal, 30000);
+    } else {
+      renderCatchup(c);
+      playVoice(c);
+    }
     playReplay(c, program);
   });
   on("agent", () => {});         // forwarded to the AGENTS monitor through emit()
@@ -216,9 +237,9 @@ function onState(s) {
     speed: s.speed, paused: s.paused, profileId: s.profile.id, present: s.present, awayBands: s.away_bands,
     snapshot: s.snapshot, snapshotAt: performance.now(), timeline: s.timeline, lineup: s.lineup,
     cards: new Map(s.cards.map((c) => [c.moment_id, c])), notes: [...s.notifications].reverse(),
-    possession: s.snapshot.possession, crowd: s.crowd,
+    possession: s.snapshot.possession, crowd: s.crowd, settings: s.settings,
   });
-  renderControls(); renderScore(); renderProfiles(); renderPresence(); renderNotes(); renderRundown(); renderData();
+  renderControls(); renderScore(); renderProfiles(); renderPresence(); renderNotes(); renderRundown(); renderData(); renderPrefs();
   renderMetric(profile());
   renderOutage(Boolean(s.outage));
   const fav = profile()?.favourite_player_id;               // sprints before a join or a seek were not streamed

@@ -163,6 +163,18 @@ GOAL_ALERT_TEXT = {
     "es": "¡Gol! {scorer_name} (min. {minute}) — {home} {score} {away}.",
 }
 
+BIG_MOMENT_TEXT = {  # spoiler-free: the score waits for the replay
+    "en": "Something big just happened. Your 20-second replay is ready.",
+    "fr": "Il vient de se passer quelque chose de grand. Ton replay de 20 secondes est prêt.",
+    "es": "Acaba de pasar algo grande. Tu repetición de 20 segundos está lista.",
+}
+
+RED_CARD_ALERT_TEXT = {
+    "en": "Red card: {player_name} ({team}) is sent off ({minute}').",
+    "fr": "Carton rouge : {player_name} ({team}) est expulsé ({minute}e).",
+    "es": "Tarjeta roja: {player_name} ({team}) es expulsado (min. {minute}).",
+}
+
 CALLED_IT_TEXT = {  # a goal that came after a call-back, with the fan back in time
     "en": "COMEBACK called it: alert at {alert_minute}', goal at {minute}'. You were back in time.",
     "fr": "COMEBACK l'avait senti : alerte à la {alert_minute}e, but à la {minute}e. Tu étais là à temps.",

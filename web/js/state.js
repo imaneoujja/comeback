@@ -2,7 +2,9 @@
  * ball position (with height for lofted passes) and smoothed player positions,
  * all in pitch coordinates (x 0..105 towards the away goal, y 0..68). */
 
-export const MATCH_ID = "demo-comeback";
+export const DEMO_MATCH = "demo-comeback";
+export const MATCH_ID = new URLSearchParams(location.search).get("match") || DEMO_MATCH;   // "Try another match"
+export const IS_DEMO = MATCH_ID === DEMO_MATCH;
 export const SPEEDS = [1, 5, 10, 20, 40];
 export const L = 105, W = 68;
 
