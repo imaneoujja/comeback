@@ -54,6 +54,7 @@ class ReplaySession:
         self.index = 0
         self.paused = False
         self.away_bands: list[dict[str, float | None]] = []
+        self._plan: list[tuple[float, str]] = []   # scheduled (second-half minute, "away" | "back"): the guided story
         self._subscribers: set[asyncio.Queue] = set()
         self._devices: set[asyncio.Queue] = set()
         self._task: asyncio.Task | None = None
@@ -159,6 +160,7 @@ class ReplaySession:
 
     async def come_back(self) -> dict[str, Any] | None:
         t = self.brain.engine.state.t
+        snapshot = self.brain.engine.snapshot()   # the match as the fan finds it, before the live feed moves on
         window = self.fan.come_back(t)
         if window is None:
             return None
@@ -168,7 +170,7 @@ class ReplaySession:
         await self._drain_cards()
         self.trace({"agent": "Watcher", "step": "back", "label": self.fan.profile.name,
                     "detail": f"back after {round((window[1] - window[0]) / 60)} min → Storyteller"})
-        catchup = await self.brain.catchup(self.fan.profile, *window, trace=self.trace)
+        catchup = await self.brain.catchup(self.fan.profile, *window, trace=self.trace, snapshot=snapshot)
         catchup |= {"from_t": window[0], "to_t": window[1]}
         catchup |= await self._replay_and_voice(catchup, *window)
         self.publish("catchup", catchup)
@@ -187,6 +189,24 @@ class ReplaySession:
             if (e["period"], e["minute"] + e["second"] / 60) >= target:
                 break
 
+    def schedule(self, away: float | None = None, back: float | None = None) -> dict[str, Any]:
+        """Plan the fan's absence at exact match minutes (second half), applied by the replay loop itself.
+
+        The guided story uses it so the absence window never depends on how fast the browser
+        reacts: on a loaded machine a click can land a minute of match late.
+        """
+        self._plan = sorted((m, action) for m, action in ((away, "away"), (back, "back")) if m is not None)
+        return {"plan": self._plan}
+
+    async def _run_plan(self, event: dict[str, Any]) -> None:
+        clock = (event["period"], event["minute"] + event["second"] / 60)
+        while self._plan and clock >= (2, self._plan[0][0]):
+            _, action = self._plan.pop(0)
+            if action == "away" and self.fan.present:
+                self.go_away()
+            elif action == "back" and not self.fan.present:
+                await self.come_back()
+
     def seek(self, minute: float) -> dict[str, Any]:
         """Skip ahead to ``minute`` with the fan watching all along (guided demo): no catch-up."""
         self._fast_forward(minute)
@@ -198,6 +218,7 @@ class ReplaySession:
         """Late join: fast-forward silently to ``minute`` (second half if > 45), then tell the story so far."""
         self._fast_forward(minute)
         t = self.brain.engine.state.t
+        snapshot = self.brain.engine.snapshot()
         self.set_profile(self.fan.profile)
         self.fan.joined_at = t
         self.away_bands.append({"from_t": 0.0, "to_t": t, "late_join": True})
@@ -205,7 +226,8 @@ class ReplaySession:
         self.publish("state", self.state_message())
         self.trace({"agent": "Watcher", "step": "join", "label": self.fan.profile.name,
                     "detail": "joined late → Storyteller: the story so far"})
-        catchup = await self.brain.catchup(self.fan.profile, 0.0, t, late_join=True, trace=self.trace)
+        catchup = await self.brain.catchup(self.fan.profile, 0.0, t, late_join=True, trace=self.trace,
+                                           snapshot=snapshot)
         catchup |= {"from_t": 0.0, "to_t": t, "late_join": True}
         catchup |= await self._replay_and_voice(catchup, 0.0, t)
         self.publish("catchup", catchup)
@@ -263,6 +285,7 @@ class ReplaySession:
                 event = self.events[self.index]
                 self._process(event)
                 self.index += 1
+                await self._run_plan(event)
                 if self.index < len(self.events):
                     gap = max(0.0, self.events[self.index]["t"] - event["t"])
                     self._wake.clear()

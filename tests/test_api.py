@@ -145,3 +145,75 @@ def test_failure_drill_falls_back_to_verified_templates() -> None:
     assert joined["source"] == "template" and joined["text"]
     assert {"type": "outage", "data": {"down": True}} in messages
     assert any(m["type"] == "agent" and m["data"]["step"] == "unavailable" for m in messages)
+
+
+def test_catchup_does_not_drift_while_the_live_feed_moves_on() -> None:
+    """The live match keeps running while pending cards are drained: the story is of the moment the fan came back."""
+    async def scenario() -> dict:
+        replay = ReplaySession("drift", "demo-comeback", load_profiles()["omar"],
+                               LLMGateway(LLMSettings(mode=LLMMode.OFFLINE)))
+        replay.subscribe()
+        replay.set_paused(True)
+        replay.start()
+        replay.seek(63)
+        replay.go_away()
+        replay.seek(70.5)
+        drain = replay._drain_cards
+
+        async def drain_while_the_match_goes_on() -> None:
+            await drain()
+            for event in replay.events[replay.index: replay.index + 60]:   # about a minute of live play
+                replay._process(event)
+            replay.index += 60
+
+        replay._drain_cards = drain_while_the_match_goes_on
+        back = await replay.come_back()
+        await replay.stop()
+        return back
+
+    back = asyncio.run(scenario())
+    assert back["source"] == "llm" and back["delta"]["away_minutes"] == 7
+
+
+def test_a_scheduled_absence_is_applied_at_exact_minutes() -> None:
+    """The guided story plans "away at 63', back at 70.5'": the window must not depend on the browser."""
+    async def scenario() -> tuple[list, dict | None]:
+        replay = ReplaySession("plan", "demo-comeback", load_profiles()["omar"],
+                               LLMGateway(LLMSettings(mode=LLMMode.OFFLINE)))
+        queue = replay.subscribe()
+        replay.set_paused(True)
+        replay.start()
+        replay.seek(59)
+        replay.schedule(away=63, back=70.5)
+        while replay.index < len(replay.events):
+            event = replay.events[replay.index]
+            replay._process(event)
+            replay.index += 1
+            await replay._run_plan(event)
+            if event["period"] == 2 and event["minute"] >= 72:
+                break
+        await replay.stop()
+        catchups = []
+        while not queue.empty():
+            message = queue.get_nowait()
+            if message["type"] == "catchup":
+                catchups.append(message["data"])
+        return replay.away_bands, catchups[0] if catchups else None
+
+    bands, catchup = asyncio.run(scenario())
+    (band,) = bands
+    assert 7 * 60 <= band["to_t"] - band["from_t"] <= 8 * 60          # 63' → 70.5'
+    assert catchup and catchup["source"] == "llm" and catchup["audio"] and catchup["delta"]["away_minutes"] == 7
+
+
+def test_session_endpoints_run_on_the_event_loop() -> None:
+    """A plain ``def`` endpoint runs in a worker thread, racing the replay loop (seen as events counted twice)."""
+    import inspect
+
+    from fastapi.routing import APIRoute
+
+    session_routes = [r for r in app.routes
+                      if isinstance(r, APIRoute) and r.path.startswith(("/api/session", "/api/sessions"))]
+    assert session_routes
+    assert all(inspect.iscoroutinefunction(r.endpoint) for r in session_routes), \
+        [r.path for r in session_routes if not inspect.iscoroutinefunction(r.endpoint)]

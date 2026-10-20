@@ -1,16 +1,21 @@
 # COMEBACK
 
-### You left the match. COMEBACK didn't.
+### You can't stay up for 90 minutes. COMEBACK wakes you up for the 10 that matter.
 
-Nobody watches 90 minutes straight. You go to the kitchen, answer a message, join
-at the 60th minute, and that is always when the goal comes. COMEBACK notices that
-**you** left, keeps watching for you, **calls you back before the big moment** (and
-tells you why), then tells you **what you missed**: in your language, from your
-club's side, sized to how long you were gone.
+The match kicks off at 4 a.m. in your time zone. You go to sleep, and that is
+always when the goal comes. COMEBACK keeps watching for you, **wakes you before the
+big moments** (and tells you why), then tells you **what you missed**: in your
+language, from your club's side, sized to how long you were gone.
 
-And it does that for every fan at almost no extra cost: one shared match brain
-writes each key moment once, so serving **200,000** simulated fans takes about
-**1,900** LLM calls instead of more than 600,000.
+**The stream asks you to watch. COMEBACK lets you not watch, without missing what matters.**
+
+- **54% of goals announced in advance**, 1.4× better than alerts placed at random,
+  on 50 unseen matches, with a **median warning of 60 s**. We announce big moments;
+  we do not claim to predict goals.
+- **Verified text**: every number and name is checked before a fan sees it; the 23 AI-written
+  texts of the demo score **5.0/5 on groundedness** in Microsoft Foundry evaluations.
+- **One brain for every fan**: serving **200,000** simulated fans takes about
+  **1,900** LLM calls instead of more than 600,000.
 
 **▶ Live demo: [comeback.lemonforest-f9ddbdf8.switzerlandnorth.azurecontainerapps.io](https://comeback.lemonforest-f9ddbdf8.switzerlandnorth.azurecontainerapps.io)** (Azure Container Apps; the first load can take ~20 s while it wakes up)
 
@@ -28,9 +33,9 @@ writes each key moment once, so serving **200,000** simulated fans takes about
 
 | | What happens | In the demo match |
 |---|---|---|
-| **1. You leave** | A Watcher agent keeps watching for you. It knows your club, favourite player, level and language. | Omar (Emberfield fan, analyst, French) leaves at 63'. |
-| **2. It's heating up** | It calls you back **before** the moment, and says why. Your phone takes over the screen, rings, and reads the reason aloud. | 69': *"Reviens — Emberfield est entré 3 fois dans la surface en 2 minutes et a tenté 1 tir."* |
-| **3. You return** | The TV rewinds: the moments you missed are replayed in 3D from behind the goal while a neural voice reads your "Previously on…" catch-up of what **changed**, sized to your absence. A live goal cuts the replay short. | 70': a catch-up in French, then the 71' goal. |
+| **1. You leave** | A Watcher agent keeps watching for you. It knows your club, favourite player, level and language. | Kick-off was at 4 a.m. for Omar (Emberfield fan, analyst, French), who falls asleep at 63'. |
+| **2. It's heating up** | It calls you back **before** the moment, and says why. Your phone takes over the screen, rings, and reads the reason aloud. | 65' and 69': *"Reviens — Emberfield est entré 3 fois dans la surface en 2 minutes et a tenté 1 tir."* |
+| **3. You return** | The TV rewinds: the moments you missed are replayed in 3D from behind the goal while a neural voice reads your "Previously on…" catch-up of what **changed**, sized to your absence. A live goal cuts the replay short. | 70': a catch-up in French, then the 71' goal, seen live. The phone confirms: *"COMEBACK l'avait senti : alerte à la 69e, but à la 71e."* |
 | **4. Full-time** | Your own front page: the match told from your side. | Sofia (Comets fan): *"Heartbreaking loss for Saltmarsh Comets after strong start"*. |
 
 Around this loop sits a **broadcast control room**: a 3D program feed with
@@ -38,6 +43,21 @@ broadcast graphics (player tags, pass difficulty, shot speed, speed and distance
 tags, danger index), an AGENTS monitor showing the agents at work, a simulated
 audience of 10,000 fans, and **timed, machine-readable overlay cues** a broadcast
 graphics renderer could consume.
+
+## Why not just stream it on your phone?
+
+Because a stream, or a commentary turned up loud, asks for 90 minutes of attention,
+and the moments COMEBACK is built for are the ones where you have none to give: a
+4 a.m. kick-off in another time zone (our main case), but also a work call, or
+putting the kids to bed. Your phone is in your pocket, face down. It is not
+COMEBACK's competitor; it is its channel: one buzz, one sentence with the reason,
+at the right time, at most twice per absence. And when you are back, the stream
+does not tell you what changed while you were gone. COMEBACK does, in your language
+and from your side.
+
+For a broadcaster, the same engine brings viewers back **live**, before the peak
+moments, instead of sending a spoiler after them: more live minutes, measurable
+(the AUDIENCE monitor counts the fans back in time for each goal).
 
 ## Try it (zero configuration, no API key)
 
@@ -63,13 +83,15 @@ without any key.
 
 ### What to try
 
-1. **▶ Play the 90-second story** on the first screen. Omar (Emberfield fan, French,
-   analyst) leaves at 63'. The phone rings at 65' and 69' with the reason. Omar is back
-   at 70': the screen replays what was missed while a neural voice reads the catch-up,
-   and the 71' goal is seen live. A caption explains each step.
+1. **▶ Play the 90-second story** on the first screen. Kick-off was at 4 a.m. for Omar
+   (Emberfield fan, French, analyst), who falls asleep at 63'. The phone buzzes at 65'
+   and 69' with the reason. Omar is up at 70': the screen replays what was missed while
+   a neural voice reads the catch-up, and the 71' goal is seen live. Then a jump to 80'
+   shows the Verifier catching a real mistake by the Analyst. A caption explains each step.
 2. Or pick a fan and watch the match yourself:
-   - **Omar**: leave whenever you like (switch browser tab, or **I'M AWAY** on the
-     on-screen phone), for example from 63' to 70'.
+   - **Omar**: press **SKIP TO 60'**, then leave whenever you like (switch browser
+     tab, or **I'M AWAY** on the on-screen phone), for example from 63' to 70'. The bar
+     above the match suggests when a team is pushing.
    - **Sofia** (English, casual, Saltmarsh Comets fan): away at about 76', back at
      about 86'. Same match, a completely different story.
    - **Reda** (Spanish, follows striker Halen Merewood): joins at 60' and gets the
@@ -207,9 +229,9 @@ of the goals; the numbers below come from **50 other, held-out matches** (seeds
 
 | Metric (held-out unscripted matches) | Value |
 |---|---|
-| Goals preceded by an alert for the scoring team (5-min window) | **54%** |
+| Goals preceded by an alert for the scoring team (5-min window) | **54%** (**1.4×** random) |
 | … with the same number of alerts placed at random | 39% |
-| Median lead time before those goals | 60 s |
+| Median lead time before those goals | **60 s** |
 | Alert followed by a shot with xG ≥ 0.1 within 60 s | **18%** (random instant: 5%, **×3.7**) |
 | Alerts per team per match | 7.3 |
 
@@ -289,7 +311,7 @@ groundedness, so the 5/5 on real texts is not leniency. Details per text:
 | **Azure AI Speech** (through the same Foundry resource) | Neural voices read each fan's catch-up and full-time recap in their language (`en-GB-RyanNeural`, `fr-FR-HenriNeural`, `es-ES-AlvaroNeural`) while the program feed replays the missed moments (`comeback/agents/speech.py`). The demo's audio is committed, so offline mode still speaks. |
 | **Azure Container Apps** | The public demo: the CI image from `ghcr.io`, Consumption plan, scale 0 → 1 replica (0.5 vCPU, 1 GiB), offline mode, so it costs nothing while idle. |
 | **GitHub Codespaces** | One-click, zero-config environment for judges (`.devcontainer/`). |
-| **GitHub Actions + GitHub Container Registry** | CI on every push (ruff, 50 tests), then the container image is built and published to `ghcr.io` (`.github/workflows/ci.yml`, `Dockerfile`). |
+| **GitHub Actions + GitHub Container Registry** | CI on every push (ruff, 55 tests), then the container image is built and published to `ghcr.io` (`.github/workflows/ci.yml`, `Dockerfile`). |
 | **Model Context Protocol** | `comeback/mcp_server.py`: any agent, including GitHub Copilot in VS Code, can query the live match. |
 | GitHub / GitHub Copilot | Development workflow. |
 
@@ -362,7 +384,7 @@ LLM_MODE=record python scripts/precompute.py     # re-record the demo cache
 ## Development
 
 ```bash
-pytest                        # 50 tests: realism, engine, verifier, workflow paths, watchers, crowd, API, guided story, failure drill
+pytest                        # 55 tests: realism, engine, verifier, workflows, watchers, called-it, crowd, API, story, drill, concurrency
 ruff check .
 python -m comeback.synth.cli random --count 5    # more synthetic matches
 python scripts/evaluate_alerts.py

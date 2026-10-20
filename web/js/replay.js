@@ -11,7 +11,7 @@ const REPLAY_RATE = 1.6;                 // match seconds per wall second inside
 const ON_BALL = new Set(["pass", "carry", "sprint", "shot", "goal", "possession_change", "throw_in", "corner", "goal_kick"]);
 const TYPE = { goal: "GOAL", big_chance: "BIG CHANCE", red_card: "RED CARD", penalty: "PENALTY" };
 let active = null;
-let voice = null;
+const voiceEl = typeof Audio === "undefined" ? null : new Audio();   // reused: iOS unlocks an element, not a page
 
 export const isReplaying = () => Boolean(active && !active.done);
 export function buffer(event) { active.buffer.push(event); }
@@ -35,20 +35,43 @@ function finish() {
   emit("replay-end", { interrupted: Boolean(active.interrupted) });
 }
 
+/** A short silent WAV, to prime the voice element from a tap. */
+function silence() {
+  const n = 800, buf = new ArrayBuffer(44 + n), v = new DataView(buf);
+  const tag = (at, text) => [...text].forEach((ch, i) => v.setUint8(at + i, ch.charCodeAt(0)));
+  tag(0, "RIFF"); v.setUint32(4, 36 + n, true); tag(8, "WAVE"); tag(12, "fmt "); v.setUint32(16, 16, true);
+  v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, 8000, true); v.setUint32(28, 8000, true);
+  v.setUint16(32, 1, true); v.setUint16(34, 8, true); tag(36, "data"); v.setUint32(40, n, true);
+  for (let i = 0; i < n; i += 1) v.setUint8(44 + i, 128);
+  return URL.createObjectURL(new Blob([buf], { type: "audio/wav" }));
+}
+
+/** Safari and iOS only play sound a tap started: call this from the first tap, the voice-overs can then play later. */
+export function unlockAudio() {
+  if (!voiceEl || voiceEl.dataset.unlocked) return;
+  voiceEl.dataset.unlocked = "1";
+  voiceEl.src = silence();
+  voiceEl.play().catch(() => {});
+}
+
 /** Play the fan's voice-over (neural audio if available, browser speech otherwise). */
 export function playVoice(c) {
   stopVoice();
-  if (c.audio) {
-    voice = new Audio(c.audio);
-    voice.play().catch(() => speak(c.text, c.language));
+  const done = () => emit("voice", { playing: false });
+  emit("voice", { playing: true });
+  if (c.audio && voiceEl) {
+    voiceEl.onended = done;
+    voiceEl.src = c.audio;
+    voiceEl.play().catch(() => speak(c.text, c.language, done));
   } else {
-    speak(c.text, c.language);
+    speak(c.text, c.language, done);
   }
 }
 
 export function stopVoice() {
-  if (voice) { voice.pause(); voice = null; }
+  if (voiceEl) { voiceEl.onended = null; voiceEl.pause(); }
   stopSpeech();
+  emit("voice", { playing: false });
 }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));

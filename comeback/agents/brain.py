@@ -62,13 +62,19 @@ class MatchBrain:
         return card
 
     async def catchup(self, profile: FanProfile, from_t: float, to_t: float,
-                      late_join: bool = False, trace: Tracer | None = None, final: bool = False) -> dict[str, Any]:
-        """Personalised catch-up for the window ``[from_t, to_t]``."""
+                      late_join: bool = False, trace: Tracer | None = None, final: bool = False,
+                      snapshot: dict[str, Any] | None = None) -> dict[str, Any]:
+        """Personalised catch-up for the window ``[from_t, to_t]``.
+
+        ``snapshot`` is the match as it was at ``to_t`` (the moment the fan came back): the live
+        match keeps moving while pending cards are drained, and the story must not drift with it.
+        """
         cards = sorted(self.cards.values(), key=lambda c: c["t"])
         in_window = [c for c in cards if from_t <= c["t"] <= to_t]
         bucket = length_bucket(to_t - from_t, late_join or final)
         selected = select_cards(cards, from_t, to_t, profile, bucket)
-        delta = build_delta(self.engine.timeline, self.engine.snapshot(), from_t, self.team_names, in_window)
+        now = snapshot or self.engine.snapshot()
+        delta = build_delta(self.engine.timeline, now, from_t, self.team_names, in_window)
         task = CatchupTask(profile, bucket, selected, delta, self.team_names, self.roster, late_join, final)
         return await write_catchup(task, self.gateway, trace)
 

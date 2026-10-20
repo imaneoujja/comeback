@@ -1,12 +1,20 @@
 /* Gallery monitors: DATA, RUNDOWN, TIMELINE and the FAN device feed. */
 
-import { $, app, esc, teamColour, teamName, profile, sizeCanvas, emit } from "./state.js";
+import { $, app, esc, teamColour, teamName, profile, sizeCanvas, emit, on } from "./state.js";
 import { TYPE_LABEL, tag } from "./graphics.js";
 import { stopSpeech } from "./voice.js";
 import { playVoice, stopVoice } from "./replay.js";
 
 const LANG_LABEL = { en: "English", fr: "Français", es: "Español" };
-const NOTE_LABEL = { come_back: "● COME BACK", goal: "● GOAL", called_it: "✓ CALLED IT" };
+const NOTE_LABEL = { come_back: "● COME BACK", goal: "● GOAL", called_it: "✓ CALLED IT", catchup: "PREVIOUSLY ON…" };
+let reading = false;          // a voice-over is playing
+let phoneVisible = true;      // the fan's device panel is on screen (not scrolled away on a small screen)
+
+on("voice", ({ playing }) => {
+  reading = playing;
+  const b = $("#listen");
+  if (b) { b.classList.toggle("reading", playing); b.textContent = playing ? "■ STOP" : "▶ LISTEN"; }
+});
 
 /* ------------------------------------------------------------------ DATA */
 
@@ -150,6 +158,26 @@ export function renderNotes() {
     <div class="note-x">${esc(n.text)}</div></div>`).join("");
 }
 
+/** On a small screen the fan's phone can be scrolled away: notifications then also appear as a toast. */
+export function initToast() {
+  const fan = document.querySelector(".mon.fan");
+  new IntersectionObserver(([e]) => { phoneVisible = e.intersectionRatio > 0.3; }, { threshold: [0, 0.3, 1] }).observe(fan);
+  $("#toast").addEventListener("click", () => {
+    fan.scrollIntoView({ behavior: "smooth", block: "start" });
+    $("#toast").hidden = true;
+  });
+}
+
+export function toast(n) {
+  if (phoneVisible) return;
+  const el = $("#toast");
+  el.className = `toast ${n.kind}`;
+  el.innerHTML = `<b>${NOTE_LABEL[n.kind] || ""}${n.minute ? ` · ${n.minute}'` : ""}</b><span>${esc(n.text)}</span>`;
+  el.hidden = false;
+  clearTimeout(toast.timer);
+  toast.timer = setTimeout(() => { el.hidden = true; }, 7000);
+}
+
 export function buzz(ringing = false) {
   const fan = document.querySelector(".mon.fan");
   fan.classList.remove("buzz"); void fan.offsetWidth; fan.classList.add("buzz");
@@ -173,13 +201,15 @@ export function renderCatchup(c) {
   el.innerHTML = `<div class="cu-k"><span>PREVIOUSLY ON…</span><button aria-label="Close" id="cu-close">×</button></div>
     <div class="cu-t">${esc(title)}</div><div class="chips">${chips}</div>
     <div class="cu-text">${esc(c.text)}</div>
-    <div class="cu-f">${tag(c, "Storyteller")}${"speechSynthesis" in window ? `<button class="key" id="listen">▶ LISTEN</button>` : ""}</div>`;
+    <div class="cu-f">${tag(c, "Storyteller")}<button class="key ${reading ? "reading" : ""}" id="listen"
+      aria-label="Read the catch-up aloud">${reading ? "■ STOP" : "▶ LISTEN"}</button></div>`;
   $("#cu-close").addEventListener("click", hideCatchup);
-  $("#listen")?.addEventListener("click", () => playVoice(c));
+  $("#listen").addEventListener("click", () => (reading ? stopVoice() : playVoice(c)));
 }
 
 export function hideCatchup() {
   stopVoice();
   stopSpeech();
   const el = $("#catchup"); el.hidden = true; el.innerHTML = "";
+  emit("catchup-closed", {});
 }

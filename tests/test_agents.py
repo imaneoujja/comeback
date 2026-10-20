@@ -267,3 +267,42 @@ def test_every_fan_gets_a_verified_full_time_gazette() -> None:
     for recap in recaps:
         assert recap["final"] and recap["source"] == "llm" and recap["headline"]
         assert 0 < len(recap["key_moments"]) <= 6
+
+
+def test_called_it_only_after_a_real_alert_for_the_scorer_within_five_minutes() -> None:
+    """The "called it" receipt is a claim about our own alert: it must never be shown without one."""
+    meta, _ = load_match(DEMO)
+    engine = MatchBrain(meta, LLMGateway(LLMSettings(mode=LLMMode.OFFLINE))).engine
+    goal = {"type": "goal", "team": "EMB", "t": 4280.0, "minute": 71, "id": "e1"}
+
+    def receipt(alerts: list[dict]) -> object:
+        session = FanSession(load_profiles()["omar"])   # present: the fan is back in time
+        session.notifications = alerts
+        return Watcher(session, engine)._called_it(goal)
+
+    alert = {"kind": "come_back", "team": "EMB", "t": 4160.0, "minute": 69}
+    assert receipt([]) is None                                                  # no alert at all
+    assert receipt([{**alert, "team": "SMC"}]) is None                          # alert about the other team
+    assert receipt([{**alert, "t": 3970.0, "minute": 66}]) is None              # older than the 5-minute window
+    assert receipt([{**alert, "kind": "goal"}]) is None                         # a goal notification is not an alert
+    assert receipt([{**alert, "t": 4290.0}]) is None                            # an alert after the goal
+    note = receipt([alert])
+    assert note.kind == "called_it" and note.facts == {"alert_minute": 69, "goal_minute": 71, "lead_s": 120,
+                                                       "score": engine.state.score_str()}
+
+
+def test_called_it_is_never_sent_while_the_fan_is_still_away() -> None:
+    """Away at the goal means the fan missed it: a goal notification, not a receipt."""
+    meta, events = load_match(DEMO)
+    brain = MatchBrain(meta, LLMGateway(LLMSettings(mode=LLMMode.OFFLINE)))
+    omar = FanSession(load_profiles()["omar"])
+    watcher = Watcher(omar, brain.engine)
+    kinds = []
+    for event in events:
+        update = brain.process(event)
+        if event["period"] == 2 and event["minute"] == 63 and omar.present:
+            omar.go_away(event["t"])
+        if event["period"] == 2 and event["minute"] >= 72:
+            break
+        kinds += [n.kind for n in watcher.on_update(brain.engine, update)]
+    assert "come_back" in kinds and "goal" in kinds and "called_it" not in kinds

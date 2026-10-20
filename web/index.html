@@ -38,20 +38,28 @@
     </div>
   </header>
 
-  <div class="welcome" id="welcome" role="dialog" aria-label="Choose how to watch">
+  <div class="welcome loading" id="welcome" role="dialog" aria-modal="true" aria-labelledby="wl-h">
     <div class="wl">
       <button class="wl-x" id="wl-x" aria-label="Close" hidden>×</button>
       <div class="wl-k">COMEBACK</div>
-      <h1 class="wl-h">You left the match.<br><em>COMEBACK didn't.</em></h1>
-      <p class="wl-p">It watches the game while you're away, calls you back <b>before</b> the big moment,
-        and tells you what you missed: in your language, from your side.</p>
-      <button class="wl-story" id="wl-story"><span class="wl-play">▶</span>
-        <span><b>Play the 90-second story</b><small>Omar leaves at 63'. The phone rings before the goal.</small></span></button>
+      <h1 class="wl-h" id="wl-h">You can't stay up for 90 minutes.<br><em>COMEBACK wakes you up for the 10 that matter.</em></h1>
+      <p class="wl-p">A 4 a.m. kick-off in your time zone? Go to sleep. COMEBACK watches the match, wakes you
+        <b>before</b> the big moments with the reason, and tells you what you missed: in your language, from your side.</p>
+      <p class="wl-promise">The stream asks you to watch. COMEBACK lets you not watch, without missing what matters.</p>
+      <button class="wl-story" id="wl-story" disabled><span class="wl-play">▶</span>
+        <span><b id="wl-story-t">Loading the match…</b><small>A 4 a.m. kick-off. Omar falls asleep at 63'. The phone buzzes before the goal.</small></span></button>
       <div class="wl-or">or pick a fan and watch the match yourself</div>
       <div class="wl-fans" id="wl-fans"></div>
+      <dl class="wl-proof">
+        <div><dt>54%</dt><dd>of goals announced in advance, 1.4× better than chance, on unseen matches</dd></div>
+        <div><dt>60 s</dt><dd>median warning before those goals</dd></div>
+        <div><dt>5.0/5</dt><dd>groundedness of the 23 AI-written texts in the demo (Microsoft Foundry evaluations)</dd></div>
+      </dl>
       <div class="wl-f">Synthetic match · fictional clubs and players · Microsoft Agent Framework · Microsoft Foundry · Azure AI Speech</div>
     </div>
   </div>
+
+  <div class="toast" id="toast" role="status" hidden></div>
 
   <main class="gallery">
     <section class="storybar" id="storybar" aria-live="polite">
@@ -101,9 +109,10 @@
           <button class="key" id="btn-join">JOIN AT 60'</button>
         </div>
         <label class="auto"><input type="checkbox" id="auto-away" checked> switching tab = leaving</label>
+        <div class="story-lock">The story is driving this phone. EXIT STORY to take over.</div>
         <div class="catchup" id="catchup" hidden></div>
         <div class="notes-head">NOTIFICATIONS</div>
-        <div class="notes" id="notes"></div>
+        <div class="notes" id="notes" aria-live="polite"></div>
         <button class="ph-pair" data-pair>Use your real phone: PAIR</button>
       </div>
     </section>

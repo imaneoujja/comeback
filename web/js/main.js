@@ -7,6 +7,7 @@ import {
 } from "./graphics.js";
 import {
   renderData, renderRundown, drawTimeline, renderProfiles, renderPresence, renderNotes, renderCatchup, hideCatchup, buzz,
+  initToast, toast,
 } from "./panels.js";
 import { drawTactical } from "./tactical.js";
 import { initAgents } from "./agents.js";
@@ -14,9 +15,9 @@ import { initAudience } from "./audience.js";
 import { initPairing } from "./pairing.js";
 import { initFocus } from "./focus.js";
 import { unlockSpeech } from "./voice.js";
-import { isReplaying, buffer, playReplay, playVoice, interruptForLive } from "./replay.js";
+import { isReplaying, buffer, playReplay, playVoice, interruptForLive, unlockAudio } from "./replay.js";
 import { initPicker, openPicker } from "./picker.js";
-import { initStory, startStory, exitStory, storyActive } from "./story.js";
+import { initStory, startStory, exitStory, storyActive, nightClock } from "./story.js";
 import { initFactCheck } from "./factcheck.js";
 
 let program = null;          // 3D renderer, or null → 2D fallback on the PGM canvas
@@ -58,15 +59,24 @@ async function boot() {
   initPairing();
   initFocus();
   initFactCheck();
-  initPicker({ onPick: pick, onStory: () => { unlockSpeech(); startStory(); } });
+  initToast();
+  initPicker({ onPick: pick, onStory: playStory });
   initStory({ restart, setMode, setSpeed, pick, openPicker });
   setMode(new URLSearchParams(location.search).get("view") === "studio" ? "studio" : "fan");
   requestAnimationFrame(frame);
 }
 
+/** Called from a tap: unlock sound (Safari, iOS) and speech, then play the guided story. */
+function playStory() {
+  unlockSpeech();
+  unlockAudio();
+  startStory();
+}
+
 /** Watch as one demo fan: the first pick starts the match, later picks switch fan on the same match. */
 async function pick(id) {
   unlockSpeech();
+  unlockAudio();
   exitStory();
   const first = !app.es;
   app.profileId = id;
@@ -113,12 +123,12 @@ function buildControls() {
   $("#btn-back").addEventListener("click", () => !app.present && post("back"));
   $("#btn-join").addEventListener("click", () => { hideCatchup(); post("join?minute=60"); });
   $("#view").addEventListener("click", (e) => { if (e.target.dataset.view) setMode(e.target.dataset.view); });
-  $("#story-btn").addEventListener("click", () => { unlockSpeech(); startStory(); });
+  $("#story-btn").addEventListener("click", playStory);
   $("#tk-open").addEventListener("click", () => setMode("studio"));
   $("#outage-btn").addEventListener("click", () => post(`outage?down=${!app.outage}`));
   onMessage("open-picker", openPicker);
-  const clock = () => { $("#ph-time").textContent = new Date().toTimeString().slice(0, 5); };
-  clock(); setInterval(clock, 15000);
+  const clock = () => { $("#ph-time").textContent = nightClock() || new Date().toTimeString().slice(0, 5); };
+  clock(); setInterval(clock, 1000);
   document.addEventListener("visibilitychange", () => {
     if (!$("#auto-away").checked || !app.es || storyActive()) return;   // the guided story drives presence itself
     if (document.hidden) { if (app.present) post("away"); } else if (!app.present) post("back");
@@ -169,7 +179,7 @@ function connect() {
   on("cue", (c) => { if (!isReplaying()) showCue(c); });   // live graphics wait during a replay
   on("card", (c) => { app.cards.set(c.moment_id, c); renderRundown(); refreshBanner(c); });
   on("timeline", (t) => app.timeline.push(t));
-  on("notification", (n) => { app.notes.unshift(n); renderNotes(); buzz(n.kind === "come_back"); });
+  on("notification", (n) => { app.notes.unshift(n); renderNotes(); buzz(n.kind === "come_back"); toast(n); });
   on("presence", (p) => {
     app.present = p.present; app.awayBands = p.away_bands;
     if (!p.present) hideCatchup();
@@ -177,6 +187,7 @@ function connect() {
   });
   on("catchup", (c) => {
     renderCatchup(c);
+    toast({ kind: "catchup", text: c.late_join ? "The story so far is ready on the phone." : "Your catch-up is ready on the phone." });
     playVoice(c);
     playReplay(c, program);
   });

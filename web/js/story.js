@@ -1,26 +1,47 @@
-/* The bar above the match. In "story" mode it captions a guided run of the demo:
- * Omar leaves at 63', is called back twice, returns at 70.5' and sees the 71' goal live;
- * then a jump to 80' shows the Verifier catching a real mistake by the Analyst at 81'.
- * The story only drives the normal controls (seek, speed, away, back): everything on
- * screen is the real system at work. Otherwise the bar says what the viewer can try. */
+/* The bar above the match.
+ *
+ * Story mode captions a guided run of the demo: kick-off is at 4 a.m. in Omar's time zone;
+ * Omar falls asleep at 63', the phone buzzes twice, Omar is up at 70.5' and sees the 71'
+ * goal live; then a jump to 80' shows the Verifier catching a real mistake by the Analyst.
+ * The story only drives the normal controls (seek, speed, away, back): everything on screen
+ * is the real system at work.
+ *
+ * Otherwise the bar is a guide: one line on what this viewer can usefully do right now
+ * (skip to the second half, leave while a team is pushing, read the catch-up…). */
 
 import { $, app, MATCH_ID, post, on, profile, esc, teamName } from "./state.js";
 
 const STEPS = 9;
 const LEAVE_AT = 63, BACK_AT = 70.5;   // the precomputed demo window (verified LLM text + neural voice)
 const FACT_CHECK_FROM = 80.3;          // just before the 81' big chance, whose first draft the Verifier rejects
+const KICK_OFF_MIN = 4 * 60;           // 4:00 a.m. local time in the story
+const HALF_TIME_MIN = 15;
+const SKIP_TO = 59.5;
 let run = null;                        // the story being played, or null
+let nightSession = null;               // the session the story played in (its phone keeps the 4 a.m. clock)
 let hooks = {};
 let scaleLine = "";
+let shown = "";                        // the hint currently on screen (re-rendered only when it changes)
 
 export const storyActive = () => Boolean(run);
 export const storyStep = () => run?.step ?? 0;
 
+/** "05:18" in the story's time zone, or null outside the story. */
+export function nightClock() {
+  const s = app.snapshot;
+  if (!s || nightSession !== app.session || app.profileId !== "omar") return null;
+  const minutes = KICK_OFF_MIN + Math.floor(s.t / 60) + (s.period === 2 ? HALF_TIME_MIN : 0);
+  return `${String(Math.floor(minutes / 60) % 24).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
+}
+
 /** ``h``: { restart(), setMode(mode), setSpeed(speed), pick(profileId), openPicker() } */
 export function initStory(h) {
   hooks = h;
-  on("state", () => { if (run && !run.seeked) seekToStart(); else if (!run) hint(); });
-  on("presence", () => { if (!run) hint(); });
+  on("state", () => { if (run && !run.seeked) seekToStart(); else hint(true); });
+  on("presence", (pr) => (run ? onPresence(pr) : hint(true)));
+  on("catchup", () => hint(true));
+  on("catchup-closed", () => hint(true));
+  on("gazette", () => hint(true, "final"));
   on("snapshot", onSnapshot);
   on("notification", onNotification);
   on("event", onEvent);
@@ -42,8 +63,9 @@ export function startStory() {
   app.profileId = "omar";
   app.speed = 20;
   hooks.restart();
-  caption(1, `<b>Meet Omar</b>: an Emberfield fan who reads French and likes the numbers.
-    It's the hour mark, and Emberfield are losing 0‑2 at home.`);
+  nightSession = app.session;
+  caption(1, `<b>Meet Omar</b>, an Emberfield fan who reads French. In Omar's time zone, kick-off was at
+    <b>4 a.m.</b> It's the hour mark, and Emberfield are losing 0‑2.`);
 }
 
 export function exitStory() {
@@ -51,51 +73,53 @@ export function exitStory() {
   run = null;
   document.body.classList.remove("story-on");
   hooks.setSpeed(10);
-  hint();
+  hint(true);
 }
 
 async function seekToStart() {
   run.seeked = true;
   await post("seek?minute=59");
+  // the server applies the absence at exact minutes: the story never depends on how fast this browser reacts
+  await post(`schedule?away=${LEAVE_AT}&back=${BACK_AT}`);
   await hooks.setSpeed(20);
 }
 
-const minuteOf = (s) => (s.period === 2 ? s.minute + s.second / 60 : 0);
+function onSnapshot() {
+  if (!run) hint();
+}
 
-function onSnapshot(s) {
-  if (!run || !run.seeked) return;
-  const m = minuteOf(s);
-  if (run.step === 1 && m >= LEAVE_AT && app.present) {
-    caption(2, `${LEAVE_AT}' · <b>Omar leaves the room.</b> The match goes on, and COMEBACK keeps watching it for Omar.`);
-    post("away");
+function onPresence({ present }) {
+  if (!present && run.step === 1) {
+    caption(2, `${LEAVE_AT}' · ${(nightClock() || "5:20").replace(/^0/, "")} a.m. <b>Omar can't stay awake</b> and goes to sleep.
+      The phone stays on the nightstand; COMEBACK keeps watching.`);
+  } else if (present && run.step >= 2 && !run.back) {
+    wakeUp();
   }
-  if (run.step >= 2 && !run.back && m >= BACK_AT) comeBack();
 }
 
 function onNotification(n) {
   if (!run || n.kind !== "come_back") return;
   run.calls += 1;
   if (run.calls === 1) {
-    caption(3, `${n.minute}' · ${esc(teamName(n.team))} are pushing. <b>Omar's phone rings</b>, with the reason, in French. →`);
+    caption(3, `${n.minute}' · ${esc(teamName(n.team))} are pushing. <b>The phone buzzes</b>, with the reason, in French. →`);
   } else if (run.calls === 2) {
-    caption(4, `${n.minute}' · The danger keeps rising. <b>A second call, before anything has happened.</b> This time, Omar comes back.`);
+    caption(4, `${n.minute}' · The danger keeps rising. <b>A second buzz, before anything has happened.</b> Omar gets up.`);
     hooks.setSpeed(5);
   }
 }
 
-async function comeBack() {
+function wakeUp() {
   run.back = true;
-  caption(5, `<b>Omar is back.</b> The screen replays what was missed while a neural voice explains what changed:
+  caption(5, `<b>Omar is up.</b> The screen replays what was missed while a neural voice explains what changed:
     in French, from Emberfield's side.`);
-  await hooks.setSpeed(1);          // real time: the voice-over ends just before the next goal
-  await post("back");
+  hooks.setSpeed(1);                // real time: the voice-over ends just before the next goal
 }
 
 function onEvent(e) {
   if (!run || !run.back || run.goal || e.type !== "goal") return;
   run.goal = true;
-  caption(6, `${e.minute}' · <b>GOAL.</b> Omar saw it live. Other apps notify you after the goal;
-    COMEBACK called two minutes before, and said why.`);
+  caption(6, `${e.minute}' · <b>GOAL.</b> Omar saw it live. Other apps send the score after the goal;
+    COMEBACK woke Omar two minutes before, and said why.`);
   setTimeout(fastForward, 8000);
 }
 
@@ -123,10 +147,11 @@ function onAgent(s) {
 function finale() {
   if (!run) return;
   clearTimeout(run.giveUp);
-  caption(9, `Behind the scenes: an <b>Analyst</b>, a <b>Verifier</b>, a <b>Watcher</b> per fan and a <b>Storyteller</b>
-    share one match brain. ${scaleLine}`,
+  caption(9, `<b>The stream asks you to watch. COMEBACK lets you not watch</b>, without missing what matters.
+    One match brain and a Watcher per fan: ${scaleLine}`,
   [["studio", "SEE THE AGENTS ▸"], ["sofia", "WATCH AS SOFIA"], ["reda", "WATCH AS REDA"], ["story", "↺ REPLAY"]]);
   run = null;
+  shown = "finale";
   document.body.classList.remove("story-on");
   hooks.setSpeed(10);
 }
@@ -136,32 +161,77 @@ function act(name) {
   else if (name === "story") startStory();
   else if (name === "exit") exitStory();
   else if (name === "picker") hooks.openPicker();
+  else if (name === "skip") post(`seek?minute=${SKIP_TO}`);
+  else if (name === "away") { if (app.present) post("away"); }
+  else if (name === "back") { if (!app.present) post("back"); }
   else hooks.pick(name);
+}
+
+/* ------------------------------------------------------------------ the guide (outside the story) */
+
+/** Which situation the viewer is in, and what to suggest. */
+function situation() {
+  const p = profile(), s = app.snapshot;
+  const name = esc(p.name);
+  if (!app.present) {
+    return ["away", `<b>${name} is away.</b> COMEBACK keeps watching and will buzz the phone when it heats up.
+      Come back whenever you like.`, [["back", "I'M BACK"], ["picker", "SWITCH FAN"]]];
+  }
+  const band = app.awayBands.at(-1);
+  if (!band && s && (s.period === 1 || s.minute < 58)) {
+    return ["early", `Watching as <b>${name}</b>. The drama starts after the hour: <b>skip ahead</b>, then leave
+      (switch tabs or I'M AWAY) and let COMEBACK call ${name} back.`, [["skip", "SKIP TO 60'"], ["picker", "SWITCH FAN"]]];
+  }
+  if (band && !$("#catchup").hidden) {             // just back: the catch-up comes first
+    const text = band.late_join ? `<b>The story so far</b> is on the phone, in ${name}'s language. Now watch live,
+      and leave whenever you like.` : `Welcome back. <b>The catch-up on the phone</b> says what changed while ${name}
+      was away. Leave again whenever you like.`;
+    return ["back", text, [["away", "I'M AWAY"], ["picker", "SWITCH FAN"]]];
+  }
+  const pushing = s && [s.home, s.away].find((c) => s.teams[c].danger >= 40 && s.teams[c].danger_slope > 0);
+  if (pushing && !shown.startsWith("pushing")) {
+    return [`pushing:${pushing}`, `<b>${esc(teamName(pushing))} are pushing right now</b> (danger ${Math.round(s.teams[pushing].danger)}/100).
+      Leave now and see whether COMEBACK calls ${name} back before anything happens.`, [["away", "I'M AWAY"]]];
+  }
+  if (shown.startsWith("pushing") && s && [s.home, s.away].some((c) => s.teams[c].danger >= 30)) return null;  // keep it
+  return ["present", `<b>Leave whenever you like</b>: switch tabs, or press I'M AWAY. COMEBACK will call ${name} back
+    before the big moment, then show what was missed.`, [["away", "I'M AWAY"], ["picker", "SWITCH FAN"]]];
+}
+
+/** Outside the story: one line on what this viewer can do right now. */
+function hint(force = false, kind = null) {
+  if (run || !profile() || (shown === "finale" && !force)) return;
+  if (kind === "final") {
+    shown = "final";
+    guide(`<b>Full-time.</b> ${esc(profile().name)}'s own front page is on screen: the match told from their side.`,
+      [["picker", "SWITCH FAN"], ["story", "▶ PLAY THE STORY"]]);
+    return;
+  }
+  if (shown === "final" && !force) return;
+  const next = situation();
+  if (!next || (next[0] === shown && !force)) return;
+  [shown] = next;
+  guide(next[1], next[2]);
+}
+
+function guide(html, actions) {
+  $("#storybar").classList.remove("story");
+  $("#st-step").innerHTML = `<span>WATCHING AS ${esc(profile().name.toUpperCase())}</span>`;
+  setText(html);
+  setActions(actions);
 }
 
 /* ------------------------------------------------------------------ rendering */
 
 function caption(step, html, actions = [["exit", "EXIT STORY ✕"]]) {
   if (run) run.step = step;
+  shown = "story";
   const bar = $("#storybar");
   bar.classList.add("story");
   $("#st-step").innerHTML = `<span>STORY · ${step}/${STEPS}</span>
     <span class="st-dots">${Array.from({ length: STEPS }, (_, i) => `<i class="${i < step ? "on" : ""}"></i>`).join("")}</span>`;
   setText(html);
   setActions(actions);
-}
-
-/** Outside the story: one line on what this viewer can do right now. */
-function hint() {
-  const p = profile();
-  if (!p) return;
-  $("#storybar").classList.remove("story");
-  $("#st-step").innerHTML = `<span>WATCHING AS ${esc(p.name.toUpperCase())}</span>`;
-  setText(app.present
-    ? `<b>Leave whenever you like</b>: switch tabs, or press I'M AWAY on the phone. COMEBACK will call ${esc(p.name)} back
-       before the big moment, then show what was missed.`
-    : `<b>${esc(p.name)} is away.</b> COMEBACK keeps watching the match and will ring the phone when it heats up.`);
-  setActions([["picker", "SWITCH FAN"]]);
 }
 
 function setText(html) {

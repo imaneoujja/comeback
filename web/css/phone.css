@@ -1,4 +1,4 @@
-:root { --red: #ff3b30; --green: #30d158; --amber: #ffb000; --text: #f2f1ec; --dim: #77756f;
+:root { --red: #ff3b30; --green: #30d158; --amber: #ffb000; --text: #f2f1ec; --dim: #8f8d87;
   --mono: "JetBrains Mono", ui-monospace, Menlo, monospace; --cond: "IBM Plex Sans Condensed", system-ui, sans-serif; }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }

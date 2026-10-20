@@ -34,14 +34,15 @@ export async function pickVoice(lang) {
   return any.find((v) => v.default) || any.find((v) => v.localService) || any[0] || null;
 }
 
-/** Speak ``text`` with a voice of ``lang``. Resolves when speech starts (or is skipped). */
-export async function speak(text, lang) {
-  if (!supported() || !text) return;
+/** Speak ``text`` with a voice of ``lang``; ``onEnd`` runs when it is over (or skipped). */
+export async function speak(text, lang, onEnd = null) {
+  if (!supported() || !text) { onEnd?.(); return; }
   const voice = await pickVoice(lang);
   speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
   if (voice) { u.voice = voice; u.lang = voice.lang; } else { u.lang = (REGION[lang] || REGION.en)[0]; }
   u.rate = 1.02;
+  if (onEnd) { u.onend = onEnd; u.onerror = onEnd; }
   speechSynthesis.speak(u);
 }
 

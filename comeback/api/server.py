@@ -29,6 +29,9 @@ DEFAULT_MATCH = "demo-comeback"
 KEEPALIVE_S = 15.0
 IDLE_SESSION_S = 120.0   # a replay nobody watches is stopped (keeps the container idle and cheap)
 
+# Every endpoint that touches a session is ``async``: it then runs on the event loop, like the replay
+# itself. A plain ``def`` endpoint would run in a worker thread, concurrently with the replay loop
+# (a seek could process events while the loop does: events counted twice or skipped).
 sessions: dict[str, ReplaySession] = {}
 gateway = LLMGateway()
 
@@ -197,7 +200,7 @@ def _sse(kind: str, data: Any) -> str:
 
 
 @app.get("/api/sessions")
-def live_sessions() -> list[dict[str, Any]]:
+async def live_sessions() -> list[dict[str, Any]]:
     """Live replay sessions (read by the MCP server)."""
     return [{"session": r.session_id, "match_id": r.match_id, "minute": r.brain.engine.state.minute,
              "period": r.brain.engine.state.period, "score": r.brain.engine.state.score_str(),
@@ -205,7 +208,7 @@ def live_sessions() -> list[dict[str, Any]]:
 
 
 @app.get("/api/session/{session_id}/live")
-def live_state(session_id: str) -> dict[str, Any]:
+async def live_state(session_id: str) -> dict[str, Any]:
     """Current match state of a session: snapshot, danger reasons, verified moment cards."""
     replay = _session(session_id)
     engine = replay.brain.engine
@@ -217,7 +220,7 @@ def live_state(session_id: str) -> dict[str, Any]:
 
 
 @app.get("/api/session/{session_id}/player/{player}")
-def player_stats(session_id: str, player: str) -> dict[str, Any]:
+async def player_stats(session_id: str, player: str) -> dict[str, Any]:
     """Live stats of one player, by id ("EMB-9") or by (part of) their name."""
     state = _session(session_id).brain.engine.state
     match = [pid for pid, info in state.roster.items()
@@ -229,7 +232,7 @@ def player_stats(session_id: str, player: str) -> dict[str, Any]:
 
 
 @app.post("/api/session/{session_id}/away")
-def away(session_id: str) -> dict[str, Any]:
+async def away(session_id: str) -> dict[str, Any]:
     return _session(session_id).go_away()
 
 
@@ -245,20 +248,26 @@ async def join(session_id: str, minute: float = 60) -> dict[str, Any]:
 
 
 @app.post("/api/session/{session_id}/seek")
-def seek(session_id: str, minute: float) -> dict[str, Any]:
+async def seek(session_id: str, minute: float) -> dict[str, Any]:
     """Skip ahead while the fan keeps watching (used by the guided story)."""
     return _session(session_id).seek(minute)
 
 
+@app.post("/api/session/{session_id}/schedule")
+async def schedule(session_id: str, away: float | None = None, back: float | None = None) -> dict[str, Any]:
+    """Plan the fan's absence at exact second-half minutes (used by the guided story)."""
+    return _session(session_id).schedule(away, back)
+
+
 @app.post("/api/session/{session_id}/outage")
-def outage(session_id: str, down: bool = True) -> dict[str, Any]:
+async def outage(session_id: str, down: bool = True) -> dict[str, Any]:
     """Failure drill: simulate an LLM outage for this session (agents fall back to verified templates)."""
     _session(session_id).set_outage(down)
     return {"down": down}
 
 
 @app.post("/api/session/{session_id}/speed")
-def set_speed(session_id: str, value: int) -> dict[str, Any]:
+async def set_speed(session_id: str, value: int) -> dict[str, Any]:
     if value not in SPEEDS:
         raise HTTPException(400, f"speed must be one of {SPEEDS}")
     _session(session_id).set_speed(value)
@@ -266,13 +275,13 @@ def set_speed(session_id: str, value: int) -> dict[str, Any]:
 
 
 @app.post("/api/session/{session_id}/pause")
-def pause(session_id: str, paused: bool = True) -> dict[str, Any]:
+async def pause(session_id: str, paused: bool = True) -> dict[str, Any]:
     _session(session_id).set_paused(paused)
     return {"paused": paused}
 
 
 @app.post("/api/session/{session_id}/profile")
-def switch_profile(session_id: str, id: str) -> dict[str, Any]:
+async def switch_profile(session_id: str, id: str) -> dict[str, Any]:
     replay = _session(session_id)
     replay.set_profile(_profile(id))
     replay.away_bands = []  # viewing history belongs to the fan, not to the screen
