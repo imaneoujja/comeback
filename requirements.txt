@@ -2,8 +2,8 @@ agent-framework==1.22.0
 python-dotenv
 fastapi==0.141.1
 uvicorn[standard]==0.54.0
+httpx
 
 # Dev
 pytest
 ruff
-httpx

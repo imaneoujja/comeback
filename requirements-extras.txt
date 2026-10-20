@@ -1,0 +1,5 @@
+# Optional extras (not needed to run the demo):
+# - Foundry evaluations of the generated texts: scripts/evaluate_texts.py
+# - MCP server exposing the live match to any agent: python -m comeback.mcp_server
+azure-ai-evaluation
+mcp

@@ -13,7 +13,9 @@ let auto = true;
 
 export function initFocus() {
   on("notification", () => request("fan", 7, 3));
-  on("catchup", () => request("fan", 12, 3));
+  on("catchup", (c) => { if (!(c.replay || []).length) request("fan", 12, 3); });
+  on("replay-start", () => request("pgm", 90, 7));            // the replay is the shot
+  on("replay-end", () => { if (current.id === "pgm") current.until = 0; request("fan", 10, 3); });
   on("gazette", () => request("pgm", 30, 6));
   on("agent-shown", (s) => {
     if (s.agent === "Verifier") request("agents", s.step === "rejected" ? 5 : 3, s.step === "rejected" ? 2.5 : 1);

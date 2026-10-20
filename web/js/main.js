@@ -14,6 +14,7 @@ import { initAudience } from "./audience.js";
 import { initPairing } from "./pairing.js";
 import { initFocus } from "./focus.js";
 import { unlockSpeech } from "./voice.js";
+import { isReplaying, buffer, playReplay, playVoice, interruptForLive } from "./replay.js";
 
 let program = null;          // 3D renderer, or null → 2D fallback on the PGM canvas
 let lastFrame = performance.now();
@@ -111,6 +112,13 @@ function connect() {
   const on = (type, fn) => es.addEventListener(type, (m) => { const d = JSON.parse(m.data); fn(d); emit(type, d); });
   on("state", onState);
   on("event", (e) => {
+    if (isReplaying()) {                        // the program feed is showing a replay
+      buffer(e);
+      if (e.type !== "goal") return;
+      interruptForLive();                         // …unless a goal is scored live
+      if (program) program.celebrate(e.team);
+      return;
+    }
     applyEvent(e);
     if (e.type === "goal" && program) program.celebrate(e.team);
     if (e.type === "sprint") app.topSpeed[e.player] = Math.max(app.topSpeed[e.player] || 0, e.speed_kmh);
@@ -121,8 +129,8 @@ function connect() {
     }
   });
   on("snapshot", (s) => { app.snapshot = s; app.snapshotAt = performance.now(); renderScore(); renderMetric(profile()); });
-  on("gazette", (g) => { renderGazette(g, profile()); renderCatchup({ ...g, late_join: false }); });
-  on("cue", showCue);
+  on("gazette", (g) => { renderGazette(g, profile()); renderCatchup({ ...g, late_join: false }); playVoice(g); });
+  on("cue", (c) => { if (!isReplaying()) showCue(c); });   // live graphics wait during a replay
   on("card", (c) => { app.cards.set(c.moment_id, c); renderRundown(); refreshBanner(c); });
   on("timeline", (t) => app.timeline.push(t));
   on("notification", (n) => { app.notes.unshift(n); renderNotes(); buzz(); });
@@ -131,7 +139,11 @@ function connect() {
     if (!p.present) hideCatchup();
     renderPresence();
   });
-  on("catchup", renderCatchup);
+  on("catchup", (c) => {
+    renderCatchup(c);
+    playVoice(c);
+    playReplay(c, program);
+  });
   on("agent", () => {});         // forwarded to the AGENTS monitor through emit()
   on("crowd", () => {});         // forwarded to the AUD monitor
   on("device", () => {});        // phone paired / unpaired

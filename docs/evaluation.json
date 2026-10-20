@@ -1,0 +1,329 @@
+{
+ "judge": "gpt-4.1-mini",
+ "texts": 23,
+ "by_kind": [
+  {
+   "kind": "moment card",
+   "n": 17,
+   "groundedness": 5.0,
+   "coherence": 4.35,
+   "fluency": 3.88
+  },
+  {
+   "kind": "catch-up",
+   "n": 3,
+   "groundedness": 5.0,
+   "coherence": 4.33,
+   "fluency": 4.0
+  },
+  {
+   "kind": "full-time recap",
+   "n": 3,
+   "groundedness": 5.0,
+   "coherence": 4.67,
+   "fluency": 4.0
+  },
+  {
+   "kind": "control (corrupted)",
+   "n": 3,
+   "groundedness": 2.0,
+   "coherence": 4.0,
+   "fluency": 3.67
+  }
+ ],
+ "overall": {
+  "groundedness": 5.0,
+  "coherence": 4.39,
+  "fluency": 3.91
+ },
+ "pass_rate_at_3": {
+  "groundedness": 1.0,
+  "coherence": 1.0,
+  "fluency": 1.0
+ },
+ "items": [
+  {
+   "kind": "catch-up",
+   "agent": "Storyteller",
+   "fan": "reda",
+   "text": "Reda, te perdiste un gran inicio de partido. Halen Merewood abrió el marcador para Saltmarsh Comets al minuto 18 con un potente disparo de zurda, asistido por Oren Caulder. Luego, al 39, Elian Glenwick amplió la ventaja con otro disparo fuerte de izquierda, también asistido por Caulder. Aunque Emberfield dominaba la posesión y creaba más oportunidades, Saltmarsh Comets mantenían el 0-2 al descanso. Después, Emberfield cambió a un ataque más agresivo con un 4-2-4 y empezó a controlar el balón con un 69% de posesión y pases precisos. El partido ahora está en sus manos para intentar remontar. Merewood ya marcó y sigue siendo clave para los Comets.",
+   "source": "llm",
+   "groundedness": 5.0,
+   "coherence": 5.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "catch-up",
+   "agent": "Storyteller",
+   "fan": "omar",
+   "text": "Salut Omar, en ton absence, Emberfield a eu une grosse occasion avec Ciro Oakenfold à la 68e minute, son tir puissant du pied gauche a été arrêté par le gardien des Saltmarsh Comets. Malgré l'avantage numérique, Emberfield n'a pas réussi à réduire l'écart, le score reste 0-2. Mais la dynamique a changé, Emberfield domine maintenant le jeu et pousse fort pour revenir.",
+   "source": "llm",
+   "groundedness": 5.0,
+   "coherence": 4.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "catch-up",
+   "agent": "Storyteller",
+   "fan": "sofia",
+   "text": "Sofia, while you were away, Emberfield pushed hard with two big shots saved by Saltmarsh Comets' keeper, keeping your team’s slim lead despite being a player down. Then at 84 minutes, Aven Elderglen scored for Emberfield to make it 2-2, evening the score and shifting the momentum. Emberfield now controls the game, and Saltmarsh Comets face a tough finish with 10 players on the pitch.",
+   "source": "llm",
+   "groundedness": 5.0,
+   "coherence": 4.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "full-time recap",
+   "agent": "Storyteller",
+   "fan": "omar",
+   "text": "Emberfield renverse Saltmarsh Comets malgré un début difficile\nOmar, tu as manqué un match intense. Saltmarsh Comets a ouvert le score à la 18e minute grâce à Halen Merewood, confirmant leur contrôle initial. Mais après un carton rouge pour Saltmarsh Comets, Emberfield a changé de forme tactique, exploitant la supériorité numérique. Ciro Oakenfold a réduit l'écart à la 71e, suivi par Aven Elderglen qui a égalisé à la 84e. Malgré quelques occasions manquées, Emberfield a maintenu la pression. Le tournant est venu en toute fin de match, à la 92e, quand Kiro Sableford a marqué le but décisif. Ce retournement illustre une excellente gestion tactique d’Emberfield face à l’infériorité numérique des Saltmarsh Comets, qui ont fini à dix joueurs.",
+   "body": "Omar, tu as manqué un match intense. Saltmarsh Comets a ouvert le score à la 18e minute grâce à Halen Merewood, confirmant leur contrôle initial. Mais après un carton rouge pour Saltmarsh Comets, Emberfield a changé de forme tactique, exploitant la supériorité numérique. Ciro Oakenfold a réduit l'écart à la 71e, suivi par Aven Elderglen qui a égalisé à la 84e. Malgré quelques occasions manquées, Emberfield a maintenu la pression. Le tournant est venu en toute fin de match, à la 92e, quand Kiro Sableford a marqué le but décisif. Ce retournement illustre une excellente gestion tactique d’Emberfield face à l’infériorité numérique des Saltmarsh Comets, qui ont fini à dix joueurs.",
+   "source": "llm",
+   "groundedness": 5.0,
+   "coherence": 4.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "full-time recap",
+   "agent": "Storyteller",
+   "fan": "sofia",
+   "text": "Heartbreaking loss for Saltmarsh Comets after strong start\nSofia, you missed an intense match! Saltmarsh Comets started brilliantly, with Halen Merewood scoring early and Elian Glenwick doubling the lead before halftime. But things changed after Ciro Hollins was sent off at 62 minutes, leaving the Comets with 10 players. Emberfield seized the chance, scoring three goals including a stoppage-time winner by Kiro Sableford. Despite the setback, the Comets showed great fight but couldn't hold on. The score changed from 0-0 to a tough 3-2 loss, with Emberfield taking control after the red card and a shift in Saltmarsh's shape. It was a thrilling but painful finish for your team.",
+   "body": "Sofia, you missed an intense match! Saltmarsh Comets started brilliantly, with Halen Merewood scoring early and Elian Glenwick doubling the lead before halftime. But things changed after Ciro Hollins was sent off at 62 minutes, leaving the Comets with 10 players. Emberfield seized the chance, scoring three goals including a stoppage-time winner by Kiro Sableford. Despite the setback, the Comets showed great fight but couldn't hold on. The score changed from 0-0 to a tough 3-2 loss, with Emberfield taking control after the red card and a shift in Saltmarsh's shape. It was a thrilling but painful finish for your team.",
+   "source": "llm",
+   "groundedness": 5.0,
+   "coherence": 5.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "full-time recap",
+   "agent": "Storyteller",
+   "fan": "reda",
+   "text": "¡Emberfield gana 3-2 tras épica remontada!\nReda, te perdiste un partido increíble. Saltmarsh Comets empezó fuerte con un gol de Halen Merewood al minuto 18 y otro de Elian Glenwick antes del descanso, poniendo el 0-2. Pero luego Saltmarsh recibió una tarjeta roja y quedaron con 10 jugadores. Emberfield aprovechó y empezó la remontada: Oakenfold marcó el primero, luego Elderglen empató y finalmente Sableford anotó el gol de la victoria en el minuto 92. Emberfield dominó la segunda mitad y logró una victoria emocionante. ¡Qué partido para recordar!",
+   "body": "Reda, te perdiste un partido increíble. Saltmarsh Comets empezó fuerte con un gol de Halen Merewood al minuto 18 y otro de Elian Glenwick antes del descanso, poniendo el 0-2. Pero luego Saltmarsh recibió una tarjeta roja y quedaron con 10 jugadores. Emberfield aprovechó y empezó la remontada: Oakenfold marcó el primero, luego Elderglen empató y finalmente Sableford anotó el gol de la victoria en el minuto 92. Emberfield dominó la segunda mitad y logró una victoria emocionante. ¡Qué partido para recordar!",
+   "source": "llm",
+   "groundedness": 5.0,
+   "coherence": 5.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "moment card",
+   "agent": "Analyst",
+   "moment": "17' momentum_swing",
+   "text": "Saltmarsh Comets seize control with strong possession and passing\nAfter a balanced start, Saltmarsh Comets now dominate possession and pass accuracy, shifting momentum away from Emberfield in a goalless match.",
+   "headline": "Saltmarsh Comets seize control with strong possession and passing",
+   "source": "llm",
+   "groundedness": 5.0,
+   "coherence": 5.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "moment card",
+   "agent": "Analyst",
+   "moment": "18' goal",
+   "text": "Halen Merewood scores opener for Saltmarsh Comets\nThis goal breaks the deadlock, giving Saltmarsh Comets a crucial lead and validating their early dominance in possession and chances against Emberfield.",
+   "headline": "Halen Merewood scores opener for Saltmarsh Comets",
+   "source": "llm",
+   "groundedness": 5.0,
+   "coherence": 4.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "moment card",
+   "agent": "Analyst",
+   "moment": "22' momentum_swing",
+   "text": "Emberfield swings momentum with dominant possession surge\nTrailing 0-1, Emberfield's regained control and 61% possession shift pressure back onto Saltmarsh Comets, setting the stage for a potential comeback in the match.",
+   "headline": "Emberfield swings momentum with dominant possession surge",
+   "source": "llm",
+   "groundedness": 5.0,
+   "coherence": 4.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "moment card",
+   "agent": "Analyst",
+   "moment": "39' goal",
+   "text": "Elian Glenwick doubles Saltmarsh Comets' lead with powerful left-foot strike\nExtending their lead to 2-0, Saltmarsh Comets gain a strong advantage before halftime, putting Emberfield under pressure to respond with a full team on the pitch.",
+   "headline": "Elian Glenwick doubles Saltmarsh Comets' lead with powerful left-foot strike",
+   "source": "llm",
+   "groundedness": 5.0,
+   "coherence": 5.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "moment card",
+   "agent": "Analyst",
+   "moment": "47' half_time",
+   "text": "Saltmarsh Comets lead 2-0 despite Emberfield's dominance\nSaltmarsh Comets hold a two-goal advantage at half-time while Emberfield controls possession and creates more chances, setting up a tense second half where Emberfield must overcome the deficit despite their attacking pressure.",
+   "headline": "Saltmarsh Comets lead 2-0 despite Emberfield's dominance",
+   "source": "llm",
+   "groundedness": 5.0,
+   "coherence": 4.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "moment card",
+   "agent": "Analyst",
+   "moment": "54' momentum_swing",
+   "text": "Saltmarsh Comets regain control with strong possession and passing\nAfter Emberfield's earlier dominance, Saltmarsh Comets have swung momentum back in their favor, maintaining a 2-0 lead with improved possession and pass accuracy, solidifying their control in the match.",
+   "headline": "Saltmarsh Comets regain control with strong possession and passing",
+   "source": "llm",
+   "groundedness": 5.0,
+   "coherence": 5.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "moment card",
+   "agent": "Analyst",
+   "moment": "55' shape_change",
+   "text": "Emberfield switches to aggressive 4-2-4 formation\nTrailing 0-2, Emberfield's substitution and formation change signal a push for goals to shift momentum and claw back into the match.",
+   "headline": "Emberfield switches to aggressive 4-2-4 formation",
+   "source": "llm",
+   "groundedness": 5.0,
+   "coherence": 4.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "moment card",
+   "agent": "Analyst",
+   "moment": "59' momentum_swing",
+   "text": "Emberfield seizes control with dominant possession surge\nTrailing 0-2, Emberfield's recent 69% possession and 84% pass accuracy shift momentum, giving them a strong platform to mount a comeback against Saltmarsh Comets.",
+   "headline": "Emberfield seizes control with dominant possession surge",
+   "source": "llm",
+   "groundedness": 5.0,
+   "coherence": 4.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "moment card",
+   "agent": "Analyst",
+   "moment": "62' red_card",
+   "text": "Saltmarsh Comets down to 10 men after Hollins red card\nWith Saltmarsh Comets leading 2-0, Ciro Hollins' sending off for denying a goal-scoring chance puts his team under pressure to maintain their advantage against full-strength Emberfield.",
+   "headline": "Saltmarsh Comets down to 10 men after Hollins red card",
+   "source": "llm",
+   "groundedness": 5.0,
+   "coherence": 4.0,
+   "fluency": 3.0
+  },
+  {
+   "kind": "moment card",
+   "agent": "Analyst",
+   "moment": "68' big_chance",
+   "text": "Ciro Oakenfold's left-foot shot saved by Saltmarsh Comets\nEmberfield remains two goals behind despite a big chance, struggling to capitalize even with a full team against ten men from Saltmarsh Comets.",
+   "headline": "Ciro Oakenfold's left-foot shot saved by Saltmarsh Comets",
+   "source": "llm",
+   "groundedness": 5.0,
+   "coherence": 3.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "moment card",
+   "agent": "Analyst",
+   "moment": "71' goal",
+   "text": "Oakenfold pulls Emberfield back into the game\nWith Saltmarsh Comets down to 10 men, Oakenfold's goal at 71 minutes cuts the deficit to 2-1, reigniting Emberfield's hopes and shifting momentum after a missed chance just minutes earlier.",
+   "headline": "Oakenfold pulls Emberfield back into the game",
+   "source": "llm",
+   "groundedness": 5.0,
+   "coherence": 5.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "moment card",
+   "agent": "Analyst",
+   "moment": "81' big_chance",
+   "text": "Tavi Thornby’s fierce shot saved by Saltmarsh Comets keeper\nWith Emberfield trailing 1-2 and Saltmarsh Comets down to 10 men, Thornby’s big chance could have leveled the match and shifted momentum late in the game.",
+   "headline": "Tavi Thornby’s fierce shot saved by Saltmarsh Comets keeper",
+   "source": "llm",
+   "groundedness": 5.0,
+   "coherence": 4.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "moment card",
+   "agent": "Analyst",
+   "moment": "81' big_chance",
+   "text": "Oakenfold's big chance saved as Emberfield chase equalizer\nWith Emberfield holding an 11v10 numerical advantage, Oakenfold's saved shot keeps Saltmarsh Comets ahead 2-1 late, maintaining their lead and forcing Emberfield to press harder in the closing minutes.",
+   "headline": "Oakenfold's big chance saved as Emberfield chase equalizer",
+   "source": "llm",
+   "groundedness": 5.0,
+   "coherence": 4.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "moment card",
+   "agent": "Analyst",
+   "moment": "84' goal",
+   "text": "Aven Elderglen levels for Emberfield against ten Saltmarsh Comets\nElderglen's goal equalizes at 2-2, capitalizing on Saltmarsh Comets' numerical disadvantage after 21 minutes with ten men, keeping Emberfield's comeback hopes alive and shifting momentum late in the match.",
+   "headline": "Aven Elderglen levels for Emberfield against ten Saltmarsh Comets",
+   "source": "llm",
+   "groundedness": 5.0,
+   "coherence": 5.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "moment card",
+   "agent": "Analyst",
+   "moment": "86' big_chance",
+   "text": "Oakenfold fires off-target in crucial late chance\nWith the score tied and Saltmarsh Comets down to ten men, Oakenfold's missed opportunity could have given Emberfield the lead and momentum in the final minutes.",
+   "headline": "Oakenfold fires off-target in crucial late chance",
+   "source": "llm",
+   "groundedness": 5.0,
+   "coherence": 5.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "moment card",
+   "agent": "Analyst",
+   "moment": "92' goal",
+   "text": "Kiro Sableford nets stoppage-time winner for Emberfield\nWith Saltmarsh Comets down to ten men, Sableford's goal breaks the 2-2 deadlock and secures a 3-2 lead in the 92nd minute, completing Emberfield's comeback from a two-goal deficit and shifting momentum decisively in their favor.",
+   "headline": "Kiro Sableford nets stoppage-time winner for Emberfield",
+   "source": "llm",
+   "groundedness": 5.0,
+   "coherence": 4.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "moment card",
+   "agent": "Analyst",
+   "moment": "95' full_time",
+   "text": "Emberfield completes stunning comeback against ten Saltmarsh Comets\nTrailing 0-2, Emberfield dominated with 65% possession and scored three late goals to win 3-2, capitalizing on their numerical advantage after Saltmarsh Comets were reduced to ten players.",
+   "headline": "Emberfield completes stunning comeback against ten Saltmarsh Comets",
+   "source": "llm",
+   "groundedness": 5.0,
+   "coherence": 5.0,
+   "fluency": 3.0
+  },
+  {
+   "kind": "control (corrupted)",
+   "agent": "Analyst",
+   "moment": "18' goal",
+   "text": "Halen Merewood scores opener for Emberfield\nThis goal breaks the deadlock, giving Emberfield a crucial lead and validating their early dominance in possession and chances against Saltmarsh Comets. It was his 7th goal of the night.",
+   "headline": "Halen Merewood scores opener for Saltmarsh Comets",
+   "source": "llm",
+   "groundedness": 2.0,
+   "coherence": 4.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "control (corrupted)",
+   "agent": "Analyst",
+   "moment": "39' goal",
+   "text": "Elian Glenwick doubles Emberfield' lead with powerful left-foot strike\nExtending their lead to 2-0, Emberfield gain a strong advantage before halftime, putting Saltmarsh Comets under pressure to respond with a full team on the pitch. It was his 7th goal of the night.",
+   "headline": "Elian Glenwick doubles Saltmarsh Comets' lead with powerful left-foot strike",
+   "source": "llm",
+   "groundedness": 2.0,
+   "coherence": 4.0,
+   "fluency": 3.0
+  },
+  {
+   "kind": "control (corrupted)",
+   "agent": "Analyst",
+   "moment": "71' goal",
+   "text": "Oakenfold pulls Saltmarsh Comets back into the game\nWith Emberfield down to 10 men, Oakenfold's goal at 71 minutes cuts the deficit to 2-1, reigniting Saltmarsh Comets's hopes and shifting momentum after a missed chance just minutes earlier. It was his 7th goal of the night.",
+   "headline": "Oakenfold pulls Emberfield back into the game",
+   "source": "llm",
+   "groundedness": 2.0,
+   "coherence": 4.0,
+   "fluency": 4.0
+  }
+ ]
+}

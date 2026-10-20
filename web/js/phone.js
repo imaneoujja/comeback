@@ -124,5 +124,8 @@ function renderCatchup(c) {
     <div class="cx">${esc(c.text)}</div>
     <div class="cf"><span>${c.source === "llm" ? "✓ STORYTELLER → VERIFIER" : "TEMPLATE · VERIFIED FACTS"}</span>
     <button class="btn" id="listen">▶ LISTEN</button></div>`;
-  $("#listen").addEventListener("click", () => speak(c.text, c.language || st.profile?.language));
+  $("#listen").addEventListener("click", () => {
+    if (c.audio) new Audio(c.audio).play().catch(() => speak(c.text, c.language || st.profile?.language));
+    else speak(c.text, c.language || st.profile?.language);
+  });
 }

@@ -53,8 +53,29 @@ def test_replay_late_join_and_away_back_cycle() -> None:
     joined, back, kinds = asyncio.run(scenario())
     assert joined["late_join"] and joined["bucket"] == "full_story" and joined["language"] == "es"
     assert joined["source"] == "llm"  # precomputed demo window → served from the committed cache
+    assert joined["audio"] and joined["audio"].startswith("/media/audio/")   # committed neural voice
+    assert 0 < len(joined["replay"]) <= 3 and all(clip["events"] for clip in joined["replay"])
+    assert client.get(joined["audio"]).status_code == 200
     assert back["bucket"] in ("key_moments", "full_story") and back["text"]
     assert {"state", "catchup", "presence", "event", "snapshot"} <= set(kinds)
+
+
+def test_live_state_endpoints_for_mcp() -> None:
+    from comeback.api import server
+
+    replay = ReplaySession("mcp", "demo-comeback", load_profiles()["omar"],
+                           LLMGateway(LLMSettings(mode=LLMMode.OFFLINE)))
+    for event in replay.events[:600]:
+        replay.brain.process(event)
+    server.sessions["mcp"] = replay
+    try:
+        assert any(s["session"] == "mcp" for s in client.get("/api/sessions").json())
+        live = client.get("/api/session/mcp/live").json()
+        assert {"snapshot", "danger_reasons", "moments"} <= live.keys()
+        assert client.get("/api/session/mcp/player/EMB-9").json()["id"] == "EMB-9"
+        assert client.get("/api/session/mcp/player/nobody").status_code == 404
+    finally:
+        server.sessions.pop("mcp", None)
 
 
 def test_phone_pairing_needs_an_existing_session() -> None:

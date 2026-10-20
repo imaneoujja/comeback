@@ -56,29 +56,35 @@ def evaluate_match(seed: int, rule: AlertRule, rng: random.Random) -> dict[str, 
 
     end_t = events[-1]["t"]
     baseline = [followed_by_chance(rng.uniform(0, end_t), rng.choice(list(trackers))) for _ in range(200)]
+    # Same number of alerts, placed at random (same teams): how many goals would they "announce"?
+    random_alerts = [(rng.uniform(0, end_t), code) for _, code in alerts]
+    random_cover = [any(c == code and t_goal - GOAL_LOOKBACK_S <= t < t_goal for t, c in random_alerts)
+                    for t_goal, code in goal_shots]
     hits = [followed_by_chance(t, code) for t, code in alerts]
     leads = []
     for t_goal, code in goal_shots:
         before = [t for t, c in alerts if c == code and t_goal - GOAL_LOOKBACK_S <= t < t_goal]
         leads.append(t_goal - max(before) if before else None)
-    return {"hits": hits, "baseline": baseline, "leads": leads}
+    return {"hits": hits, "baseline": baseline, "leads": leads, "random_cover": random_cover}
 
 
 def main() -> None:
     """Print the evaluation as a Markdown table (ready for the README)."""
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--matches", type=int, default=50)
-    parser.add_argument("--first-seed", type=int, default=1001)
+    parser.add_argument("--first-seed", type=int, default=2001,
+                        help="2001 = held-out matches (the threshold was tuned on seeds 1001-1050)")
     parser.add_argument("--threshold", type=float, default=AlertRule.threshold)
     args = parser.parse_args()
 
     rule, rng = AlertRule(threshold=args.threshold), random.Random(0)
-    hits, baseline, leads = [], [], []
+    hits, baseline, leads, random_cover = [], [], [], []
     for seed in range(args.first_seed, args.first_seed + args.matches):
         result = evaluate_match(seed, rule, rng)
         hits += result["hits"]
         baseline += result["baseline"]
         leads += result["leads"]
+        random_cover += result["random_cover"]
 
     precision = sum(hits) / len(hits) if hits else 0.0
     base_rate = sum(baseline) / len(baseline)
@@ -94,6 +100,7 @@ def main() -> None:
     print(f"| Lift over chance | x{precision / base_rate:.1f} |")
     print(f"| Goals preceded by an alert for the scoring team (5 min window) | "
           f"{len(covered)}/{len(leads)} ({len(covered) / len(leads):.0%}) |")
+    print(f"| Same number of alerts placed at random | {sum(random_cover) / len(random_cover):.0%} |")
     if covered:
         print(f"| Median lead time before those goals | {statistics.median(covered):.0f} s |")
 

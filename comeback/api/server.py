@@ -17,14 +17,17 @@ from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 from comeback.agents.llm import LLMGateway
+from comeback.agents.speech import AUDIO_DIR
 from comeback.api.replay import MATCHES_DIR, SPEEDS, ReplaySession, cue_visible
 from comeback.engine.match import load_match, run_engine
 from comeback.fans.crowd import scaling_curve
 from comeback.fans.profiles import load_profiles
 
 WEB_DIR = Path(__file__).resolve().parents[2] / "web"
+SCALE_DIR = Path(__file__).resolve().parents[2] / "data" / "scale"
 DEFAULT_MATCH = "demo-comeback"
 KEEPALIVE_S = 15.0
+IDLE_SESSION_S = 120.0   # a replay nobody watches is stopped (keeps the container idle and cheap)
 
 sessions: dict[str, ReplaySession] = {}
 gateway = LLMGateway()
@@ -52,6 +55,8 @@ class UIStaticFiles(StaticFiles):
 
 
 app.mount("/web", UIStaticFiles(directory=WEB_DIR), name="web")
+AUDIO_DIR.mkdir(parents=True, exist_ok=True)
+app.mount("/media/audio", StaticFiles(directory=AUDIO_DIR), name="audio")
 
 
 def _match_path(match_id: str) -> Path:
@@ -133,8 +138,12 @@ _scale_cache: dict[str, list[dict[str, int]]] = {}
 async def scale(match_id: str) -> dict[str, Any]:
     """LLM calls needed to serve audiences of growing size (computed once, in a worker thread)."""
     if match_id not in _scale_cache:
-        meta, events = load_match(_match_path(match_id))
-        _scale_cache[match_id] = await asyncio.to_thread(scaling_curve, meta, events)
+        precomputed = SCALE_DIR / f"{match_id}.json"        # written at image build time
+        if precomputed.is_file():
+            _scale_cache[match_id] = json.loads(precomputed.read_text())
+        else:
+            meta, events = load_match(_match_path(match_id))
+            _scale_cache[match_id] = await asyncio.to_thread(scaling_curve, meta, events)
     return {"match_id": match_id, "curve": _scale_cache[match_id]}
 
 
@@ -168,13 +177,55 @@ async def stream(request: Request, match_id: str = DEFAULT_MATCH, session: str |
                 yield _sse(message["type"], message["data"])
         finally:
             replay.unsubscribe(queue)
+            if not replay.watched:
+                asyncio.create_task(_reap(session_id))
 
     return StreamingResponse(events(), media_type="text/event-stream",
                              headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
 
+async def _reap(session_id: str) -> None:
+    await asyncio.sleep(IDLE_SESSION_S)
+    replay = sessions.get(session_id)
+    if replay and not replay.watched:
+        sessions.pop(session_id, None)
+        await replay.stop()
+
+
 def _sse(kind: str, data: Any) -> str:
     return f"event: {kind}\ndata: {json.dumps(data, ensure_ascii=False, default=str)}\n\n"
+
+
+@app.get("/api/sessions")
+def live_sessions() -> list[dict[str, Any]]:
+    """Live replay sessions (read by the MCP server)."""
+    return [{"session": r.session_id, "match_id": r.match_id, "minute": r.brain.engine.state.minute,
+             "period": r.brain.engine.state.period, "score": r.brain.engine.state.score_str(),
+             "fan": r.fan.profile.name, "fan_present": r.fan.present} for r in sessions.values()]
+
+
+@app.get("/api/session/{session_id}/live")
+def live_state(session_id: str) -> dict[str, Any]:
+    """Current match state of a session: snapshot, danger reasons, verified moment cards."""
+    replay = _session(session_id)
+    engine = replay.brain.engine
+    reasons = {code: tracker.reasons(engine.state.t) for code, tracker in engine.danger.items()}
+    cards = [{k: c[k] for k in ("minute", "type", "team", "importance", "headline", "why_it_matters", "source")}
+             for c in sorted(replay.brain.cards.values(), key=lambda c: c["t"]) if c["type"] != "danger_peak"]
+    return {"snapshot": engine.snapshot(), "danger_reasons": reasons, "moments": cards,
+            "fan": replay.fan.profile.name, "fan_present": replay.fan.present}
+
+
+@app.get("/api/session/{session_id}/player/{player}")
+def player_stats(session_id: str, player: str) -> dict[str, Any]:
+    """Live stats of one player, by id ("EMB-9") or by (part of) their name."""
+    state = _session(session_id).brain.engine.state
+    match = [pid for pid, info in state.roster.items()
+             if pid.lower() == player.lower() or player.lower() in info["name"].lower()]
+    if not match:
+        raise HTTPException(404, f"no player matching {player!r}")
+    pid = match[0]
+    return {**state.roster[pid], "stats": state.players[pid].to_dict()}
 
 
 @app.post("/api/session/{session_id}/away")

@@ -10,9 +10,13 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class AlertRule:
-    """Thresholds of the alert rule (tuned on unscripted synthetic matches)."""
+    """Thresholds of the alert rule.
 
-    threshold: float = 55.0
+    The threshold was tuned on unscripted matches (seeds 1001-1050) to announce at
+    least half of the goals, and is reported on held-out matches (seeds 2001-2050).
+    """
+
+    threshold: float = 44.0
     min_slope: float = 3.0
     cooldown_s: float = 180.0
     quiet_after_shot_s: float = 20.0

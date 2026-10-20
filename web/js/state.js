@@ -20,6 +20,8 @@ export const app = {
   events: [], durationT: 5700, listeners: {}, topSpeed: {}, lastFavTag: 0,
 };
 
+window.__comeback = app;   // read-only handle for automated UI checks and debugging
+
 export function newSessionId() { return Math.random().toString(36).slice(2, 12); }
 
 export async function post(path) {

@@ -14,6 +14,7 @@ from typing import Any
 from comeback.agents.analyst import needs_analyst
 from comeback.agents.brain import MatchBrain
 from comeback.agents.llm import LLMGateway
+from comeback.agents.speech import SpeechGateway
 from comeback.agents.watcher import Watcher
 from comeback.engine.match import EngineUpdate, load_match
 from comeback.fans.crowd import Crowd
@@ -26,7 +27,10 @@ MATCHES_DIR = Path(__file__).resolve().parents[2] / "data" / "matches"
 SPEEDS = (1, 5, 10, 20, 40)
 MAX_SLEEP_S = 1.5  # dead-ball pauses are shortened so the replay never feels frozen
 CARD_WAIT_S = 20.0
-CROWD_SIZE = 10_000  # how long a catch-up waits for pending verified cards before using templates
+CROWD_SIZE = 10_000
+REPLAYABLE = {"goal", "big_chance", "red_card", "penalty"}
+REPLAY_CLIPS = 3
+CLIP_BEFORE_S, CLIP_AFTER_S = 10.0, 2.5  # how long a catch-up waits for pending verified cards before using templates
 
 
 def cue_visible(cue: dict[str, Any], level: str) -> bool:
@@ -44,6 +48,7 @@ class ReplaySession:
         self.meta, self.events = load_match(MATCHES_DIR / f"{match_id}.jsonl")
         self.brain = MatchBrain(self.meta, gateway)
         self.crowd = Crowd(self.brain.engine, CROWD_SIZE)
+        self.speech = SpeechGateway()
         self.speed = speed if speed in SPEEDS else 10
         self.index = 0
         self.paused = False
@@ -66,6 +71,11 @@ class ReplaySession:
             self._devices.add(queue)
             self.publish("device", {"paired": len(self._devices)})
         return queue
+
+    @property
+    def watched(self) -> bool:
+        """Whether any screen or device is still listening to this session."""
+        return bool(self._subscribers)
 
     def unsubscribe(self, queue: asyncio.Queue) -> None:
         self._subscribers.discard(queue)
@@ -151,6 +161,7 @@ class ReplaySession:
                     "detail": f"back after {round((window[1] - window[0]) / 60)} min → Storyteller"})
         catchup = await self.brain.catchup(self.fan.profile, *window, trace=self.trace)
         catchup |= {"from_t": window[0], "to_t": window[1]}
+        catchup |= await self._replay_and_voice(catchup, *window)
         self.publish("catchup", catchup)
         return catchup
 
@@ -173,6 +184,7 @@ class ReplaySession:
                     "detail": "joined late → Storyteller: the story so far"})
         catchup = await self.brain.catchup(self.fan.profile, 0.0, t, late_join=True, trace=self.trace)
         catchup |= {"from_t": 0.0, "to_t": t, "late_join": True}
+        catchup |= await self._replay_and_voice(catchup, 0.0, t)
         self.publish("catchup", catchup)
         self._wake.set()
         return catchup
@@ -249,12 +261,31 @@ class ReplaySession:
             finally:
                 self._card_queue.task_done()
 
+    def replay_clips(self, from_t: float, to_t: float) -> list[dict[str, Any]]:
+        """The missed moments worth replaying on the 3D feed, with the events around each of them."""
+        cards = [c for c in self.brain.cards.values() if from_t <= c["t"] <= to_t and c["type"] in REPLAYABLE]
+        chosen = sorted(sorted(cards, key=lambda c: c["importance"], reverse=True)[:REPLAY_CLIPS], key=lambda c: c["t"])
+        played = self.events[: self.index]
+        return [{
+            "moment_id": c["moment_id"], "minute": c["minute"], "type": c["type"], "team": c["team"],
+            "headline": c["headline"], "t": c["t"],
+            "events": [e for e in played if c["t"] - CLIP_BEFORE_S <= e["t"] <= c["t"] + CLIP_AFTER_S],
+        } for c in chosen]
+
+    async def _replay_and_voice(self, catchup: dict[str, Any], from_t: float, to_t: float) -> dict[str, Any]:
+        audio = await self.speech.audio_url(catchup["text"], catchup["language"])
+        if audio:
+            self.trace({"agent": "Storyteller", "step": "voice", "label": self.fan.profile.name,
+                        "detail": "Azure AI Speech neural voice"})
+        return {"replay": self.replay_clips(from_t, to_t), "audio": audio}
+
     async def _gazette(self) -> None:
         """Full-time: the Storyteller writes this fan's own recap of the match."""
         await self._drain_cards()
         self.trace({"agent": "Watcher", "step": "full_time", "label": self.fan.profile.name,
                     "detail": "full-time → Storyteller: personal recap"})
         recap = await self.brain.final_recap(self.fan.profile, trace=self.trace)
+        recap["audio"] = await self.speech.audio_url(recap["text"], recap["language"])
         self.publish("gazette", recap)
 
     async def _drain_cards(self) -> None:

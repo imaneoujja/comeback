@@ -365,3 +365,11 @@ button:disabled { opacity: .3; cursor: default; }
 .gz-m { margin-bottom: 7px; } .gz-m b { font-family: var(--mono); font-size: 11px; }
 .gz-foot { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #16130e; padding-top: 6px; }
 .gz-foot .tag { color: #1b6b3a; } .gz-foot .key { color: #f3efe4; }
+
+/* ------------------------------------------------------------- replay stinger */
+.stinger { position: absolute; inset: 0; z-index: 7; pointer-events: none; display: flex; align-items: center; justify-content: center;
+  gap: 18px; background: var(--red); color: #fff; clip-path: inset(0 100% 0 0); }
+.stinger span { font-family: var(--cond); font-weight: 700; font-size: 44px; letter-spacing: .2em; }
+.stinger b { font-family: var(--mono); font-size: 18px; letter-spacing: .3em; border: 2px solid #fff; padding: 4px 10px; }
+.stinger.go { animation: sting .9s cubic-bezier(.7, 0, .3, 1) both; }
+@keyframes sting { 0% { clip-path: inset(0 100% 0 0); } 45%, 55% { clip-path: inset(0 0 0 0); } 100% { clip-path: inset(0 0 0 100%); } }

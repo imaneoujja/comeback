@@ -26,9 +26,9 @@ about **1,900** LLM calls instead of more than 600,000.
 
 | | What happens | In the demo match |
 |---|---|---|
-| **1. You leave** | A Watcher agent keeps watching for you. It knows your club, favourite player, level and language. | Omar (Emberfield fan, analyst, French) leaves at 66'. |
-| **2. It's heating up** | It calls you back **before** the moment, and says why. Your phone takes over the screen, rings, and reads the reason aloud. | 67': *"Reviens — Emberfield est entré 3 fois dans la surface en 2 minutes et a tenté 2 tirs."* |
-| **3. You return** | A "Previously on…" catch-up of what **changed**, sized to your absence (one line, the key moments, or the full story). | 70': a catch-up in French, then the 71' goal. |
+| **1. You leave** | A Watcher agent keeps watching for you. It knows your club, favourite player, level and language. | Omar (Emberfield fan, analyst, French) leaves at 63'. |
+| **2. It's heating up** | It calls you back **before** the moment, and says why. Your phone takes over the screen, rings, and reads the reason aloud. | 69': *"Reviens — Emberfield est entré 3 fois dans la surface en 2 minutes et a tenté 1 tir."* |
+| **3. You return** | The TV rewinds: the moments you missed are replayed in 3D from behind the goal while a neural voice reads your "Previously on…" catch-up of what **changed**, sized to your absence. A live goal cuts the replay short. | 70': a catch-up in French, then the 71' goal. |
 | **4. Full-time** | Your own front page: the match told from your side. | Sofia (Comets fan): *"Heartbreaking loss for Saltmarsh Comets after strong start"*. |
 
 Around this loop sits a **broadcast control room**: a 3D program feed with
@@ -61,8 +61,8 @@ without any key.
    auto-director puts one monitor ON AIR at a time (toggle **AUTO DIRECT**).
 2. **Reda** (Spanish, follows striker Halen Merewood): pick his profile. His player
    carries a ★ label all match. Press **Join at 60'** for the story so far.
-3. **Omar** (French, analyst, Emberfield fan): press **I'm away** at about 66' (or just
-   switch browser tab). Around 67' his phone gets a "come back" alert. Press
+3. **Omar** (French, analyst, Emberfield fan): press **I'm away** at about 63' (or just
+   switch browser tab). At 65' and 69' his phone gets "come back" alerts. Press
    **I'm back** at about 70', read the catch-up, then watch the 71' goal.
 4. Optional: **PAIR PHONE** shows a QR code. Scan it with your phone on the same
    Wi-Fi, and the alerts ring and speak on your real phone.
@@ -169,24 +169,35 @@ accurate the alerts are: that is measured separately, below.
 
 ## Does "come back" actually predict anything?
 
-Measured with `python scripts/evaluate_alerts.py` **only on 50 unscripted
-synthetic matches** (random fixtures, no story beats). The demo match is
-scripted for storytelling and is **never** used for these numbers. Rule: danger
-≥ 55, rising, not within 20 s of the team's own shot (that chance is already
-over), 3-minute cooldown.
+Measured with `python scripts/evaluate_alerts.py` **only on unscripted synthetic
+matches** (random fixtures, no story beats). The demo match is scripted for
+storytelling and is **never** used for these numbers (the script refuses it).
 
-| Metric (unscripted matches only) | Value |
+Rule: danger ≥ 44, rising, not within 20 s of the team's own shot (that chance is
+already over), 3-minute cooldown, at most 2 alerts per absence for a given fan.
+The threshold was tuned on 50 matches (seeds 1001–1050) to announce at least half
+of the goals; the numbers below come from **50 other, held-out matches** (seeds
+2001–2050).
+
+| Metric (held-out unscripted matches) | Value |
 |---|---|
-| Alerts per team per match | 3.1 |
-| Alert followed by a shot with xG ≥ 0.1 within 60 s | **21%** (chance baseline: 5%, **×4.5**) |
-| Goals preceded by an alert for the scoring team (5-min window) | 33% |
-| Median lead time before those goals | 91 s |
+| Goals preceded by an alert for the scoring team (5-min window) | **54%** |
+| … with the same number of alerts placed at random | 39% |
+| Median lead time before those goals | 60 s |
+| Alert followed by a shot with xG ≥ 0.1 within 60 s | **18%** (random instant: 5%, **×3.7**) |
+| Alerts per team per match | 7.3 |
 
-These are honest numbers on synthetic data, and improving them is our main next
-step. Validating them on real tracking data is future work. In the scripted demo,
-every goal is preceded by an alert about the team that then scores, for each of
-the three fans. That is a design check of the demo scenario (a test), not a
-performance claim.
+What we learned: in our simulator most goals come from short attacks, so the
+danger index right before a goal is often low; goals cluster in spells of
+pressure instead. Announcing half of the goals therefore costs about 7 alerts per
+team per match (a fan only receives them while away, at most 2 per absence). A
+stricter threshold (55) announces fewer goals (33%) with fewer alerts (3.1) and
+higher precision (21%). These are honest numbers on synthetic data; real-data
+validation is future work.
+
+In the scripted demo, every goal is preceded by an alert about the team that then
+scores, for each of the three fans. That is a design check of the demo scenario
+(a test), not a performance claim.
 
 ## The Verifier earns its place
 
@@ -204,6 +215,24 @@ tests caught). Each one became a rule:
 
 The Verifier also rejects players who are not part of the moment, clubs outside
 the match, and over-long texts.
+
+### Foundry evaluations of every text a fan sees
+
+`python scripts/evaluate_texts.py` replays the demo, recovers the exact facts
+behind each final text, and scores it with Microsoft Foundry's AI-assisted
+evaluators (`azure-ai-evaluation`, judge: our `gpt-4.1-mini` deployment, 1–5):
+
+| Texts | n | Groundedness | Coherence | Fluency |
+|---|---|---|---|---|
+| Moment cards (Analyst) | 17 | 5.0 | 4.35 | 3.88 |
+| Catch-ups (Storyteller) | 3 | 5.0 | 4.33 | 4.0 |
+| Full-time recaps (Storyteller) | 3 | 5.0 | 4.67 | 4.0 |
+| **All texts shown to fans** | 23 | **5.0** | **4.39** | **3.91** |
+| Control: 3 cards deliberately corrupted (teams swapped, invented stat) | 3 | **2.0** | 4.0 | 3.67 |
+
+The control row matters: the same judge scores corrupted texts 2/5 on
+groundedness, so the 5/5 on real texts is not leniency. Details per text:
+[`docs/evaluation.json`](docs/evaluation.json).
 
 ## Challenge requirement → where in COMEBACK
 
@@ -230,7 +259,11 @@ the match, and over-long texts.
 |---|---|
 | **Microsoft Agent Framework** (Python) | The LLM agents (Analyst, Storyteller) are `agent_framework.Agent`s. The verified-writing workflow is an Agent Framework `WorkflowBuilder` graph: writer, Verifier and fallback executors, conditional edges, a retry loop, and a live trace of every step (`comeback/agents/workflow.py`, `llm.py`). |
 | **Microsoft Foundry** | LLM inference: Azure OpenAI `gpt-4.1-mini`, Global Standard deployment, through Foundry's OpenAI-compatible v1 endpoint. A 30k TPM cap and a daily call budget protect the credit. |
+| **Microsoft Foundry evaluations** (`azure-ai-evaluation`) | Groundedness, coherence and fluency of every generated text, with a corrupted control set (`scripts/evaluate_texts.py`, results in `docs/evaluation.json`). |
+| **Azure AI Speech** (through the same Foundry resource) | Neural voices read each fan's catch-up and full-time recap in their language (`en-GB-RyanNeural`, `fr-FR-HenriNeural`, `es-ES-AlvaroNeural`) while the program feed replays the missed moments (`comeback/agents/speech.py`). The demo's audio is committed, so offline mode still speaks. |
 | **GitHub Codespaces** | One-click, zero-config environment for judges (`.devcontainer/`). |
+| **GitHub Actions + GitHub Container Registry** | CI on every push (ruff, 48 tests), then the container image is built and published to `ghcr.io` (`.github/workflows/ci.yml`, `Dockerfile`). |
+| **Model Context Protocol** | `comeback/mcp_server.py`: any agent, including GitHub Copilot in VS Code, can query the live match. |
 | GitHub / GitHub Copilot | Development workflow. |
 
 The whole demo match costs **34 LLM calls**: 17 moment cards, 8 personal stories
@@ -277,6 +310,20 @@ cards, agent steps, crowd, alerts, catch-ups, full-time recap),
 `GET /api/scale/{match}`, `GET /phone?session=` (paired phone),
 `GET /api/match/{id}`, `GET /api/profiles`.
 
+## Ask an agent about the live match (MCP)
+
+`comeback/mcp_server.py` is a Model Context Protocol server that reads a running
+COMEBACK (local or deployed) and exposes tools: `live_sessions`, `match_state`,
+`danger_now`, `key_moments(since_minute)`, `player_stats(player)`. To use it from
+GitHub Copilot (agent mode) in VS Code, install the extras and add `.vscode/mcp.json`:
+
+```json
+{ "servers": { "comeback": { "type": "stdio", "command": "python",
+  "args": ["-m", "comeback.mcp_server"], "env": { "COMEBACK_URL": "http://localhost:8000" } } } }
+```
+
+Then ask Copilot: *"Using comeback, who is dangerous right now and why?"*
+
 ## Run with your own Foundry deployment (optional)
 
 ```bash
@@ -288,7 +335,7 @@ LLM_MODE=record python scripts/precompute.py     # re-record the demo cache
 ## Development
 
 ```bash
-pytest                        # 47 tests: realism, engine, verifier, workflow paths, watchers, crowd, API
+pytest                        # 48 tests: realism, engine, verifier, workflow paths, watchers, crowd, API
 ruff check .
 python -m comeback.synth.cli random --count 5    # more synthetic matches
 python scripts/evaluate_alerts.py
@@ -303,19 +350,19 @@ comeback/
   fans/     profiles, session, catch-up selection, crowd (audience simulation)
   api/      FastAPI server, replay sessions (SSE)
 web/        control room (ES modules, no build step; Three.js from a CDN) + phone page
-scripts/    precompute.py, evaluate_alerts.py, hello_agent.py
+scripts/    precompute.py, evaluate_alerts.py, evaluate_texts.py, scale_cache.py, hello_agent.py
 data/       demo match, profiles, committed LLM cache
 ```
 
 ## Limits and next steps
 
-- Synthetic data only; the alert must be improved (33% of goals announced on
-  unscripted matches) and validated on real data.
+- Synthetic data only; the alert (54% of goals announced on held-out matches,
+  vs 39% for random alerts at the same rate) must be validated on real data.
 - Offline mode serves cached stories for the demo's absences; other windows get
   the (verified) template text unless `LLM_MODE=live`.
 - No auto-eventing from video.
-- Next: a personalised replay of the missed moments with a neural voice, cloud
-  hosting, Foundry evaluations, and an MCP server so any agent can query the live match.
+- Next: tracing of the agents (OpenTelemetry → Application Insights), real push
+  notifications, more languages.
 
 ## License
 

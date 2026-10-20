@@ -2,7 +2,8 @@
 
 import { $, app, esc, teamColour, teamName, profile, sizeCanvas } from "./state.js";
 import { TYPE_LABEL, tag } from "./graphics.js";
-import { speak, stopSpeech } from "./voice.js";
+import { stopSpeech } from "./voice.js";
+import { playVoice, stopVoice } from "./replay.js";
 
 const LANG_LABEL = { en: "English", fr: "Français", es: "Español" };
 
@@ -169,10 +170,11 @@ export function renderCatchup(c) {
     <div class="cu-text">${esc(c.text)}</div>
     <div class="cu-f">${tag(c, "Storyteller")}${"speechSynthesis" in window ? `<button class="key" id="listen">▶ LISTEN</button>` : ""}</div>`;
   $("#cu-close").addEventListener("click", hideCatchup);
-  $("#listen")?.addEventListener("click", () => speak(c.text, c.language));
+  $("#listen")?.addEventListener("click", () => playVoice(c));
 }
 
 export function hideCatchup() {
+  stopVoice();
   stopSpeech();
   const el = $("#catchup"); el.hidden = true; el.innerHTML = "";
 }

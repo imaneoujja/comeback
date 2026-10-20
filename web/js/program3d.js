@@ -226,10 +226,11 @@ export function createProgram(canvas) {
     const bx = toX(app.ball.x), bz = toZ(app.ball.y);
     const k = 1 - Math.exp(-dt * 1.7);
     if (cam.mode === "goal") {
-      const gx = cam.side * (L / 2 + 17);
-      camera.position.lerp(new THREE.Vector3(gx, 6.5, bz * 0.25), k * 2);
-      camera.fov += (40 - camera.fov) * k;
-      camera.lookAt(cam.side * 36, 1.2, bz * 0.5);
+      // behind the attacked goal, above the LED boards and in front of the stand
+      const gx = cam.side * (L / 2 + 6.5);
+      camera.position.lerp(new THREE.Vector3(gx, 7.5, bz * 0.3), k * 2);
+      camera.fov += (48 - camera.fov) * k;
+      camera.lookAt(cam.side * 28, 0.5, bz * 0.45);
     } else {
       const tx = Math.max(-34, Math.min(34, bx * 0.88));
       cam.x += (tx - cam.x) * k;
