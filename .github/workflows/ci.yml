@@ -1,8 +1,7 @@
 name: CI
 
 on:
-  push:
-    branches: [main]
+  push:            # tests on every branch; the image is published from main only
   pull_request:
 
 jobs:
@@ -22,7 +21,7 @@ jobs:
 
   image:
     needs: test
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: read

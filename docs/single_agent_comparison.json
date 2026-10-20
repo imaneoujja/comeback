@@ -31,13 +31,13 @@
   },
   "calls": 68,
   "usd_per_call": 0.0003304058823529412,
-  "seconds_per_call_median": 1.5650193750625476
+  "seconds_per_call_median": null
  },
  "at_200k_fans_demo_match": {
   "fans": 200000,
-  "comeback_calls": 1854,
-  "comeback_usd": 0.6125725058823529,
-  "single_agent_calls": 628369,
-  "single_agent_usd": 804.6055588666666
+  "comeback_calls": 1830,
+  "comeback_usd": 0.6046427647058824,
+  "single_agent_calls": 633921,
+  "single_agent_usd": 811.7147097999999
  }
 }

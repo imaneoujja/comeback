@@ -206,3 +206,61 @@ def check_no_final_result(text: str, finished: bool) -> list[str]:
         return [f"The match is not over: do not describe a final result ({', '.join(found)}). "
                 "Say who leads or that the score is level right now."]
     return []
+
+
+# Responsible AI: fans are told about people. No insults, no mockery of a player, and no betting.
+_DISRESPECT = re.compile(
+    r"\b(?:useless|idiot\w*|stupid\w*|pathetic|disgrace\w*|clown\w*|flop|rubbish|garbage|incompetent|laughable"
+    r"|humiliat\w*|imb[ée]cile\w*|minable\w*|lamentable\w*|honte\w*|ridicule\w*|nullard\w*"
+    r"|in[úu]til\w*|pat[ée]tic\w*|verg[üu]enza|payaso\w*|rid[íi]cul\w*)\b",
+    re.IGNORECASE,
+)
+_BETTING = re.compile(
+    r"\b(?:odds|bet|bets|betting|wager\w*|bookmaker\w*|bookie\w*|paris sportifs?|cotes?|apuestas?|cuotas?)\b",
+    re.IGNORECASE,
+)
+
+
+def check_respect(text: str) -> list[str]:
+    """No insulting or mocking words about players or clubs, and no betting talk (odds, bets)."""
+    issues = []
+    insults = sorted({m.group(0).lower() for m in _DISRESPECT.finditer(text)})
+    if insults:
+        issues.append(f"Be respectful of players and clubs: remove {', '.join(insults)}.")
+    betting = sorted({m.group(0).lower() for m in _BETTING.finditer(text)})
+    if betting:
+        issues.append(f"No betting talk: remove {', '.join(betting)}.")
+    return issues
+
+
+# Comparative claims ("despite fewer chances", "more possession") must match the per-team stats.
+_COMPARISONS = [  # (pattern, stat, direction: -1 = the team has less, +1 = more)
+    (r"fewer (?:chances|shots|opportunities)|less (?:threat|xg)"
+     r"|moins d['’]occasions|moins de tirs|menos ocasiones|menos tiros", "shots", -1),
+    (r"more (?:chances|shots|opportunities)|outshot"
+     r"|plus d['’]occasions|plus de tirs|más ocasiones|más tiros", "shots", +1),
+    (r"less (?:of the )?(?:ball|possession)|moins de possession|menos posesi[óo]n", "possession", -1),
+    (r"more (?:of the )?(?:ball|possession)|dominated possession|plus de possession|más posesi[óo]n", "possession", +1),
+]
+
+
+def check_comparisons(text: str, facts: dict, team_names: dict[str, str]) -> list[str]:
+    """A claim that a team had fewer/more chances or less/more possession must agree with the facts."""
+    stats = {team_names[code]: facts[code] for code in team_names
+             if isinstance(facts.get(code), dict) and "shots" in facts[code] and "possession" in facts[code]}
+    if len(stats) != 2:
+        return []
+    issues = []
+    for sentence in _SENTENCE.findall(text):
+        for pattern, stat, direction in _COMPARISONS:
+            for claim in re.finditer(pattern, sentence, re.IGNORECASE):
+                before = [(claim.start() - m.end(), name) for name in stats for token in _team_tokens(name)
+                          for m in re.finditer(re.escape(token), sentence[:claim.start()])]
+                if not before:
+                    continue
+                team = min(before)[1]
+                other = next(name for name in stats if name != team)
+                if (stats[team][stat] - stats[other][stat]) * direction <= 0:
+                    issues.append(f"'{sentence.strip()}': {team} had {stats[team][stat]} {stat} and {other} "
+                                  f"{stats[other][stat]}, so '{claim.group(0)}' is wrong. Use the facts.")
+    return issues

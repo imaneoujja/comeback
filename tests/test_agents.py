@@ -364,3 +364,33 @@ def test_against_ten_men_belongs_to_the_opponents_of_the_team_named_before() -> 
     wrong = "Saltmarsh Comets hold on while playing against ten men."
     assert check_numerical_claims(ok, on_pitch) == []
     assert check_numerical_claims(wrong, on_pitch)
+
+
+def test_responsible_ai_no_insults_and_no_betting_talk() -> None:
+    from comeback.agents.verifier import check_respect
+    assert check_respect("Oakenfold's big chance is saved: Emberfield keep pushing.") == []
+    assert check_respect("A pathetic miss by Oakenfold.")
+    assert check_respect("Quelle occasion ratée, c'est lamentable.")
+    assert check_respect("The odds of an Emberfield comeback are rising.")
+    assert check_respect("Match nul 2-2 entre les deux équipes.") == []   # "nul" (a draw) is not an insult
+
+
+def test_a_translation_is_shown_only_if_it_keeps_every_number_and_name() -> None:
+    from comeback.agents.translator import english_version, faithful
+    names = {"Ciro Oakenfold", "Emberfield"}
+    fr = "Ciro Oakenfold a eu une grosse occasion à la 68e minute ; le score reste 0-2 pour Emberfield."
+    assert faithful(fr, "Ciro Oakenfold had a big chance in the 68th minute; Emberfield still trail 0-2.", names)
+    assert not faithful(fr, "Ciro Oakenfold had a chance in the 69th minute; Emberfield trail 0-2.", names)   # number
+    assert not faithful(fr, "Oakenfold had a big chance in the 68th minute; the score is still 0-2.", names)  # name
+    gateway = LLMGateway(LLMSettings(mode=LLMMode.OFFLINE))
+    assert asyncio.run(english_version("Already English.", "en", gateway, names)) is None
+
+
+def test_comparative_claims_must_match_the_stats() -> None:
+    """Caught by Foundry's groundedness judge, then turned into a rule: 'despite fewer chances' with 21 shots to 7."""
+    from comeback.agents.verifier import check_comparisons
+    facts = {"AVW": {"shots": 7, "possession": 0.53}, "LKA": {"shots": 21, "possession": 0.47}}
+    names = {"AVW": "Ashvale Wanderers", "LKA": "Larkhaven Athletic"}
+    assert check_comparisons("Larkhaven Athletic drew 2-2 despite fewer chances and less possession.", facts, names)
+    assert check_comparisons("Larkhaven Athletic drew 2-2 despite less possession.", facts, names) == []
+    assert check_comparisons("Ashvale Wanderers held on despite fewer chances.", facts, names) == []

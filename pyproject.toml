@@ -16,6 +16,7 @@ select = ["E", "F", "W", "I", "B", "UP", "SIM"]
 # report scripts print Markdown tables and SVG templates verbatim
 "scripts/evaluate_alerts.py" = ["E501"]
 "scripts/compare_single_agent.py" = ["E501"]
+"scripts/evaluate_texts.py" = ["E501"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

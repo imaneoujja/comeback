@@ -13,11 +13,13 @@ from comeback.agents.llm import LLMGateway, parse_json_reply
 from comeback.agents.templates import moment_card_text
 from comeback.agents.verifier import (
     allowed_numbers,
+    check_comparisons,
     check_length,
     check_names,
     check_no_final_result,
     check_numbers,
     check_numerical_claims,
+    check_respect,
     check_scope,
 )
 from comeback.agents.workflow import Tracer, WrittenResult, run_verified
@@ -117,6 +119,8 @@ class AnalystWriter:
         issues += check_numerical_claims(text, task.situation.get("players_on_pitch", {}))
         issues += check_scope(text)
         issues += check_no_final_result(text, m["type"] == "full_time")
+        issues += check_respect(text)
+        issues += check_comparisons(text, m["facts"], task.team_names)
         return issues
 
     def fallback(self, task: AnalystTask) -> dict[str, Any]:

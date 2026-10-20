@@ -23,6 +23,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from comeback.agents.brain import MatchBrain  # noqa: E402
 from comeback.agents.llm import LLMGateway  # noqa: E402
 from comeback.agents.speech import SpeechGateway  # noqa: E402
+from comeback.agents.translator import english_version  # noqa: E402
 from comeback.agents.watcher import Watcher  # noqa: E402
 from comeback.engine.match import load_match  # noqa: E402
 from comeback.fans.profiles import for_match, load_profiles  # noqa: E402
@@ -46,6 +47,7 @@ async def precompute(path: Path, gateway: LLMGateway, speech: SpeechGateway | No
 
     async def voice(text: str, lang: str) -> None:
         voiced.append(await speech.audio_url(text, lang) if speech else None)
+        await english_version(text, lang, gateway, brain.known_names())   # the "Show English" button
 
     brain = MatchBrain(meta, gateway)
     profiles = {pid: for_match(p, meta["home"]["id"], meta["away"]["id"]) for pid, p in load_profiles().items()}

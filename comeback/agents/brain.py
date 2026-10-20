@@ -43,6 +43,10 @@ class MatchBrain:
             }
         return update
 
+    def known_names(self) -> set[str]:
+        """Player and club names of this match (a translation must keep them)."""
+        return {p["name"] for p in self.roster.values()} | set(self.team_names.values())
+
     def _recent_headlines(self, before_t: float) -> list[str]:
         return [f"{c['minute']}' {c['headline']}" for c in self.cards.values()
                 if c["t"] < before_t and c["importance"] >= 50 and c["type"] != "danger_peak"]

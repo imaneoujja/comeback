@@ -1,329 +1,841 @@
 {
  "judge": "gpt-4.1-mini",
- "texts": 23,
- "by_kind": [
+ "matches": [
+  "demo-comeback",
+  "random-3112"
+ ],
+ "rows": [
   {
-   "kind": "moment card",
-   "n": 17,
-   "groundedness": 5.0,
-   "coherence": 4.35,
-   "fluency": 3.88
+   "set": "Before the Verifier: first drafts",
+   "n": 46,
+   "groundedness": 4.93,
+   "coherence": 4.39,
+   "fluency": 3.96,
+   "groundedness_below_4": 1
   },
   {
-   "kind": "catch-up",
-   "n": 3,
-   "groundedness": 5.0,
+   "set": "  of which the Verifier sent back",
+   "n": 6,
+   "groundedness": 4.5,
    "coherence": 4.33,
-   "fluency": 4.0
+   "fluency": 4.0,
+   "groundedness_below_4": 1
   },
   {
-   "kind": "full-time recap",
-   "n": 3,
+   "set": "After the Verifier: texts shown to fans",
+   "n": 45,
    "groundedness": 5.0,
-   "coherence": 4.67,
-   "fluency": 4.0
+   "coherence": 4.36,
+   "fluency": 3.96,
+   "groundedness_below_4": 0
   },
   {
-   "kind": "control (corrupted)",
+   "set": "Control: 3 cards deliberately corrupted",
    "n": 3,
    "groundedness": 2.0,
-   "coherence": 4.0,
-   "fluency": 3.67
+   "coherence": 3.67,
+   "fluency": 3.33,
+   "groundedness_below_4": 3
   }
  ],
- "overall": {
-  "groundedness": 5.0,
-  "coherence": 4.39,
-  "fluency": 3.91
- },
- "pass_rate_at_3": {
-  "groundedness": 1.0,
-  "coherence": 1.0,
-  "fluency": 1.0
- },
  "items": [
   {
-   "kind": "catch-up",
-   "agent": "Storyteller",
-   "fan": "reda",
-   "text": "Reda, te perdiste un gran inicio de partido. Halen Merewood abrió el marcador para Saltmarsh Comets al minuto 18 con un potente disparo de zurda, asistido por Oren Caulder. Luego, al 39, Elian Glenwick amplió la ventaja con otro disparo fuerte de izquierda, también asistido por Caulder. Aunque Emberfield dominaba la posesión y creaba más oportunidades, Saltmarsh Comets mantenían el 0-2 al descanso. Después, Emberfield cambió a un ataque más agresivo con un 4-2-4 y empezó a controlar el balón con un 69% de posesión y pases precisos. El partido ahora está en sus manos para intentar remontar. Merewood ya marcó y sigue siendo clave para los Comets.",
-   "source": "llm",
-   "groundedness": 5.0,
-   "coherence": 5.0,
-   "fluency": 4.0
-  },
-  {
-   "kind": "catch-up",
-   "agent": "Storyteller",
-   "fan": "omar",
-   "text": "Salut Omar, en ton absence, Emberfield a eu une grosse occasion avec Ciro Oakenfold à la 68e minute, son tir puissant du pied gauche a été arrêté par le gardien des Saltmarsh Comets. Malgré l'avantage numérique, Emberfield n'a pas réussi à réduire l'écart, le score reste 0-2. Mais la dynamique a changé, Emberfield domine maintenant le jeu et pousse fort pour revenir.",
-   "source": "llm",
-   "groundedness": 5.0,
-   "coherence": 4.0,
-   "fluency": 4.0
-  },
-  {
-   "kind": "catch-up",
-   "agent": "Storyteller",
-   "fan": "sofia",
-   "text": "Sofia, while you were away, Emberfield pushed hard with two big shots saved by Saltmarsh Comets' keeper, keeping your team’s slim lead despite being a player down. Then at 84 minutes, Aven Elderglen scored for Emberfield to make it 2-2, evening the score and shifting the momentum. Emberfield now controls the game, and Saltmarsh Comets face a tough finish with 10 players on the pitch.",
-   "source": "llm",
-   "groundedness": 5.0,
-   "coherence": 4.0,
-   "fluency": 4.0
-  },
-  {
-   "kind": "full-time recap",
-   "agent": "Storyteller",
-   "fan": "omar",
-   "text": "Emberfield renverse Saltmarsh Comets malgré un début difficile\nOmar, tu as manqué un match intense. Saltmarsh Comets a ouvert le score à la 18e minute grâce à Halen Merewood, confirmant leur contrôle initial. Mais après un carton rouge pour Saltmarsh Comets, Emberfield a changé de forme tactique, exploitant la supériorité numérique. Ciro Oakenfold a réduit l'écart à la 71e, suivi par Aven Elderglen qui a égalisé à la 84e. Malgré quelques occasions manquées, Emberfield a maintenu la pression. Le tournant est venu en toute fin de match, à la 92e, quand Kiro Sableford a marqué le but décisif. Ce retournement illustre une excellente gestion tactique d’Emberfield face à l’infériorité numérique des Saltmarsh Comets, qui ont fini à dix joueurs.",
-   "body": "Omar, tu as manqué un match intense. Saltmarsh Comets a ouvert le score à la 18e minute grâce à Halen Merewood, confirmant leur contrôle initial. Mais après un carton rouge pour Saltmarsh Comets, Emberfield a changé de forme tactique, exploitant la supériorité numérique. Ciro Oakenfold a réduit l'écart à la 71e, suivi par Aven Elderglen qui a égalisé à la 84e. Malgré quelques occasions manquées, Emberfield a maintenu la pression. Le tournant est venu en toute fin de match, à la 92e, quand Kiro Sableford a marqué le but décisif. Ce retournement illustre une excellente gestion tactique d’Emberfield face à l’infériorité numérique des Saltmarsh Comets, qui ont fini à dix joueurs.",
-   "source": "llm",
-   "groundedness": 5.0,
-   "coherence": 4.0,
-   "fluency": 4.0
-  },
-  {
-   "kind": "full-time recap",
-   "agent": "Storyteller",
-   "fan": "sofia",
-   "text": "Heartbreaking loss for Saltmarsh Comets after strong start\nSofia, you missed an intense match! Saltmarsh Comets started brilliantly, with Halen Merewood scoring early and Elian Glenwick doubling the lead before halftime. But things changed after Ciro Hollins was sent off at 62 minutes, leaving the Comets with 10 players. Emberfield seized the chance, scoring three goals including a stoppage-time winner by Kiro Sableford. Despite the setback, the Comets showed great fight but couldn't hold on. The score changed from 0-0 to a tough 3-2 loss, with Emberfield taking control after the red card and a shift in Saltmarsh's shape. It was a thrilling but painful finish for your team.",
-   "body": "Sofia, you missed an intense match! Saltmarsh Comets started brilliantly, with Halen Merewood scoring early and Elian Glenwick doubling the lead before halftime. But things changed after Ciro Hollins was sent off at 62 minutes, leaving the Comets with 10 players. Emberfield seized the chance, scoring three goals including a stoppage-time winner by Kiro Sableford. Despite the setback, the Comets showed great fight but couldn't hold on. The score changed from 0-0 to a tough 3-2 loss, with Emberfield taking control after the red card and a shift in Saltmarsh's shape. It was a thrilling but painful finish for your team.",
-   "source": "llm",
-   "groundedness": 5.0,
-   "coherence": 5.0,
-   "fluency": 4.0
-  },
-  {
-   "kind": "full-time recap",
-   "agent": "Storyteller",
-   "fan": "reda",
-   "text": "¡Emberfield gana 3-2 tras épica remontada!\nReda, te perdiste un partido increíble. Saltmarsh Comets empezó fuerte con un gol de Halen Merewood al minuto 18 y otro de Elian Glenwick antes del descanso, poniendo el 0-2. Pero luego Saltmarsh recibió una tarjeta roja y quedaron con 10 jugadores. Emberfield aprovechó y empezó la remontada: Oakenfold marcó el primero, luego Elderglen empató y finalmente Sableford anotó el gol de la victoria en el minuto 92. Emberfield dominó la segunda mitad y logró una victoria emocionante. ¡Qué partido para recordar!",
-   "body": "Reda, te perdiste un partido increíble. Saltmarsh Comets empezó fuerte con un gol de Halen Merewood al minuto 18 y otro de Elian Glenwick antes del descanso, poniendo el 0-2. Pero luego Saltmarsh recibió una tarjeta roja y quedaron con 10 jugadores. Emberfield aprovechó y empezó la remontada: Oakenfold marcó el primero, luego Elderglen empató y finalmente Sableford anotó el gol de la victoria en el minuto 92. Emberfield dominó la segunda mitad y logró una victoria emocionante. ¡Qué partido para recordar!",
-   "source": "llm",
-   "groundedness": 5.0,
-   "coherence": 5.0,
-   "fluency": 4.0
-  },
-  {
-   "kind": "moment card",
+   "kind": "before",
    "agent": "Analyst",
-   "moment": "17' momentum_swing",
    "text": "Saltmarsh Comets seize control with strong possession and passing\nAfter a balanced start, Saltmarsh Comets now dominate possession and pass accuracy, shifting momentum away from Emberfield in a goalless match.",
-   "headline": "Saltmarsh Comets seize control with strong possession and passing",
-   "source": "llm",
+   "revised": false,
    "groundedness": 5.0,
-   "coherence": 5.0,
+   "coherence": 4.0,
    "fluency": 4.0
   },
   {
-   "kind": "moment card",
+   "kind": "after",
    "agent": "Analyst",
-   "moment": "18' goal",
+   "text": "Saltmarsh Comets seize control with strong possession and passing\nAfter a balanced start, Saltmarsh Comets now dominate possession and pass accuracy, shifting momentum away from Emberfield in a goalless match.",
+   "groundedness": 5.0,
+   "coherence": 4.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "before",
+   "agent": "Analyst",
    "text": "Halen Merewood scores opener for Saltmarsh Comets\nThis goal breaks the deadlock, giving Saltmarsh Comets a crucial lead and validating their early dominance in possession and chances against Emberfield.",
-   "headline": "Halen Merewood scores opener for Saltmarsh Comets",
-   "source": "llm",
+   "revised": false,
    "groundedness": 5.0,
    "coherence": 4.0,
-   "fluency": 4.0
+   "fluency": 3.0
   },
   {
-   "kind": "moment card",
+   "kind": "after",
    "agent": "Analyst",
-   "moment": "22' momentum_swing",
+   "text": "Halen Merewood scores opener for Saltmarsh Comets\nThis goal breaks the deadlock, giving Saltmarsh Comets a crucial lead and validating their early dominance in possession and chances against Emberfield.",
+   "groundedness": 5.0,
+   "coherence": 4.0,
+   "fluency": 3.0
+  },
+  {
+   "kind": "before",
+   "agent": "Analyst",
    "text": "Emberfield swings momentum with dominant possession surge\nTrailing 0-1, Emberfield's regained control and 61% possession shift pressure back onto Saltmarsh Comets, setting the stage for a potential comeback in the match.",
-   "headline": "Emberfield swings momentum with dominant possession surge",
-   "source": "llm",
+   "revised": false,
    "groundedness": 5.0,
    "coherence": 4.0,
    "fluency": 4.0
   },
   {
-   "kind": "moment card",
+   "kind": "after",
    "agent": "Analyst",
-   "moment": "39' goal",
+   "text": "Emberfield swings momentum with dominant possession surge\nTrailing 0-1, Emberfield's regained control and 61% possession shift pressure back onto Saltmarsh Comets, setting the stage for a potential comeback in the match.",
+   "groundedness": 5.0,
+   "coherence": 4.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "before",
+   "agent": "Analyst",
    "text": "Elian Glenwick doubles Saltmarsh Comets' lead with powerful left-foot strike\nExtending their lead to 2-0, Saltmarsh Comets gain a strong advantage before halftime, putting Emberfield under pressure to respond with a full team on the pitch.",
-   "headline": "Elian Glenwick doubles Saltmarsh Comets' lead with powerful left-foot strike",
-   "source": "llm",
+   "revised": false,
    "groundedness": 5.0,
-   "coherence": 5.0,
+   "coherence": 4.0,
    "fluency": 4.0
   },
   {
-   "kind": "moment card",
+   "kind": "after",
    "agent": "Analyst",
-   "moment": "47' half_time",
+   "text": "Elian Glenwick doubles Saltmarsh Comets' lead with powerful left-foot strike\nExtending their lead to 2-0, Saltmarsh Comets gain a strong advantage before halftime, putting Emberfield under pressure to respond with a full team on the pitch.",
+   "groundedness": 5.0,
+   "coherence": 4.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "before",
+   "agent": "Analyst",
    "text": "Saltmarsh Comets lead 2-0 despite Emberfield's dominance\nSaltmarsh Comets hold a two-goal advantage at half-time while Emberfield controls possession and creates more chances, setting up a tense second half where Emberfield must overcome the deficit despite their attacking pressure.",
-   "headline": "Saltmarsh Comets lead 2-0 despite Emberfield's dominance",
-   "source": "llm",
+   "revised": false,
    "groundedness": 5.0,
    "coherence": 4.0,
    "fluency": 4.0
   },
   {
-   "kind": "moment card",
+   "kind": "after",
    "agent": "Analyst",
-   "moment": "54' momentum_swing",
+   "text": "Saltmarsh Comets lead 2-0 despite Emberfield's dominance\nSaltmarsh Comets hold a two-goal advantage at half-time while Emberfield controls possession and creates more chances, setting up a tense second half where Emberfield must overcome the deficit despite their attacking pressure.",
+   "groundedness": 5.0,
+   "coherence": 4.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "before",
+   "agent": "Analyst",
+   "text": "Saltmarsh Comets regain control with strong possession surge\nAfter Emberfield's earlier dominance, Saltmarsh Comets' regained control and higher pass accuracy solidify their 2-0 lead, increasing pressure on Emberfield to respond with only 36 minutes remaining.",
+   "revised": true,
+   "groundedness": 5.0,
+   "coherence": 4.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "after",
+   "agent": "Analyst",
    "text": "Saltmarsh Comets regain control with strong possession and passing\nAfter Emberfield's earlier dominance, Saltmarsh Comets have swung momentum back in their favor, maintaining a 2-0 lead with improved possession and pass accuracy, solidifying their control in the match.",
-   "headline": "Saltmarsh Comets regain control with strong possession and passing",
-   "source": "llm",
    "groundedness": 5.0,
-   "coherence": 5.0,
+   "coherence": 4.0,
    "fluency": 4.0
   },
   {
-   "kind": "moment card",
+   "kind": "before",
    "agent": "Analyst",
-   "moment": "55' shape_change",
    "text": "Emberfield switches to aggressive 4-2-4 formation\nTrailing 0-2, Emberfield's substitution and formation change signal a push for goals to shift momentum and claw back into the match.",
-   "headline": "Emberfield switches to aggressive 4-2-4 formation",
-   "source": "llm",
+   "revised": false,
    "groundedness": 5.0,
    "coherence": 4.0,
    "fluency": 4.0
   },
   {
-   "kind": "moment card",
+   "kind": "after",
    "agent": "Analyst",
-   "moment": "59' momentum_swing",
+   "text": "Emberfield switches to aggressive 4-2-4 formation\nTrailing 0-2, Emberfield's substitution and formation change signal a push for goals to shift momentum and claw back into the match.",
+   "groundedness": 5.0,
+   "coherence": 4.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "before",
+   "agent": "Analyst",
+   "text": "Emberfield seizes control with dominant possession surge\nTrailing 0-2, Emberfield's shift to aggressive play has paid off, gaining 69% possession and 84% pass accuracy in the last 5 minutes, signaling a potential comeback against Saltmarsh Comets.",
+   "revised": true,
+   "groundedness": 5.0,
+   "coherence": 4.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "after",
+   "agent": "Analyst",
    "text": "Emberfield seizes control with dominant possession surge\nTrailing 0-2, Emberfield's recent 69% possession and 84% pass accuracy shift momentum, giving them a strong platform to mount a comeback against Saltmarsh Comets.",
-   "headline": "Emberfield seizes control with dominant possession surge",
-   "source": "llm",
    "groundedness": 5.0,
    "coherence": 4.0,
    "fluency": 4.0
   },
   {
-   "kind": "moment card",
+   "kind": "before",
+   "agent": "Storyteller",
+   "text": "Reda, te perdiste un gran inicio de partido. Halen Merewood abrió el marcador para Saltmarsh Comets al minuto 18 con un potente disparo de zurda, asistido por Oren Caulder. Luego, al 39, Elian Glenwick amplió la ventaja con otro disparo fuerte de izquierda, también asistido por Caulder. Aunque Emberfield dominaba la posesión y creaba más oportunidades, Saltmarsh Comets mantenían el 0-2 al descanso. Después, Emberfield cambió a un ataque más agresivo con un 4-2-4 y empezó a controlar el balón con un 69% de posesión y pases precisos. El partido ahora está en sus manos para intentar remontar. Merewood ya marcó y sigue siendo clave para los Comets.",
+   "revised": false,
+   "groundedness": 5.0,
+   "coherence": 5.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "after",
+   "agent": "Storyteller",
+   "text": "Reda, te perdiste un gran inicio de partido. Halen Merewood abrió el marcador para Saltmarsh Comets al minuto 18 con un potente disparo de zurda, asistido por Oren Caulder. Luego, al 39, Elian Glenwick amplió la ventaja con otro disparo fuerte de izquierda, también asistido por Caulder. Aunque Emberfield dominaba la posesión y creaba más oportunidades, Saltmarsh Comets mantenían el 0-2 al descanso. Después, Emberfield cambió a un ataque más agresivo con un 4-2-4 y empezó a controlar el balón con un 69% de posesión y pases precisos. El partido ahora está en sus manos para intentar remontar. Merewood ya marcó y sigue siendo clave para los Comets.",
+   "groundedness": 5.0,
+   "coherence": 5.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "before",
    "agent": "Analyst",
-   "moment": "62' red_card",
    "text": "Saltmarsh Comets down to 10 men after Hollins red card\nWith Saltmarsh Comets leading 2-0, Ciro Hollins' sending off for denying a goal-scoring chance puts his team under pressure to maintain their advantage against full-strength Emberfield.",
-   "headline": "Saltmarsh Comets down to 10 men after Hollins red card",
-   "source": "llm",
+   "revised": false,
    "groundedness": 5.0,
    "coherence": 4.0,
    "fluency": 3.0
   },
   {
-   "kind": "moment card",
+   "kind": "after",
    "agent": "Analyst",
-   "moment": "68' big_chance",
+   "text": "Saltmarsh Comets down to 10 men after Hollins red card\nWith Saltmarsh Comets leading 2-0, Ciro Hollins' sending off for denying a goal-scoring chance puts his team under pressure to maintain their advantage against full-strength Emberfield.",
+   "groundedness": 5.0,
+   "coherence": 4.0,
+   "fluency": 3.0
+  },
+  {
+   "kind": "before",
+   "agent": "Analyst",
    "text": "Ciro Oakenfold's left-foot shot saved by Saltmarsh Comets\nEmberfield remains two goals behind despite a big chance, struggling to capitalize even with a full team against ten men from Saltmarsh Comets.",
-   "headline": "Ciro Oakenfold's left-foot shot saved by Saltmarsh Comets",
-   "source": "llm",
+   "revised": false,
    "groundedness": 5.0,
-   "coherence": 3.0,
+   "coherence": 4.0,
    "fluency": 4.0
   },
   {
-   "kind": "moment card",
+   "kind": "after",
    "agent": "Analyst",
-   "moment": "71' goal",
+   "text": "Ciro Oakenfold's left-foot shot saved by Saltmarsh Comets\nEmberfield remains two goals behind despite a big chance, struggling to capitalize even with a full team against ten men from Saltmarsh Comets.",
+   "groundedness": 5.0,
+   "coherence": 4.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "before",
+   "agent": "Storyteller",
+   "text": "Salut Omar, en ton absence, Emberfield a eu une grosse occasion avec Ciro Oakenfold à la 68e minute, son tir puissant du pied gauche a été arrêté par le gardien des Saltmarsh Comets. Malgré l'avantage numérique, Emberfield n'a pas réussi à réduire l'écart, le score reste 0-2. Mais la dynamique a changé, Emberfield domine maintenant le jeu et pousse fort pour revenir.",
+   "revised": false,
+   "groundedness": 5.0,
+   "coherence": 4.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "after",
+   "agent": "Storyteller",
+   "text": "Salut Omar, en ton absence, Emberfield a eu une grosse occasion avec Ciro Oakenfold à la 68e minute, son tir puissant du pied gauche a été arrêté par le gardien des Saltmarsh Comets. Malgré l'avantage numérique, Emberfield n'a pas réussi à réduire l'écart, le score reste 0-2. Mais la dynamique a changé, Emberfield domine maintenant le jeu et pousse fort pour revenir.",
+   "groundedness": 5.0,
+   "coherence": 4.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "before",
+   "agent": "Analyst",
    "text": "Oakenfold pulls Emberfield back into the game\nWith Saltmarsh Comets down to 10 men, Oakenfold's goal at 71 minutes cuts the deficit to 2-1, reigniting Emberfield's hopes and shifting momentum after a missed chance just minutes earlier.",
-   "headline": "Oakenfold pulls Emberfield back into the game",
-   "source": "llm",
+   "revised": false,
    "groundedness": 5.0,
-   "coherence": 5.0,
+   "coherence": 4.0,
    "fluency": 4.0
   },
   {
-   "kind": "moment card",
+   "kind": "after",
    "agent": "Analyst",
-   "moment": "81' big_chance",
+   "text": "Oakenfold pulls Emberfield back into the game\nWith Saltmarsh Comets down to 10 men, Oakenfold's goal at 71 minutes cuts the deficit to 2-1, reigniting Emberfield's hopes and shifting momentum after a missed chance just minutes earlier.",
+   "groundedness": 5.0,
+   "coherence": 4.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "before",
+   "agent": "Analyst",
    "text": "Tavi Thornby’s fierce shot saved by Saltmarsh Comets keeper\nWith Emberfield trailing 1-2 and Saltmarsh Comets down to 10 men, Thornby’s big chance could have leveled the match and shifted momentum late in the game.",
-   "headline": "Tavi Thornby’s fierce shot saved by Saltmarsh Comets keeper",
-   "source": "llm",
+   "revised": false,
    "groundedness": 5.0,
    "coherence": 4.0,
    "fluency": 4.0
   },
   {
-   "kind": "moment card",
+   "kind": "after",
    "agent": "Analyst",
-   "moment": "81' big_chance",
+   "text": "Tavi Thornby’s fierce shot saved by Saltmarsh Comets keeper\nWith Emberfield trailing 1-2 and Saltmarsh Comets down to 10 men, Thornby’s big chance could have leveled the match and shifted momentum late in the game.",
+   "groundedness": 5.0,
+   "coherence": 4.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "before",
+   "agent": "Analyst",
+   "text": "Ciro Oakenfold's fierce shot saved in crucial moment\nEmberfield remains trailing 1-2 despite Oakenfold's big chance, as Saltmarsh Comets hold on with 10 men, maintaining their numerical advantage and control late in the match.",
+   "revised": true,
+   "groundedness": 5.0,
+   "coherence": 4.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "after",
+   "agent": "Analyst",
    "text": "Oakenfold's big chance saved as Emberfield chase equalizer\nWith Emberfield holding an 11v10 numerical advantage, Oakenfold's saved shot keeps Saltmarsh Comets ahead 2-1 late, maintaining their lead and forcing Emberfield to press harder in the closing minutes.",
-   "headline": "Oakenfold's big chance saved as Emberfield chase equalizer",
-   "source": "llm",
    "groundedness": 5.0,
    "coherence": 4.0,
    "fluency": 4.0
   },
   {
-   "kind": "moment card",
+   "kind": "before",
    "agent": "Analyst",
-   "moment": "84' goal",
-   "text": "Aven Elderglen levels for Emberfield against ten Saltmarsh Comets\nElderglen's goal equalizes at 2-2, capitalizing on Saltmarsh Comets' numerical disadvantage after 21 minutes with ten men, keeping Emberfield's comeback hopes alive and shifting momentum late in the match.",
-   "headline": "Aven Elderglen levels for Emberfield against ten Saltmarsh Comets",
-   "source": "llm",
+   "text": "Aven Elderglen equalizes for Emberfield with powerful right-foot strike\nElderglen's goal levels the score at 2-2, completing Emberfield's comeback from a two-goal deficit while playing against ten men, shifting momentum in their favor late in the match.",
+   "revised": false,
    "groundedness": 5.0,
    "coherence": 5.0,
    "fluency": 4.0
   },
   {
-   "kind": "moment card",
+   "kind": "after",
    "agent": "Analyst",
-   "moment": "86' big_chance",
-   "text": "Oakenfold fires off-target in crucial late chance\nWith the score tied and Saltmarsh Comets down to ten men, Oakenfold's missed opportunity could have given Emberfield the lead and momentum in the final minutes.",
-   "headline": "Oakenfold fires off-target in crucial late chance",
-   "source": "llm",
+   "text": "Aven Elderglen equalizes for Emberfield with powerful right-foot strike\nElderglen's goal levels the score at 2-2, completing Emberfield's comeback from a two-goal deficit while playing against ten men, shifting momentum in their favor late in the match.",
    "groundedness": 5.0,
    "coherence": 5.0,
    "fluency": 4.0
   },
   {
-   "kind": "moment card",
-   "agent": "Analyst",
-   "moment": "92' goal",
-   "text": "Kiro Sableford nets stoppage-time winner for Emberfield\nWith Saltmarsh Comets down to ten men, Sableford's goal breaks the 2-2 deadlock and secures a 3-2 lead in the 92nd minute, completing Emberfield's comeback from a two-goal deficit and shifting momentum decisively in their favor.",
-   "headline": "Kiro Sableford nets stoppage-time winner for Emberfield",
-   "source": "llm",
+   "kind": "before",
+   "agent": "Storyteller",
+   "text": "Sofia, while you were away, Emberfield pushed hard to catch up despite Saltmarsh Comets playing with 10 men. Tavi Thornby and Ciro Oakenfold both had big shots saved around the 81st minute, keeping the score 2-1 in our favor. But then at 84 minutes, Aven Elderglen scored a powerful equalizer for Emberfield, making it 2-2. Emberfield is now in control, and the match is wide open!",
+   "revised": false,
    "groundedness": 5.0,
    "coherence": 4.0,
    "fluency": 4.0
   },
   {
-   "kind": "moment card",
+   "kind": "after",
+   "agent": "Storyteller",
+   "text": "Sofia, while you were away, Emberfield pushed hard to catch up despite Saltmarsh Comets playing with 10 men. Tavi Thornby and Ciro Oakenfold both had big shots saved around the 81st minute, keeping the score 2-1 in our favor. But then at 84 minutes, Aven Elderglen scored a powerful equalizer for Emberfield, making it 2-2. Emberfield is now in control, and the match is wide open!",
+   "groundedness": 5.0,
+   "coherence": 4.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "before",
    "agent": "Analyst",
-   "moment": "95' full_time",
-   "text": "Emberfield completes stunning comeback against ten Saltmarsh Comets\nTrailing 0-2, Emberfield dominated with 65% possession and scored three late goals to win 3-2, capitalizing on their numerical advantage after Saltmarsh Comets were reduced to ten players.",
-   "headline": "Emberfield completes stunning comeback against ten Saltmarsh Comets",
-   "source": "llm",
+   "text": "Oakenfold fires off-target in crucial late chance\nWith the score tied at 2-2 and Saltmarsh Comets down to 10 men, Oakenfold's missed opportunity could have given Emberfield the lead and momentum in the final minutes.",
+   "revised": false,
+   "groundedness": 5.0,
+   "coherence": 4.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "after",
+   "agent": "Analyst",
+   "text": "Oakenfold fires off-target in crucial late chance\nWith the score tied at 2-2 and Saltmarsh Comets down to 10 men, Oakenfold's missed opportunity could have given Emberfield the lead and momentum in the final minutes.",
+   "groundedness": 5.0,
+   "coherence": 4.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "before",
+   "agent": "Analyst",
+   "text": "Kiro Sableford scores late winner for Emberfield\nSableford’s goal breaks the 2-2 deadlock deep into stoppage time, giving Emberfield a crucial 3-2 lead while playing with a full squad against ten men, completing a comeback from a two-goal deficit and shifting momentum firmly in their favor.",
+   "revised": false,
    "groundedness": 5.0,
    "coherence": 5.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "after",
+   "agent": "Analyst",
+   "text": "Kiro Sableford scores late winner for Emberfield\nSableford’s goal breaks the 2-2 deadlock deep into stoppage time, giving Emberfield a crucial 3-2 lead while playing with a full squad against ten men, completing a comeback from a two-goal deficit and shifting momentum firmly in their favor.",
+   "groundedness": 5.0,
+   "coherence": 5.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "before",
+   "agent": "Analyst",
+   "text": "Emberfield completes stunning comeback with late winner\nDown 0-2, Emberfield dominated possession and shots to overturn the deficit, scoring three unanswered goals while a man up, sealing a thrilling 3-2 victory against Saltmarsh Comets.",
+   "revised": false,
+   "groundedness": 5.0,
+   "coherence": 5.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "after",
+   "agent": "Analyst",
+   "text": "Emberfield completes stunning comeback with late winner\nDown 0-2, Emberfield dominated possession and shots to overturn the deficit, scoring three unanswered goals while a man up, sealing a thrilling 3-2 victory against Saltmarsh Comets.",
+   "groundedness": 5.0,
+   "coherence": 5.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "before",
+   "agent": "Storyteller",
+   "text": "Emberfield renverse Saltmarsh Comets malgré un début difficile\nOmar, Emberfield a été mené 0-1 après un but de Halen Merewood à la 18e minute, alors que le match était équilibré. Saltmarsh Comets ont pris l'avantage avec un joueur expulsé, ce qui a changé la dynamique. Emberfield a ajusté sa formation pour exploiter leur supériorité numérique. Ciro Oakenfold a réduit l'écart à la 71e minute, suivi par un but d'Aven Elderglen à la 84e, égalisant le score. Malgré une occasion manquée d'Oakenfold, Kiro Sableford a marqué le but vainqueur à la 92e minute. Emberfield a dominé en fin de match, contrôlant le jeu et profitant de la supériorité numérique pour une victoire 3-2 impressionnante.",
+   "revised": false,
+   "groundedness": 5.0,
+   "coherence": 5.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "after",
+   "agent": "Storyteller",
+   "text": "Emberfield renverse Saltmarsh Comets malgré un début difficile\nOmar, Emberfield a été mené 0-1 après un but de Halen Merewood à la 18e minute, alors que le match était équilibré. Saltmarsh Comets ont pris l'avantage avec un joueur expulsé, ce qui a changé la dynamique. Emberfield a ajusté sa formation pour exploiter leur supériorité numérique. Ciro Oakenfold a réduit l'écart à la 71e minute, suivi par un but d'Aven Elderglen à la 84e, égalisant le score. Malgré une occasion manquée d'Oakenfold, Kiro Sableford a marqué le but vainqueur à la 92e minute. Emberfield a dominé en fin de match, contrôlant le jeu et profitant de la supériorité numérique pour une victoire 3-2 impressionnante.",
+   "groundedness": 5.0,
+   "coherence": 5.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "before",
+   "agent": "Storyteller",
+   "text": "Heartbreak as Saltmarsh Comets lose late after red card\nSofia, you missed an intense match! Saltmarsh Comets started strong with Halen Merewood and Elian Glenwick scoring early to lead 2-0. But then, Ciro Hollins was sent off, leaving the Comets with 10 men. Emberfield took advantage, with Oakenfold and Elderglen scoring to equalize. In stoppage time, Kiro Sableford scored the winner for Emberfield. Despite the tough loss, your team showed great spirit. The red card changed everything, and Emberfield took control to complete a thrilling comeback. Tough to watch, but the Comets fought hard until the end!",
+   "revised": false,
+   "groundedness": 5.0,
+   "coherence": 5.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "after",
+   "agent": "Storyteller",
+   "text": "Heartbreak as Saltmarsh Comets lose late after red card\nSofia, you missed an intense match! Saltmarsh Comets started strong with Halen Merewood and Elian Glenwick scoring early to lead 2-0. But then, Ciro Hollins was sent off, leaving the Comets with 10 men. Emberfield took advantage, with Oakenfold and Elderglen scoring to equalize. In stoppage time, Kiro Sableford scored the winner for Emberfield. Despite the tough loss, your team showed great spirit. The red card changed everything, and Emberfield took control to complete a thrilling comeback. Tough to watch, but the Comets fought hard until the end!",
+   "groundedness": 5.0,
+   "coherence": 5.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "before",
+   "agent": "Storyteller",
+   "text": "Emberfield logra una remontada increíble contra Saltmarsh Comets\nReda, te perdiste un partido emocionante. Halen Merewood abrió el marcador para Saltmarsh Comets al minuto 18, y su equipo aumentó la ventaja a 2-0 antes del descanso. Pero luego, Saltmarsh Comets se quedó con 10 jugadores por la expulsión de Hollins. Emberfield aprovechó la ventaja y cambió su formación para presionar más. Oakenfold inició la remontada al minuto 71, seguido por Elderglen que empató el partido a los 84 minutos. Finalmente, en el tiempo de descuento, Sableford marcó el gol de la victoria para Emberfield, completando una increíble vuelta de 0-2 a 3-2. Fue un partido lleno de emoción y cambios importantes.",
+   "revised": false,
+   "groundedness": 5.0,
+   "coherence": 5.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "after",
+   "agent": "Storyteller",
+   "text": "Emberfield logra una remontada increíble contra Saltmarsh Comets\nReda, te perdiste un partido emocionante. Halen Merewood abrió el marcador para Saltmarsh Comets al minuto 18, y su equipo aumentó la ventaja a 2-0 antes del descanso. Pero luego, Saltmarsh Comets se quedó con 10 jugadores por la expulsión de Hollins. Emberfield aprovechó la ventaja y cambió su formación para presionar más. Oakenfold inició la remontada al minuto 71, seguido por Elderglen que empató el partido a los 84 minutos. Finalmente, en el tiempo de descuento, Sableford marcó el gol de la victoria para Emberfield, completando una increíble vuelta de 0-2 a 3-2. Fue un partido lleno de emoción y cambios importantes.",
+   "groundedness": 5.0,
+   "coherence": 5.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "before",
+   "agent": "Analyst",
+   "text": "Larkhaven Athletic takes control after early stalemate\nWith the score still 0-0, Larkhaven Athletic's surge in possession and control shifts momentum, putting pressure on Ashvale Wanderers and setting the stage for potential scoring opportunities.",
+   "revised": false,
+   "groundedness": 5.0,
+   "coherence": 4.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "after",
+   "agent": "Analyst",
+   "text": "Larkhaven Athletic takes control after early stalemate\nWith the score still 0-0, Larkhaven Athletic's surge in possession and control shifts momentum, putting pressure on Ashvale Wanderers and setting the stage for potential scoring opportunities.",
+   "groundedness": 5.0,
+   "coherence": 4.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "before",
+   "agent": "Analyst",
+   "text": "Ashvale Wanderers seize control with improved possession and passing\nAfter a period of Larkhaven Athletic dominance, Ashvale Wanderers have shifted momentum by increasing possession to 60% and improving pass accuracy, setting the stage to challenge for the first goal in a tightly contested 0-0 match.",
+   "revised": false,
+   "groundedness": 5.0,
+   "coherence": 5.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "after",
+   "agent": "Analyst",
+   "text": "Ashvale Wanderers seize control with improved possession and passing\nAfter a period of Larkhaven Athletic dominance, Ashvale Wanderers have shifted momentum by increasing possession to 60% and improving pass accuracy, setting the stage to challenge for the first goal in a tightly contested 0-0 match.",
+   "groundedness": 5.0,
+   "coherence": 5.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "before",
+   "agent": "Analyst",
+   "text": "Larkhaven Athletic regains control with precise passing\nAfter Ashvale Wanderers dominated possession and passing, Larkhaven Athletic's improved accuracy and control shift momentum, setting the stage for potential scoring opportunities in a tight 0-0 match.",
+   "revised": false,
+   "groundedness": 5.0,
+   "coherence": 4.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "after",
+   "agent": "Analyst",
+   "text": "Larkhaven Athletic regains control with precise passing\nAfter Ashvale Wanderers dominated possession and passing, Larkhaven Athletic's improved accuracy and control shift momentum, setting the stage for potential scoring opportunities in a tight 0-0 match.",
+   "groundedness": 5.0,
+   "coherence": 4.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "before",
+   "agent": "Analyst",
+   "text": "Yori Farrow scores opener for Ashvale Wanderers\nFarrow's goal breaks the deadlock at 1-0, rewarding Ashvale's improved possession and putting Larkhaven on the back foot despite their earlier control.",
+   "revised": false,
+   "groundedness": 5.0,
+   "coherence": 4.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "after",
+   "agent": "Analyst",
+   "text": "Yori Farrow scores opener for Ashvale Wanderers\nFarrow's goal breaks the deadlock at 1-0, rewarding Ashvale's improved possession and putting Larkhaven on the back foot despite their earlier control.",
+   "groundedness": 5.0,
+   "coherence": 4.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "before",
+   "agent": "Analyst",
+   "text": "Ashvale Wanderers regain control with strong possession surge\nAfter Larkhaven Athletic's recent control, Ashvale's improved possession and passing accuracy shift momentum, helping them protect their 1-0 lead going into halftime.",
+   "revised": false,
+   "groundedness": 5.0,
+   "coherence": 4.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "after",
+   "agent": "Analyst",
+   "text": "Ashvale Wanderers regain control with strong possession surge\nAfter Larkhaven Athletic's recent control, Ashvale's improved possession and passing accuracy shift momentum, helping them protect their 1-0 lead going into halftime.",
+   "groundedness": 5.0,
+   "coherence": 4.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "before",
+   "agent": "Analyst",
+   "text": "Ashvale Wanderers lead 1-0 at half-time after Yori Farrow's goal\nDespite Larkhaven Athletic's higher shot count and xG, Ashvale Wanderers hold a crucial lead, setting the stage for a tense second half with both teams evenly matched in possession and players.",
+   "revised": true,
+   "groundedness": 5.0,
+   "coherence": 4.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "after",
+   "agent": "Analyst",
+   "text": "Ashvale Wanderers lead 1-0 at half-time despite Larkhaven pressure\nAshvale Wanderers hold a narrow lead after scoring at 40 minutes, maintaining balance in possession and shots with Larkhaven Athletic pressing hard. The second half will test Ashvale's resilience against Larkhaven's higher shot count and chances.",
+   "groundedness": 5.0,
+   "coherence": 4.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "before",
+   "agent": "Analyst",
+   "text": "Larkhaven Athletic seizes control early in second half\nTrailing 1-0, Larkhaven Athletic's improved possession and pass accuracy signal a momentum shift that could fuel a comeback against Ashvale Wanderers.",
+   "revised": false,
+   "groundedness": 5.0,
+   "coherence": 4.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "after",
+   "agent": "Analyst",
+   "text": "Larkhaven Athletic seizes control early in second half\nTrailing 1-0, Larkhaven Athletic's improved possession and pass accuracy signal a momentum shift that could fuel a comeback against Ashvale Wanderers.",
+   "groundedness": 5.0,
+   "coherence": 4.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "before",
+   "agent": "Analyst",
+   "text": "Ashvale Wanderers regain control with improved possession and accuracy\nAfter Larkhaven Athletic briefly took control early in the second half, Ashvale Wanderers have swung momentum back in their favor with better possession and pass accuracy, helping them protect their 1-0 lead.",
+   "revised": false,
+   "groundedness": 5.0,
+   "coherence": 4.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "after",
+   "agent": "Analyst",
+   "text": "Ashvale Wanderers regain control with improved possession and accuracy\nAfter Larkhaven Athletic briefly took control early in the second half, Ashvale Wanderers have swung momentum back in their favor with better possession and pass accuracy, helping them protect their 1-0 lead.",
+   "groundedness": 5.0,
+   "coherence": 4.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "before",
+   "agent": "Storyteller",
+   "text": "¡Hola Reda! Te perdiste el gol de Yori Farrow al minuto 40, que puso a Ashvale Wanderers adelante 1-0 con una potente volea con la izquierda, asistido por Nilo Ravensworth. Antes de eso, el partido estaba muy parejo, pero ese gol cambió todo. Larkhaven Athletic había tenido más tiros y control, pero Ashvale mejoró su posesión y precisión para mantener la ventaja. En el segundo tiempo, aunque Larkhaven intentó tomar el control, Ashvale recuperó la iniciativa con pases más precisos y mejor manejo del balón. Además, Fenn Dunlow de Larkhaven alcanzó su máxima velocidad del partido, corriendo a 34.2 km/h, mostrando su esfuerzo para ayudar a su equipo. Ahora Ashvale domina y gana 1-0, ¡queda mucho por jugar!",
+   "revised": false,
+   "groundedness": 5.0,
+   "coherence": 5.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "after",
+   "agent": "Storyteller",
+   "text": "¡Hola Reda! Te perdiste el gol de Yori Farrow al minuto 40, que puso a Ashvale Wanderers adelante 1-0 con una potente volea con la izquierda, asistido por Nilo Ravensworth. Antes de eso, el partido estaba muy parejo, pero ese gol cambió todo. Larkhaven Athletic había tenido más tiros y control, pero Ashvale mejoró su posesión y precisión para mantener la ventaja. En el segundo tiempo, aunque Larkhaven intentó tomar el control, Ashvale recuperó la iniciativa con pases más precisos y mejor manejo del balón. Además, Fenn Dunlow de Larkhaven alcanzó su máxima velocidad del partido, corriendo a 34.2 km/h, mostrando su esfuerzo para ayudar a su equipo. Ahora Ashvale domina y gana 1-0, ¡queda mucho por jugar!",
+   "groundedness": 5.0,
+   "coherence": 5.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "before",
+   "agent": "Analyst",
+   "text": "Larkhaven Athletic awarded penalty after foul on Dunlow\nWith the score at 1-0, this penalty offers Larkhaven Athletic a crucial chance to equalize and shift momentum in their favor during a tightly contested match.",
+   "revised": false,
+   "groundedness": 5.0,
+   "coherence": 4.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "after",
+   "agent": "Analyst",
+   "text": "Larkhaven Athletic awarded penalty after foul on Dunlow\nWith the score at 1-0, this penalty offers Larkhaven Athletic a crucial chance to equalize and shift momentum in their favor during a tightly contested match.",
+   "groundedness": 5.0,
+   "coherence": 4.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "before",
+   "agent": "Analyst",
+   "text": "Fenn Dunlow equalises with powerful penalty for Larkhaven\nDunlow's 64th-minute penalty levels the score at 1-1, halting Ashvale Wanderers' lead and shifting momentum as both teams remain at full strength.",
+   "revised": false,
+   "groundedness": 5.0,
+   "coherence": 5.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "after",
+   "agent": "Analyst",
+   "text": "Fenn Dunlow equalises with powerful penalty for Larkhaven\nDunlow's 64th-minute penalty levels the score at 1-1, halting Ashvale Wanderers' lead and shifting momentum as both teams remain at full strength.",
+   "groundedness": 5.0,
+   "coherence": 5.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "before",
+   "agent": "Analyst",
+   "text": "Larkhaven Athletic regains control with sustained pressure\nAt 1-1, Larkhaven Athletic's momentum swing at 65 minutes shifts control back to them, increasing their chances to capitalize on the equalizer and possibly take the lead in a tightly contested match.",
+   "revised": false,
+   "groundedness": 5.0,
+   "coherence": 4.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "after",
+   "agent": "Analyst",
+   "text": "Larkhaven Athletic regains control with sustained pressure\nAt 1-1, Larkhaven Athletic's momentum swing at 65 minutes shifts control back to them, increasing their chances to capitalize on the equalizer and possibly take the lead in a tightly contested match.",
+   "groundedness": 5.0,
+   "coherence": 4.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "before",
+   "agent": "Analyst",
+   "text": "Yori Farrow scores go-ahead goal for Ashvale Wanderers\nFarrow's second goal of the match breaks the 1-1 deadlock, giving Ashvale Wanderers a crucial lead at 2-1 with equal players on the pitch, shifting momentum after Larkhaven's recent equaliser and pressure.",
+   "revised": false,
+   "groundedness": 5.0,
+   "coherence": 5.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "after",
+   "agent": "Analyst",
+   "text": "Yori Farrow scores go-ahead goal for Ashvale Wanderers\nFarrow's second goal of the match breaks the 1-1 deadlock, giving Ashvale Wanderers a crucial lead at 2-1 with equal players on the pitch, shifting momentum after Larkhaven's recent equaliser and pressure.",
+   "groundedness": 5.0,
+   "coherence": 5.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "before",
+   "agent": "Analyst",
+   "text": "Ashvale Wanderers seize control with dominant possession surge\nAfter Larkhaven Athletic briefly regained momentum, Ashvale's superior possession and passing accuracy since the 65th minute have solidified their 2-1 lead, shifting the game's control and putting pressure on Larkhaven to respond.",
+   "revised": false,
+   "groundedness": 5.0,
+   "coherence": 5.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "after",
+   "agent": "Analyst",
+   "text": "Ashvale Wanderers seize control with dominant possession surge\nAfter Larkhaven Athletic briefly regained momentum, Ashvale's superior possession and passing accuracy since the 65th minute have solidified their 2-1 lead, shifting the game's control and putting pressure on Larkhaven to respond.",
+   "groundedness": 5.0,
+   "coherence": 5.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "before",
+   "agent": "Storyteller",
+   "text": "Omar, en ton absence, Fenn Dunlow a égalisé pour Larkhaven à la 64e minute sur penalty, ramenant le score à 1-1 et équilibrant le match. Mais juste 4 minutes plus tard, Yori Farrow a repris l'avantage pour Ashvale avec un tir précis, aidé par Quin Larkspur. Depuis, Ashvale domine clairement la possession et la précision des passes, contrôlant le match et maintenant une avance cruciale de 2-1.",
+   "revised": true,
+   "groundedness": 5.0,
+   "coherence": 5.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "before",
+   "agent": "Analyst",
+   "text": "Larkhaven Athletic regains control late in tight match\nWith the score at 2-1, Larkhaven Athletic's improved pass accuracy and regained control shift momentum, setting the stage for a potential comeback against Ashvale Wanderers who had just dominated possession.",
+   "revised": false,
+   "groundedness": 5.0,
+   "coherence": 5.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "after",
+   "agent": "Analyst",
+   "text": "Larkhaven Athletic regains control late in tight match\nWith the score at 2-1, Larkhaven Athletic's improved pass accuracy and regained control shift momentum, setting the stage for a potential comeback against Ashvale Wanderers who had just dominated possession.",
+   "groundedness": 5.0,
+   "coherence": 5.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "before",
+   "agent": "Analyst",
+   "text": "Fenn Dunlow equalises for Larkhaven Athletic with powerful strike\nDunlow's goal levels the score at 2-2, maintaining Larkhaven Athletic's comeback momentum and keeping the match finely balanced with both teams at full strength.",
+   "revised": false,
+   "groundedness": 5.0,
+   "coherence": 4.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "after",
+   "agent": "Analyst",
+   "text": "Fenn Dunlow equalises for Larkhaven Athletic with powerful strike\nDunlow's goal levels the score at 2-2, maintaining Larkhaven Athletic's comeback momentum and keeping the match finely balanced with both teams at full strength.",
+   "groundedness": 5.0,
+   "coherence": 4.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "before",
+   "agent": "Analyst",
+   "text": "Ashvale Wanderers regain control with strong possession surge\nWith the score tied at 2-2 and just minutes remaining, Ashvale Wanderers' regained control and superior possession increase their chances of scoring a decisive late goal.",
+   "revised": false,
+   "groundedness": 5.0,
+   "coherence": 4.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "after",
+   "agent": "Analyst",
+   "text": "Ashvale Wanderers regain control with strong possession surge\nWith the score tied at 2-2 and just minutes remaining, Ashvale Wanderers' regained control and superior possession increase their chances of scoring a decisive late goal.",
+   "groundedness": 5.0,
+   "coherence": 4.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "before",
+   "agent": "Storyteller",
+   "text": "Hey Sofia, while you were away, Larkhaven Athletic fought back from 2-1 down! Fenn Dunlow scored a powerful equaliser at 81 minutes, with a great assist from Galen Merewood. That goal kept the comeback hopes alive. But Ashvale Wanderers quickly took control again, dominating possession in the last minutes. The score is now 2-2, and the game is still wide open. What a thrilling finish to watch!",
+   "revised": false,
+   "groundedness": 5.0,
+   "coherence": 5.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "after",
+   "agent": "Storyteller",
+   "text": "Hey Sofia, while you were away, Larkhaven Athletic fought back from 2-1 down! Fenn Dunlow scored a powerful equaliser at 81 minutes, with a great assist from Galen Merewood. That goal kept the comeback hopes alive. But Ashvale Wanderers quickly took control again, dominating possession in the last minutes. The score is now 2-2, and the game is still wide open. What a thrilling finish to watch!",
+   "groundedness": 5.0,
+   "coherence": 5.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "before",
+   "agent": "Analyst",
+   "text": "Larkhaven Athletic fight back to draw with Ashvale Wanderers\nLarkhaven Athletic matched Ashvale Wanderers' early lead twice, securing a 2-2 draw despite fewer chances and less possession, highlighting their resilience and ability to capitalize on opportunities late in the match.",
+   "revised": true,
+   "groundedness": 2.0,
+   "coherence": 5.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "after",
+   "agent": "Analyst",
+   "text": "Ashvale Wanderers and Larkhaven Athletic draw 2-2 in intense match\nDespite Ashvale's early lead and better possession, Larkhaven's relentless pressure with 21 shots forced a late equalizer, highlighting their resilience and keeping the contest fiercely balanced until full time.",
+   "groundedness": 5.0,
+   "coherence": 4.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "before",
+   "agent": "Storyteller",
+   "text": "Ashvale Wanderers accrochent un nul intense 2-2\nSalut Omar, quel match ! Ashvale a pris l'avantage avec un superbe but de Yori Farrow à la 40e minute, récompensant une meilleure possession. Mais Larkhaven a riposté avec un penalty transformé par Fenn Dunlow à la 64e, égalisant. Farrow a redonné l'avantage à Ashvale à la 68e, mais Dunlow a égalisé à nouveau à la 81e. Malgré une possession légèrement supérieure et un contrôle du jeu d'Ashvale, Larkhaven a exercé une pression énorme avec 21 tirs, forçant ce match nul. Ce résultat reflète bien la bataille tactique équilibrée entre les deux équipes, avec Ashvale dominant légèrement mais Larkhaven montrant une grande résilience.",
+   "revised": false,
+   "groundedness": 5.0,
+   "coherence": 4.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "after",
+   "agent": "Storyteller",
+   "text": "Ashvale Wanderers accrochent un nul intense 2-2\nSalut Omar, quel match ! Ashvale a pris l'avantage avec un superbe but de Yori Farrow à la 40e minute, récompensant une meilleure possession. Mais Larkhaven a riposté avec un penalty transformé par Fenn Dunlow à la 64e, égalisant. Farrow a redonné l'avantage à Ashvale à la 68e, mais Dunlow a égalisé à nouveau à la 81e. Malgré une possession légèrement supérieure et un contrôle du jeu d'Ashvale, Larkhaven a exercé une pression énorme avec 21 tirs, forçant ce match nul. Ce résultat reflète bien la bataille tactique équilibrée entre les deux équipes, avec Ashvale dominant légèrement mais Larkhaven montrant une grande résilience.",
+   "groundedness": 5.0,
+   "coherence": 4.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "before",
+   "agent": "Storyteller",
+   "text": "Larkhaven Athletic fight back for thrilling 2-2 draw\nHey Sofia! You missed an exciting match where Ashvale Wanderers took the lead first with Yori Farrow scoring at 40 minutes. Larkhaven fought hard and got a penalty at 62 minutes after Dunlow was fouled. Dunlow calmly scored the penalty to equalize. Farrow then scored again for Ashvale at 68 minutes, putting them ahead. But Larkhaven didn’t give up! Dunlow scored again at 81 minutes to make it 2-2. Both teams played with full strength and lots of energy. Larkhaven showed great spirit to come back twice and earn a well-deserved draw. It was a tough game but your team’s resilience really shone through!",
+   "revised": false,
+   "groundedness": 5.0,
+   "coherence": 5.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "after",
+   "agent": "Storyteller",
+   "text": "Larkhaven Athletic fight back for thrilling 2-2 draw\nHey Sofia! You missed an exciting match where Ashvale Wanderers took the lead first with Yori Farrow scoring at 40 minutes. Larkhaven fought hard and got a penalty at 62 minutes after Dunlow was fouled. Dunlow calmly scored the penalty to equalize. Farrow then scored again for Ashvale at 68 minutes, putting them ahead. But Larkhaven didn’t give up! Dunlow scored again at 81 minutes to make it 2-2. Both teams played with full strength and lots of energy. Larkhaven showed great spirit to come back twice and earn a well-deserved draw. It was a tough game but your team’s resilience really shone through!",
+   "groundedness": 5.0,
+   "coherence": 5.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "before",
+   "agent": "Storyteller",
+   "text": "Fenn Dunlow brilla con dos goles en empate 2-2\nReda, te perdiste un partido emocionante. Ashvale Wanderers abrió el marcador con un gol de Yori Farrow al minuto 40, pero Larkhaven Athletic no se rindió. A los 62 minutos, Fenn Dunlow fue derribado y consiguió un penalti que él mismo convirtió para empatar. Farrow volvió a adelantar a Ashvale a los 68 minutos, pero Dunlow igualó otra vez a los 81 con un potente disparo asistido por Galen Merewood. El partido terminó 2-2, con Larkhaven dominando en tiros y generando mucha presión. Dunlow fue clave, marcando dos goles y demostrando su gran talento. ¡Qué partido para recordar!",
+   "revised": false,
+   "groundedness": 5.0,
+   "coherence": 5.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "after",
+   "agent": "Storyteller",
+   "text": "Fenn Dunlow brilla con dos goles en empate 2-2\nReda, te perdiste un partido emocionante. Ashvale Wanderers abrió el marcador con un gol de Yori Farrow al minuto 40, pero Larkhaven Athletic no se rindió. A los 62 minutos, Fenn Dunlow fue derribado y consiguió un penalti que él mismo convirtió para empatar. Farrow volvió a adelantar a Ashvale a los 68 minutos, pero Dunlow igualó otra vez a los 81 con un potente disparo asistido por Galen Merewood. El partido terminó 2-2, con Larkhaven dominando en tiros y generando mucha presión. Dunlow fue clave, marcando dos goles y demostrando su gran talento. ¡Qué partido para recordar!",
+   "groundedness": 5.0,
+   "coherence": 5.0,
+   "fluency": 4.0
+  },
+  {
+   "kind": "control",
+   "agent": "Analyst",
+   "text": "Emberfield seize control with strong possession and passing\nAfter a balanced start, Emberfield now dominate possession and pass accuracy, shifting momentum away from Saltmarsh Comets in a goalless match. It was his 7th goal of the night.",
+   "groundedness": 2.0,
+   "coherence": 3.0,
    "fluency": 3.0
   },
   {
-   "kind": "control (corrupted)",
+   "kind": "control",
    "agent": "Analyst",
-   "moment": "18' goal",
    "text": "Halen Merewood scores opener for Emberfield\nThis goal breaks the deadlock, giving Emberfield a crucial lead and validating their early dominance in possession and chances against Saltmarsh Comets. It was his 7th goal of the night.",
-   "headline": "Halen Merewood scores opener for Saltmarsh Comets",
-   "source": "llm",
    "groundedness": 2.0,
    "coherence": 4.0,
    "fluency": 4.0
   },
   {
-   "kind": "control (corrupted)",
+   "kind": "control",
    "agent": "Analyst",
-   "moment": "39' goal",
-   "text": "Elian Glenwick doubles Emberfield' lead with powerful left-foot strike\nExtending their lead to 2-0, Emberfield gain a strong advantage before halftime, putting Saltmarsh Comets under pressure to respond with a full team on the pitch. It was his 7th goal of the night.",
-   "headline": "Elian Glenwick doubles Saltmarsh Comets' lead with powerful left-foot strike",
-   "source": "llm",
+   "text": "Saltmarsh Comets swings momentum with dominant possession surge\nTrailing 0-1, Saltmarsh Comets's regained control and 61% possession shift pressure back onto Emberfield, setting the stage for a potential comeback in the match. It was his 7th goal of the night.",
    "groundedness": 2.0,
    "coherence": 4.0,
    "fluency": 3.0
-  },
-  {
-   "kind": "control (corrupted)",
-   "agent": "Analyst",
-   "moment": "71' goal",
-   "text": "Oakenfold pulls Saltmarsh Comets back into the game\nWith Emberfield down to 10 men, Oakenfold's goal at 71 minutes cuts the deficit to 2-1, reigniting Saltmarsh Comets's hopes and shifting momentum after a missed chance just minutes earlier. It was his 7th goal of the night.",
-   "headline": "Oakenfold pulls Emberfield back into the game",
-   "source": "llm",
-   "groundedness": 2.0,
-   "coherence": 4.0,
-   "fluency": 4.0
   }
  ]
 }

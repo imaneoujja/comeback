@@ -18,6 +18,7 @@ from comeback.agents.analyst import needs_analyst
 from comeback.agents.brain import MatchBrain
 from comeback.agents.llm import LLMGateway, SwitchableGateway
 from comeback.agents.speech import SpeechGateway
+from comeback.agents.translator import english_version
 from comeback.agents.watcher import Watcher
 from comeback.engine.match import EngineUpdate, load_match
 from comeback.fans.crowd import crowd_frames
@@ -367,10 +368,11 @@ class ReplaySession:
 
     async def _replay_and_voice(self, catchup: dict[str, Any], from_t: float, to_t: float) -> dict[str, Any]:
         audio = await self.speech.audio_url(catchup["text"], catchup["language"])
+        text_en = await english_version(catchup["text"], catchup["language"], self.llm, self.brain.known_names())
         if audio:
             self.trace({"agent": "Storyteller", "step": "voice", "label": self.fan.profile.name,
                         "detail": "Azure AI Speech neural voice"})
-        return {"replay": self.replay_clips(from_t, to_t), "audio": audio}
+        return {"replay": self.replay_clips(from_t, to_t), "audio": audio, "text_en": text_en}
 
     async def _gazette(self) -> None:
         """Full-time: the Storyteller writes this fan's own recap of the match."""
@@ -379,6 +381,7 @@ class ReplaySession:
                     "detail": "full-time → Storyteller: personal recap"})
         recap = await self.brain.final_recap(self.fan.profile, trace=self.trace)
         recap["audio"] = await self.speech.audio_url(recap["text"], recap["language"])
+        recap["text_en"] = await english_version(recap["text"], recap["language"], self.llm, self.brain.known_names())
         self.publish("gazette", recap)
 
     async def _drain_cards(self) -> None:

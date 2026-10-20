@@ -664,3 +664,4 @@ a.mono-link:hover { text-decoration: underline; }
   font-family: var(--mono); font-size: 12px; line-height: 1.45; }
 @media (max-width: 760px) { .wl-mobile { display: block; } }
 .wl-story[hidden] { display: none; }
+.cu-btns { display: flex; gap: 4px; }

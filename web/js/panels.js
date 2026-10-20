@@ -222,10 +222,17 @@ export function renderCatchup(c) {
   el.innerHTML = `<div class="cu-k"><span>PREVIOUSLY ON…</span><button aria-label="Close" id="cu-close">×</button></div>
     <div class="cu-t">${esc(title)}</div><div class="chips">${chips}</div>
     <div class="cu-text">${esc(c.text)}</div>
-    <div class="cu-ai">AI-generated · fact-checked against the match data${c.source === "template" ? " (template)" : ""}</div>
-    <div class="cu-f">${tag(c, "Storyteller")}<button class="key ${reading ? "reading" : ""}" id="listen"
-      aria-label="Read the catch-up aloud">${reading ? "■ STOP" : "▶ LISTEN"}</button></div>`;
+    <div class="cu-ai" id="cu-ai">AI-generated · fact-checked against the match data${c.source === "template" ? " (template)" : ""}</div>
+    <div class="cu-f">${tag(c, "Storyteller")}<span class="cu-btns">${c.text_en ? `<button class="key" id="show-en">SHOW ENGLISH</button>` : ""}
+      <button class="key ${reading ? "reading" : ""}" id="listen" aria-label="Read the catch-up aloud">${reading ? "■ STOP" : "▶ LISTEN"}</button></span></div>`;
   $("#cu-close").addEventListener("click", hideCatchup);
+  $("#show-en")?.addEventListener("click", (e) => {        // for viewers who do not read the fan's language
+    const english = e.target.textContent === "SHOW ENGLISH";
+    el.querySelector(".cu-text").textContent = english ? c.text_en : c.text;
+    $("#cu-ai").textContent = english ? "English translation (AI), checked: same numbers and names as the original"
+      : "AI-generated · fact-checked against the match data";
+    e.target.textContent = english ? `SHOW ${({ fr: "FRANÇAIS", es: "ESPAÑOL" })[c.language] || "ORIGINAL"}` : "SHOW ENGLISH";
+  });
   $("#listen").addEventListener("click", () => (reading ? stopVoice() : playVoice(c)));
 }
 

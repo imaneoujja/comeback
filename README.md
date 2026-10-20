@@ -1,7 +1,17 @@
 # COMEBACK
 
+[![CI](https://github.com/imaneoujja/comeback/actions/workflows/ci.yml/badge.svg)](https://github.com/imaneoujja/comeback/actions/workflows/ci.yml)
+[![Live demo](https://img.shields.io/badge/live%20demo-Azure%20Container%20Apps-0078D4)](https://comeback.lemonforest-f9ddbdf8.switzerlandnorth.azurecontainerapps.io)
+[![Open in GitHub Codespaces](https://img.shields.io/badge/open%20in-Codespaces-24292f?logo=github)](https://codespaces.new/imaneoujja/comeback)
+![Microsoft Agent Framework](https://img.shields.io/badge/Microsoft%20Agent%20Framework-1.22-0078D4)
+![Microsoft Foundry](https://img.shields.io/badge/Microsoft%20Foundry-gpt--4.1--mini-0078D4)
+![Python 3.12](https://img.shields.io/badge/python-3.12-3776AB)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+
 **An AI match insights engine for studio and streaming that personalizes on what each fan
 saw, or missed.**
+
+![COMEBACK in 20 seconds: a fan goes pitchside, the phone buzzes before the goal with the reason, the replay and the goal live, the same moment for three fans, and backstage the agents and the Verifier's fact-check](docs/comeback.gif)
 
 ### You left the match. COMEBACK didn't.
 
@@ -16,21 +26,24 @@ changed. **Put your phone away. COMEBACK will tell you when it matters.**
   alerts, on 50 unseen matches, with a **median warning of 60 s**. We announce big
   moments; we do not claim to predict goals.
 - **Verified text**: every number and name is checked before a fan sees it. A single
-  LLM agent doing everything delivers a factual problem in 12% of its texts; COMEBACK in 0.
+  LLM agent doing everything delivers a factual problem in 12% of its texts; COMEBACK in 0,
+  and Microsoft Foundry's evaluators score the 45 texts fans see 5.0/5 on groundedness.
 - **One brain for every fan**: serving **200,000** simulated fans takes about
-  **1,900** LLM calls instead of more than 600,000 (≈ $0.61 instead of ≈ $805).
+  **1,830** LLM calls instead of more than 630,000 (≈ $0.60 instead of ≈ $812).
 
 > *The future of football isn't more screens. It's a match that fits your life.*
 
-**▶ Live demo: [comeback.lemonforest-f9ddbdf8.switzerlandnorth.azurecontainerapps.io](https://comeback.lemonforest-f9ddbdf8.switzerlandnorth.azurecontainerapps.io)** (Azure Container Apps; the first load can take ~20 s while it wakes up)
+### Try it in 60 seconds
 
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/imaneoujja/comeback)
+1. Open the **[live demo](https://comeback.lemonforest-f9ddbdf8.switzerlandnorth.azurecontainerapps.io)** on a computer and press **▶ Play the story** (about 100 s).
+2. Or **[open it in GitHub Codespaces](https://codespaces.new/imaneoujja/comeback)**: it starts by itself on port 8000.
+3. Or locally: `pip install -r requirements.txt && python -m comeback` → http://localhost:8000
 
-![Omar is back: the screen replays the missed 68' chance while the phone shows the French catch-up and the two call-backs that came before the goal](docs/screenshot.png)
+No account, no key: it runs offline (see *What runs live, what is cached?* in the FAQ).
 
-> Built for *Inside the Game: Developer Hackathon* (Microsoft × Premier League),
-> challenge "Synthetic Match Insights Engine". All data is **synthetic**; all
-> clubs and players are **fictional**.
+> Built for *Inside the Game: Developer Hackathon* (Microsoft × Premier League), challenge
+> "Synthetic Match Insights Engine". All data is **synthetic**; all clubs and players are
+> **fictional**.
 
 ---
 
@@ -42,6 +55,12 @@ changed. **Put your phone away. COMEBACK will tell you when it matters.**
 | **2. It's heating up** | It calls you back **before** the moment, and says why. Your phone takes over the screen, rings, and reads the reason aloud. | 65' and 69': *"Reviens — Emberfield est entré 3 fois dans la surface en 2 minutes et a tenté 1 tir."* |
 | **3. You return** | Spoiler-free: if a goal happened, your phone only said "something big happened"; the score waits for your replay. The TV rewinds: the moments you missed are replayed in 3D from behind the goal while a neural voice reads your "Previously on…" catch-up of what **changed**, sized to your absence. A live goal cuts the replay short. | 70': a catch-up in French, then the 71' goal, seen live. The phone confirms: *"COMEBACK l'avait senti : alerte à la 69e, but à la 71e."* |
 | **4. Full-time** | Your own front page: the match told from your side. | Sofia (Comets fan): *"Heartbreaking loss for Saltmarsh Comets after strong start"*. |
+
+![Omar is back: the screen replays the missed 68' chance while the phone shows the French catch-up, a SHOW ENGLISH button, and the two call-backs that came before the goal](docs/screenshot.png)
+
+The same moment, as three different fans got it (language, depth, side, metric):
+
+![Same moment, three fans: the 69' call-back in French for Omar, in English for Sofia (the other side), in Spanish for Reda (player mode), with each fan's graphic and metric](docs/personalize.png)
 
 Around this loop sits a **broadcast control room**: a 3D program feed with
 broadcast graphics (player tags, pass difficulty, shot speed, speed and distance
@@ -72,7 +91,7 @@ called fans return; a real figure needs an A/B test in production).
 and scan the QR code with your phone: it becomes the fan's device, from anywhere.
 The app scales to zero when nobody uses it, so the first request wakes it up.
 
-**GitHub Codespaces:** click the badge above. The server starts by itself; open
+**GitHub Codespaces:** click the Codespaces badge at the top. The server starts by itself; open
 the forwarded port **8000**.
 
 **Locally** (Python ≥ 3.10):
@@ -120,35 +139,6 @@ same engine, Watchers and Verifier.
 4. Optional: **Use your real phone: PAIR** shows a QR code. Scan it, and the alerts
    ring and speak on your own phone.
 5. Let it run to full-time: each fan gets their own front page.
-
-## Related work
-
-Others have already proved fans want this:
-
-- **Prime Video Rapid Recap**: when you join an NBA or NFL game late, an AI recap
-  of the key highlights you missed, before you rejoin the live action
-  ([AWS](https://aws.amazon.com/solutions/amazon/one-amazon-lane/streaming)).
-- **YouTube TV Key Plays**: catch up to live by jumping through a game's key plays
-  ([Google support](https://support.google.com/youtubetv/answer/9119412?hl=en-GB)).
-- **Turner Sports Excitement Alerts**: notifications when a game becomes close or
-  turns into an upset ([Airship](https://www.airship.com/blog/turner-sports-ncaa-march-madness/)).
-
-They show the need. But recaps wait for the fan to ask (or to join late), and
-excitement alerts are about a whole game, for everyone. COMEBACK starts from the
-fan's own attention: it notices that *you* left, calls *you* back *before* the
-moment, from *your* club's side, and tells *you* what you missed. We don't claim
-to be first; we combine these ideas around presence, at a cost that doesn't grow
-with the audience.
-
-## Presence signals
-
-COMEBACK needs to know whether you are watching. All signals are opt-in, and it
-uses no camera and no microphone.
-
-| | Signals |
-|---|---|
-| **This demo** | Switching browser tab (Page Visibility API), the *I'm away / I'm back* buttons (on the screen or on the paired phone), joining a match in progress. |
-| **In production** | The app going to the background, playback paused, inactivity on the player, and push notifications (APNs, FCM or Web Push) to bring the fan back. |
 
 ## How it works
 
@@ -214,6 +204,12 @@ agents' live log, the 10,000-fan audience and the rundown of verified cards.
 
 ![STUDIO view: program feed, fan device, tactical camera, match data, agents log, simulated audience and rundown](docs/studio.png)
 
+
+Every call-back comes with its decision chain, time-stamped (STUDIO **DECISIONS** monitor,
+and act 1 of the guided story):
+
+![Decision chain of the 65' call-back: events observed with their ids, danger state and trend, the insight without a goal promise, and why Omar, why now](docs/decision.png)
+
 ## One match brain for every fan
 
 The AUDIENCE monitor simulates 10,000 fans with random absences and late joins,
@@ -225,10 +221,10 @@ LLM calls needed to serve the whole demo match, by audience size (`/api/scale`):
 
 | Fans | COMEBACK | One LLM call per catch-up |
 |---|---|---|
-| 1,000 | 699 | 3,058 |
-| 10,000 | 1,260 | 31,317 |
-| 50,000 | 1,578 | 157,433 |
-| 200,000 | **1,854** | **628,386** |
+| 1,000 | 659 | 3,077 |
+| 10,000 | 1,191 | 31,591 |
+| 50,000 | 1,515 | 158,631 |
+| 200,000 | **1,830** | **633,938** |
 
 These are cost figures on the scripted demo match. They say nothing about how
 accurate the alerts are: that is measured separately, below. The audience is
@@ -341,9 +337,13 @@ tests caught). Each one became a rule:
 | "Emberfield *grabbed a well-earned draw*" (at 86') | The match was not over | No final result (win, draw, defeat) before full-time, in all three languages |
 | "Emberfield won, *overcoming a numerical advantage for Saltmarsh Comets*" | Saltmarsh Comets had 10 players | Numerical advantage or disadvantage claims must attach to the right team, including "for X", "against ten-man X" and "overcoming…" |
 | "The striker scores his *9th*" (test case) | Invented: the 9 came from the player id `EMB-9` | Every number must exist in the facts; ids are not statistics |
+| "Larkhaven drew 2-2 *despite fewer chances*" | Larkhaven had 21 shots to 7. Our rules missed it; **Foundry's groundedness judge caught it** (2/5) | Comparative claims (fewer/more chances, shots, possession) must agree with the per-team stats |
 
 The Verifier also rejects players who are not part of the moment, clubs outside
-the match, and over-long texts.
+the match, insulting or mocking words about players, betting talk, and over-long
+texts. And it was tuned against its own false positives: "Emberfield, playing against
+ten men" is correct and now passes (the ten men are the opponents of the team named
+before).
 
 ### One agent, or a team of agents?
 
@@ -359,31 +359,53 @@ text is then checked with the Verifier's rules.
 | Texts with a factual problem delivered to fans | **7 / 57 (12%)** | **0 / 57** (1 template fallback) |
 | Key moments left without a card | 47 of 95 | 0: a template card at once, the verified text when ready |
 | What went wrong / what was caught | player or club not in the facts 5, invented or wrong number 4, result announced before full time 2 | caught before air: numerical advantage on the wrong team 5, wrong number 3, player not in the facts 3, early result 1 |
-| LLM calls for 200,000 fans (demo match) | 628,369 (one per catch-up) | **1,854** (cards once, stories shared) |
-| Cost for 200,000 fans (gpt-4.1-mini list price) | ≈ $805 | **≈ $0.61** |
+| LLM calls for 200,000 fans (demo match) | 633,921 (one per catch-up) | **1,830** (cards once, stories shared) |
+| Cost for 200,000 fans (gpt-4.1-mini list price) | ≈ $812 | **≈ $0.60** |
 | Latency | ≈ 3.9 s per fan, only after the absence | template card instantly; verified card ≈ 1.7 s (median call) |
 
 Replies are cached in `data/experiments/compare_cache.jsonl`, so the table replays offline.
 The single agent is not a strawman: same model, same facts, same rules in its
 instructions; it simply has nobody to check it and no shared memory across fans.
 
-### Foundry evaluations of every text a fan sees
+### Foundry evaluations, before and after the Verifier
 
-`python scripts/evaluate_texts.py` replays the demo, recovers the exact facts
-behind each final text, and scores it with Microsoft Foundry's AI-assisted
-evaluators (`azure-ai-evaluation`, judge: our `gpt-4.1-mini` deployment, 1–5):
+`python scripts/evaluate_texts.py` replays both playable matches, recovers the exact facts
+behind every draft, and scores it with Microsoft Foundry's AI-assisted evaluators
+(`azure-ai-evaluation`, judge: our `gpt-4.1-mini` deployment, 1–5). *Before* = the first
+draft of every text (what a pipeline without the Verifier would show); *after* = the texts
+fans actually see.
 
-| Texts | n | Groundedness | Coherence | Fluency |
-|---|---|---|---|---|
-| Moment cards (Analyst) | 17 | 5.0 | 4.35 | 3.88 |
-| Catch-ups (Storyteller) | 3 | 5.0 | 4.33 | 4.0 |
-| Full-time recaps (Storyteller) | 3 | 5.0 | 4.67 | 4.0 |
-| **All texts shown to fans** | 23 | **5.0** | **4.39** | **3.91** |
-| Control: 3 cards deliberately corrupted (teams swapped, invented stat) | 3 | **2.0** | 4.0 | 3.67 |
+| Texts (demo + unscripted match) | n | Groundedness | Coherence | Fluency | Groundedness < 4 |
+|---|---|---|---|---|---|
+| Before the Verifier: first drafts | 46 | 4.93 | 4.39 | 3.96 | 1 |
+| … of which the Verifier sent back | 6 | 4.50 | 4.33 | 4.00 | 1 |
+| **After the Verifier: texts shown to fans** | **45** | **5.00** | 4.36 | 3.96 | **0** |
+| Control: 3 cards deliberately corrupted (teams swapped, invented stat) | 3 | **2.00** | 3.67 | 3.33 | 3 |
 
-The control row matters: the same judge scores corrupted texts 2/5 on
-groundedness, so the 5/5 on real texts is not leniency. Details per text:
+What we learned: the LLM judge and the rule-based Verifier catch **different** errors. The
+judge scored most drafts the Verifier rejected 5/5 (a numerical advantage given to the wrong
+team, an invented number); the Verifier missed one qualitative claim the judge flagged
+("despite fewer chances" with 21 shots to 7), which we turned into a rule. The control row
+shows the judge is not lenient on gross errors. Details per text:
 [`docs/evaluation.json`](docs/evaluation.json).
+
+## Responsible AI
+
+- **No betting, no odds, no prediction market.** COMEBACK announces pressure and big
+  moments with the reason; it never states a probability that a goal will happen, and the
+  Verifier rejects betting talk (odds, bets, wagers, in three languages).
+- **Respect for people.** Players are real people in real products: the Verifier rejects
+  insulting or mocking words about a player or a club, in English, French and Spanish
+  (`check_respect` in `comeback/agents/verifier.py`).
+- **Facts before fluency.** Every number and every name must exist in the engine's facts;
+  numerical-advantage claims must name the right team; no final result before full time;
+  nothing outside the match (season, career). What fails is rewritten or replaced by a
+  template built from verified facts, and the text says which (`AI-generated · fact-checked`).
+- **The fan is in control.** Opt-in alerts, the fan's own rules, at most two calls per
+  absence, spoiler-free by default, night mode. No camera, no microphone: presence comes
+  from the fan's own signals (see Presence signals).
+- **Honest numbers.** Alert metrics on unscripted matches only; the simulation assumption
+  behind "fans back in time" is written where the number appears.
 
 ## Judging criteria → evidence in the code
 
@@ -403,34 +425,31 @@ groundedness, so the 5/5 on real texts is not leniency. Details per text:
 | (i-a) **Ingest** events as they happen | `comeback/synth` generates the events; `api/replay.py` streams them; `engine/match.py` processes them one at a time, with no look-ahead |
 | (i-b) **Interpret** into stats, patterns, context | `engine/state.py`: possession (overall and rolling), pass accuracy and difficulty, xG, speeds, distance with the ball, control vs chaos; `engine/danger.py`, `engine/moments.py` |
 | (i-c) **Explain** why a moment matters | Analyst's "why it matters"; storylines (redemption, the substitute's impact, comeback, numerical advantage); delta-based catch-ups |
-| (i-d) **Render** on screen, machine-readable | 3D program feed with broadcast graphics; `GET /api/overlays/{match}`: timed JSON cues per layer and audience |
-| (i-e) **Personalize** | Presence (away, back, late join); club point of view; favourite player tagged all match; casual vs analyst (different overlays and stories); language; the fan's focus metric on screen |
+| (i-d) **Render** on screen, machine-readable | 3D program feed with broadcast graphics; `GET /api/overlays/{match}`: timed JSON cues per layer and audience, streamed live in the STUDIO **CUES** monitor; OpenAPI at `/docs` |
+| (i-e) **Personalize** | What the fan saw or missed (away, back, late join, spoiler-free return); the fan's own alert rules (goal threats, equaliser or winner, any big moment, night mode); club point of view; player mode (the followed player tagged all match); casual vs analyst live (words vs numbers on the danger and control graphics, different overlays and stories); language; one focus metric on screen. The guided story shows the same moment as three fans side by side |
 | (ii) Player identification | Lower-third name tags; the followed player is labelled in 3D all match |
 | (ii) Speed and distance on thresholds | Speed tag at ≥ 32 km/h sprints; distance tag every 100 m a player covers with the ball |
 | (ii) Pass quality | Distance, accuracy and a 0–100 difficulty rating, with ball speed |
 | (ii) Ball and shot speed | Pass ball speed; shot speed tag on every shot |
 | (ii) Auto-eventing from video | **Not implemented.** COMEBACK works on event streams (synthetic here) |
 | (iii) Narratives, player context, milestones, recaps | Moment cards; milestones (fastest shot, top speed, 50 completed passes); catch-ups; per-fan full-time recap |
-| (iv) Control vs chaos, pressure, rhythm | Control (rolling possession × accuracy) and chaos (duels + turnovers per minute); danger index; momentum swings; momentum timeline |
+| (iv) Control vs chaos, pressure, rhythm | Live "control vs chaos" graphic (rolling possession × accuracy; duels + turnovers per minute); danger index and its trend; momentum swings; momentum timeline; every call-back's decision chain (events → state → insight → decision) |
 | (v) Synthetic data innovation | Possession simulator with spells of dominance, transparent scripted beats, realism tests, a 10,000-fan audience simulation |
-| (vi) Multi-language storytelling | Catch-ups, alerts and recaps in English, French and Spanish; voices picked per language |
+| (vi) Multi-language storytelling | Catch-ups, alerts and recaps in English, French and Spanish, neural voice per language, and a checked **Show English** translation under every non-English catch-up |
 
 ## Microsoft technologies
 
 | Technology | Where |
 |---|---|
 | **Microsoft Agent Framework** (Python) | The LLM agents (Analyst, Storyteller) are `agent_framework.Agent`s. The verified-writing workflow is an Agent Framework `WorkflowBuilder` graph: writer, Verifier and fallback executors, conditional edges, a retry loop, and a live trace of every step (`comeback/agents/workflow.py`, `llm.py`). |
-| **Microsoft Foundry** | LLM inference: Azure OpenAI `gpt-4.1-mini`, Global Standard deployment, through Foundry's OpenAI-compatible v1 endpoint. A 30k TPM cap and a daily call budget protect the credit. |
-| **Microsoft Foundry evaluations** (`azure-ai-evaluation`) | Groundedness, coherence and fluency of every generated text, with a corrupted control set (`scripts/evaluate_texts.py`, results in `docs/evaluation.json`). |
+| **Microsoft Foundry** | LLM inference for the Analyst, the Storyteller and the Translator ("Show English"): Azure OpenAI `gpt-4.1-mini`, Global Standard deployment, through Foundry's OpenAI-compatible v1 endpoint. A 30k TPM cap and a daily call budget protect the credit. |
+| **Microsoft Foundry evaluations** (`azure-ai-evaluation`) | Groundedness, coherence and fluency of the agents' texts, before and after the Verifier, with a corrupted control set (`scripts/evaluate_texts.py`, results in `docs/evaluation.json`). |
 | **Azure AI Speech** (through the same Foundry resource) | Neural voices read each fan's catch-up and full-time recap in their language (`en-GB-RyanNeural`, `fr-FR-HenriNeural`, `es-ES-AlvaroNeural`) while the program feed replays the missed moments (`comeback/agents/speech.py`). The demo's audio is committed, so offline mode still speaks. |
-| **Azure Container Apps** | The public demo: the CI image from `ghcr.io`, Consumption plan, scale 0 → 1 replica (0.5 vCPU, 1 GiB), offline mode, so it costs nothing while idle. |
+| **Azure Container Apps** | The public demo: the CI image from `ghcr.io`, Consumption plan, 0.5 vCPU, 1 GiB, offline mode; one replica kept warm during judging (27 Oct–10 Nov), scale to zero otherwise. |
 | **GitHub Codespaces** | One-click, zero-config environment for judges (`.devcontainer/`). |
-| **GitHub Actions + GitHub Container Registry** | CI on every push (ruff, 55 tests), then the container image is built and published to `ghcr.io` (`.github/workflows/ci.yml`, `Dockerfile`). |
+| **GitHub Actions + GitHub Container Registry** | CI on every push and pull request (ruff, 64 tests); the container image is built and published to `ghcr.io` from `main` (`.github/workflows/ci.yml`, `Dockerfile`). |
 | **Model Context Protocol** | `comeback/mcp_server.py`: any agent, including GitHub Copilot in VS Code, can query the live match. |
 | GitHub / GitHub Copilot | Development workflow. |
-
-The whole demo match costs **34 LLM calls**: 17 moment cards, 8 personal stories
-(catch-ups and full-time recaps) and 9 revisions requested by the Verifier.
 
 ## Data and match intelligence
 
@@ -490,6 +509,117 @@ GitHub Copilot (agent mode) in VS Code, install the extras and add `.vscode/mcp.
 
 Then ask Copilot: *"Using comeback, who is dangerous right now and why?"*
 
+## From demo to production
+
+The demo runs as one container. At broadcast scale the same parts map onto Azure services:
+
+```mermaid
+flowchart LR
+  feed[Live event feed] --> eh[Azure Event Hubs]
+  eh --> engine[Match engine, one per match<br/>Container Apps or AKS]
+  engine --> brain[(Shared match brain<br/>Azure Cache for Redis)]
+  engine --> agents[Analyst · Verifier · Storyteller<br/>Microsoft Foundry]
+  agents --> store[(Moment store, fan rules<br/>Azure Cosmos DB)]
+  brain --> watchers[Watchers, stateless workers<br/>one decision per team, fanned out]
+  watchers --> push[Azure Notification Hubs<br/>to fans' phones]
+  store --> api[API and SSE<br/>broadcaster apps, official app, overlay renderer]
+  agents --> speech[Azure AI Speech]
+  agents -.-> evals[Foundry evaluations and tracing<br/>Application Insights]
+```
+
+**Business model (B2B2C).** COMEBACK is a layer that broadcasters, streaming platforms and
+the official app integrate, not one more app for fans: an SDK and API for presence-aware
+call-backs, catch-ups and overlay cues, priced per match or per active viewer. Its value
+for the integrator is live minutes and ad inventory: fans who had left come back before
+the peak moment.
+
+**Cost per match at 200,000 fans** (demo match, list prices): about **1,830 LLM calls ≈ $0.60**
+(cards written once, stories shared by fans with the same moments, language, level, side
+and length), plus ≈ $16 of neural voice if every distinct story is spoken: about
+**$0.0001 per fan**. One LLM call per fan would cost ≈ $812 for the text alone.
+
+## Related work
+
+Others have already proved fans want this:
+
+- **Prime Video Rapid Recap**: when you join an NBA or NFL game late, an AI recap
+  of the key highlights you missed, before you rejoin the live action
+  ([AWS](https://aws.amazon.com/solutions/amazon/one-amazon-lane/streaming)).
+- **YouTube TV Key Plays**: catch up to live by jumping through a game's key plays
+  ([Google support](https://support.google.com/youtubetv/answer/9119412?hl=en-GB)).
+- **Turner Sports Excitement Alerts**: notifications when a game becomes close or
+  turns into an upset ([Airship](https://www.airship.com/blog/turner-sports-ncaa-march-madness/)).
+
+They show the need. But recaps wait for the fan to ask (or to join late), and
+excitement alerts are about a whole game, for everyone. COMEBACK starts from the
+fan's own attention: it notices that *you* left, calls *you* back *before* the
+moment, from *your* club's side, and tells *you* what you missed. We don't claim
+to be first; we combine these ideas around presence, at a cost that doesn't grow
+with the audience.
+
+## Presence signals
+
+COMEBACK needs to know whether you are watching. All signals are opt-in, and it
+uses no camera and no microphone.
+
+| | Signals |
+|---|---|
+| **This demo** | Switching browser tab (Page Visibility API), the *I'm away / I'm back* buttons (on the screen or on the paired phone), joining a match in progress. |
+| **In production** | The app going to the background, playback paused, inactivity on the player, and push notifications (APNs, FCM or Web Push) to bring the fan back. |
+
+## Limits, synthetic data and what's next
+
+- **Synthetic data only.** The simulator is calibrated on match-level averages (passes,
+  accuracy, shots, xG, goals); it has no tracking data, no off-ball movement, no fatigue,
+  and its goals come mostly from short attacks. The alert numbers are honest on that data
+  and must be validated on real event data; "fans back in time" needs an A/B test in
+  production.
+- **Offline mode** serves the agents' cached texts for the precomputed windows of the two
+  playable matches; other windows get verified templates unless `LLM_MODE=live`.
+- **Not implemented:** auto-eventing from video; real push notifications (the paired phone
+  receives server-sent events instead).
+- **Next:** validation on real event feeds; Notification Hubs push; Foundry tracing of the
+  agents; a producer "approve before air" mode in STUDIO; more languages, including
+  right-to-left.
+
+## FAQ for judges
+
+**Why not just stream the match on my phone?** Because you cannot always watch or listen:
+a kid's match, a call, the night. COMEBACK asks for no attention until it matters, then
+buzzes once with the reason. See *Why not just stream it on your phone?*
+
+**Do you predict goals?** No. We announce big moments: 54% of goals were preceded by a call
+(1.6× random alerts) on 50 unseen matches, with 60 s of warning; most calls are not
+followed by a goal, which is why a call states its reason, not a promise.
+
+**Isn't the demo match scripted?** Yes, its storyline is, and the UI says so. Alert metrics
+are measured only on unscripted matches; *Try another match* replays an unscripted fixture
+with the same engine, Watchers and Verifier.
+
+**What runs live, what is cached?** On every visit the engine, the danger index, the
+Watchers, the Verifier and the 10,000-fan audience run for real. Only the agents' texts of
+the two playable matches are cached, so the demo needs no key.
+
+**Is a rule-based Verifier or Watcher really an agent?** They are agents with distinct
+roles and their own decisions; we keep LLMs where language is needed and deterministic
+code where truth is needed. The comparison table shows what one LLM agent alone delivers.
+
+**What if the LLM fails?** Every text has a verified template fallback. Press **⚡ CUT THE
+LLM** in STUDIO: the show goes on.
+
+**Won't fans get spammed or spoiled?** At most two calls per absence (1.9 per match on
+average in our simulation), the fan's own rules, night mode, and spoiler-free by default.
+
+**How do you detect that I left?** In the demo: switching browser tab or a button. In
+production: opt-in signals the fan already gives (the app in background, the TV off, a
+calendar slot), never a camera or a microphone.
+
+**Does it scale?** One brain per match, one decision per team, stories shared across fans:
+200,000 fans ≈ 1,830 LLM calls. Ten simultaneous viewers on one small container: no errors.
+
+**Real clubs, players or data?** None. All clubs, players and matches are fictional and
+synthetic.
+
 ## Run with your own Foundry deployment (optional)
 
 ```bash
@@ -519,16 +649,6 @@ web/        control room (ES modules, no build step; Three.js from a CDN) + phon
 scripts/    precompute.py, evaluate_alerts.py, evaluate_texts.py, scale_cache.py, hello_agent.py
 data/       demo match, profiles, committed LLM cache
 ```
-
-## Limits and next steps
-
-- Synthetic data only; the alert (54% of goals announced on held-out matches,
-  vs 39% for random alerts at the same rate) must be validated on real data.
-- Offline mode serves cached stories for the demo's absences; other windows get
-  the (verified) template text unless `LLM_MODE=live`.
-- No auto-eventing from video.
-- Next: tracing of the agents (OpenTelemetry → Application Insights), real push
-  notifications, more languages.
 
 ## License
 
