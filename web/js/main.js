@@ -20,6 +20,7 @@ import { initSetup, openSetup, liveMatch } from "./setup.js";
 import { initAutoplay, startAutoplay, stopAutoplay, autoplayActive } from "./autoplay.js";
 import { initCues } from "./cues.js";
 import { initStudio } from "./studio.js";
+import { initInsights } from "./insights.js";
 import { initMissed, showMissed, hideMissed } from "./missed.js";
 
 let program = null;          // 3D renderer, or null → 2D fallback on the PGM canvas
@@ -40,6 +41,7 @@ async function boot() {
   initPairing();
   initCues();
   initStudio();
+  initInsights();
   initToast();
   initMissed();
   initAutoplay({ setSpeed });

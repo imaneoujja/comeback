@@ -135,6 +135,11 @@
 
     <aside class="companion fan-only" id="companion" aria-label="Your match companion">
       <div class="cp-presence" id="presence"></div>
+      <nav class="cp-tabs" id="cp-tabs" aria-label="Companion">
+        <button data-tab="alerts" class="on">YOUR ALERTS</button><button data-tab="insights">MATCH INSIGHTS</button>
+      </nav>
+      <div class="cp-pane insights" data-pane="insights" id="insights" hidden></div>
+      <div class="cp-pane" data-pane="alerts">
       <div class="cp-quiet" id="cp-quiet" hidden><span>This match is quiet so far.</span>
         <button class="key hot" id="cp-quiet-go">ONLY CALL ME IF IT GETS GOOD</button></div>
       <section class="cp-block cp-pair">
@@ -163,6 +168,7 @@
         <div class="cp-k">SENT TO YOUR PHONE</div>
         <div class="notes" id="notes" aria-live="polite"></div>
       </section>
+      </div>
     </aside>
 
     <section class="mon feed-mon studio-only" data-mon="feed" aria-label="Live agent feed">

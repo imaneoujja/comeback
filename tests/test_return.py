@@ -197,3 +197,21 @@ def test_milestone_cards_say_which_mark_was_reached() -> None:
         for m in engine.process(e).moments:
             if m.type == "milestone":
                 assert "milestone for" not in moment_card_text(m.to_dict(), engine.state.team_names)["headline"].lower()
+
+
+def test_match_insights_show_what_the_engine_already_knows() -> None:
+    from comeback.api import server
+
+    replay = ReplaySession("insights", "demo-comeback", fan_profile("home", "en", "analyst", None, "EMB", "SMC"),
+                           _offline())
+    server.sessions["insights"] = replay
+    try:
+        replay.seek(75)
+        out = client.get("/api/session/insights/insights").json()
+        goals = [s for s in out["shots"] if s["outcome"] == "goal"]
+        assert len(goals) == 3 and all(0 < s["xg"] < 1 for s in out["shots"])        # 0-1, 0-2, 1-2 by 75'
+        scores = [p["influence"] for p in out["players"]]
+        assert len(scores) == 6 and scores == sorted(scores, reverse=True)
+        assert {"avg_pass_difficulty", "top_speed_kmh", "key_passes"} <= set(out["players"][0]["match"])
+    finally:
+        server.sessions.pop("insights", None)

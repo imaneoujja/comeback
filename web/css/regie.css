@@ -770,3 +770,33 @@ body.configuring .setup { display: block; }
   .feed-mon .screen { height: 520px; flex: none; }
   .numbers { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* ------------------------------------------------------------- the companion's tabs and "Match insights" */
+.cp-tabs { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid #2a2a2a; }
+.cp-tabs button { border: 0; background: #111; color: var(--label); font-family: var(--mono); font-size: 11px; letter-spacing: .12em; padding: 8px 6px; }
+.cp-tabs button.on { background: var(--text); color: #111; font-weight: 700; }
+.cp-pane { display: flex; flex-direction: column; gap: 10px; }
+.cp-pane[hidden] { display: none; }
+.in-block { display: flex; flex-direction: column; gap: 6px; }
+#in-curve { width: 100%; height: 78px; display: block; background: #0a0a0a; border: 1px solid #1f1f1f; }
+#in-shots { width: 100%; height: 165px; display: block; }
+.in-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-family: var(--mono); font-size: 10px; color: var(--label); }
+.in-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.in-legend i { width: 9px; height: 9px; display: inline-block; border-radius: 50%; }
+.in-legend i.chaos { height: 2px; border-radius: 0; background: #8fd3ff; }
+.in-player { width: 100%; display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; gap: 9px; align-items: center; text-align: left;
+  padding: 6px 8px; margin-bottom: 4px; background: #121212; border: 1px solid #262626; border-left: 3px solid var(--team); }
+.in-player:hover { border-color: #444; border-left-color: var(--team); }
+.in-player .ms-num { width: 34px; height: 34px; font-size: 18px; }
+.in-who { display: flex; flex-direction: column; min-width: 0; }
+.in-who b { font-family: var(--cond); font-size: 15.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.in-who small { font-family: var(--mono); font-size: 9.5px; color: var(--label); text-transform: uppercase; }
+.in-bar { height: 4px; background: #262626; margin-top: 4px; } .in-bar i { display: block; height: 100%; background: var(--team); }
+.in-stats { font-family: var(--mono); font-size: 9.5px; color: var(--dim); text-align: right; line-height: 1.45; }
+.in-stats em { font-style: normal; color: var(--text); font-weight: 700; font-size: 11px; }
+.in-turn { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 8px; padding: 6px 0; border-top: 1px solid #1f1f1f; }
+.in-turn > b { font-family: var(--cond); font-size: 17px; color: var(--team, var(--amber)); }
+.in-turn strong { display: block; font-family: var(--cond); font-size: 15px; line-height: 1.2; }
+.in-turn small { display: block; font-size: 12.5px; line-height: 1.35; color: var(--label); margin-top: 2px; }
+.in-empty { font-size: 13px; color: var(--dim); }
+.in-turn small { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }

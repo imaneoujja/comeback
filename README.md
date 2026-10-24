@@ -170,6 +170,33 @@ and Verifier.
    below, and **SIMULATE LLM OUTAGE** to watch the show go on without the model. **RAW FEED**
    unfolds the timed overlay cues (JSON), the engine data and the timeline.
 
+## What the engine understands
+
+A pure-Python engine reads every event once, as it happens (`comeback/engine/`), and every
+number the fan or the studio sees comes from it, never from the LLM:
+
+- **xG** for every shot, from distance and angle (`engine/xg.py`).
+- **Pass difficulty** (0–100): distance, pressure, forward ratio, final third, long ball;
+  pass accuracy, progressive passes and **key passes** (the receiver shoots within 15 s).
+- **Shot speed and ball speed**, **sprint speed**, distance covered with the ball.
+- **Danger index** (0–100, last two minutes) and its trend: box entries, final-third passes,
+  shots weighted by xG, corners, balls won high (`engine/danger.py`).
+- **Control vs chaos**: rolling possession × pass accuracy against duels and turnovers per
+  minute; **momentum swings** when control changes hands.
+- **Rhythm**: minute-by-minute momentum, and "this match got good" when a quiet spell
+  comes alive.
+- **Influence**: goals, assists, xG, key passes, forward passes, duels won and interceptions,
+  with volume capped (`fans/missed.py`).
+- **Milestones**: fastest shot and top speed of the match, 50 completed passes; storylines
+  (redemption, the substitute's impact, the comeback, numerical advantage).
+
+The fan app shows it in **Match insights** (open by default for analysts, one click for
+casual fans): the match curve with its key moments, the shot map sized by xG, the players
+of the match (a click opens their sheet), and the three turning points with their verified
+"why it matters".
+
+![Match insights at 76': momentum and chaos minute by minute with the goals marked, the shot map sized by xG, the players of the match by influence with pass difficulty and top speed, and the turning points](docs/insights.png)
+
 ## How it works
 
 ```mermaid

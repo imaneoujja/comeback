@@ -42,6 +42,14 @@ export function showMissed(missed) {
   return true;
 }
 
+/** A player's sheet for the whole match so far (from the "Match insights" panel). */
+export function showPlayerSheet(player, players, toT, minute) {
+  data = { players, teams: {}, lines: {}, from_t: 0, to_t: toT, from_minute: 0, to_minute: minute, late_join: false,
+    whole: true, source: "template" };
+  view = { page: "player", id: player.id, scope: "match" };
+  render();
+}
+
 export function hideMissed() {
   const el = $("#missed");
   el.hidden = true;
@@ -50,11 +58,12 @@ export function hideMissed() {
 
 function head(title, sub) {
   return `<div class="ms-k"><span>${title}</span><span class="ms-btns">
-      <button data-go="story">◂ STORY</button><button data-go="close" aria-label="Close">×</button></span></div>
+      ${data.whole ? "" : `<button data-go="story">◂ STORY</button>`}<button data-go="close" aria-label="Close">×</button></span></div>
     ${sub ? `<div class="ms-sub">${sub}</div>` : ""}`;
 }
 
 function windowLabel() {
+  if (data.whole) return `PLAYERS OF THE MATCH · 0'–${data.to_minute}'`;
   return data.late_join ? `THE STORY SO FAR · 0'–${data.to_minute}'` : `WHAT YOU MISSED · ${data.from_minute}'–${data.to_minute}'`;
 }
 
@@ -83,7 +92,7 @@ function list() {
     <button class="ms-team" data-go="team:${code}" style="--team:${teamColour(code)}">
       <b>${esc(t.name)}</b><span>${data.late_join ? "" : `${esc(t.before.score)} → `}${esc(t.now.score)} · ${t.window.shots} shots ·
         ${num(t.window.xg, 2)} xG</span><small>${esc(data.lines[code] || "")}</small></button>`).join("");
-  return `${head(windowLabel(), data.late_join ? "Players who changed the game before you joined"
+  return `${head(windowLabel(), data.whole ? "Players who have made the difference so far" : data.late_join ? "Players who changed the game before you joined"
     : "Players who changed the game while you were away")}
     <div class="ms-players">${players}</div>
     <div class="ms-teams">${teams}</div>
@@ -108,8 +117,8 @@ function playerSheet(p) {
   return `${head(`<button class="ms-back" data-go="list">◂ ${windowLabel()}</button>`)}
     <div class="ms-sheet-h" style="--team:${teamColour(p.team)}"><span class="ms-num big">${p.number}</span>
       <div><div class="ms-name big">${surnameUp(p.name)}</div><div class="ms-meta">${esc(teamName(p.team))} · ${esc(p.position)}</div></div>
-      <div class="seg ms-scope"><button data-go="scope:window" class="${view.scope === "window" ? "on" : ""}">${away}</button>
-        <button data-go="scope:match" class="${view.scope === "match" ? "on" : ""}">WHOLE MATCH</button></div></div>
+      ${data.whole ? "<span></span>" : `<div class="seg ms-scope"><button data-go="scope:window" class="${view.scope === "window" ? "on" : ""}">${away}</button>
+        <button data-go="scope:match" class="${view.scope === "match" ? "on" : ""}">WHOLE MATCH</button></div>`}</div>
     <div class="ms-why">${esc(data.lines[p.id] || "")}</div>
     <div class="ms-body"><div class="ms-pitch"><canvas id="ms-canvas"></canvas>
         <div class="ms-legend"><span><i class="lg-pass"></i>pass</span><span><i class="lg-key"></i>key pass</span>

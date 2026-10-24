@@ -338,6 +338,27 @@ async def player_actions(session_id: str, player: str, from_t: float = 0.0,
     return {"player": player, "team": replay.brain.engine.state.roster[player]["team"], "actions": actions}
 
 
+@app.get("/api/session/{session_id}/insights")
+async def match_insights(session_id: str, top: int = 6) -> dict[str, Any]:
+    """What the engine already knows, for the fan's "Match insights" panel: every shot so far (xG,
+    outcome, where) and the players ranked by the same influence score as "What you missed"."""
+    from comeback.fans.missed import influence
+
+    replay = _session(session_id)
+    st = replay.brain.engine.state
+    shots = [{k: e[k] for k in ("minute", "team", "player", "x", "y", "xg", "outcome", "shot_speed_kmh")}
+             for e in replay.events[: replay.index] if e["type"] == "shot"]
+    ranked = []
+    for pid, stats in st.players.items():
+        score, reasons = influence(stats)
+        if score > 0:
+            info = st.roster[pid]
+            ranked.append({"id": pid, "name": info["name"], "number": info["number"], "position": info["position"],
+                           "team": info["team"], "influence": score, "reasons": reasons, "match": stats.to_dict()})
+    ranked.sort(key=lambda p: (-p["influence"], p["id"]))
+    return {"t": st.t, "minute": st.minute, "shots": shots, "players": ranked[:top]}
+
+
 @app.post("/api/session/{session_id}/away")
 async def away(session_id: str) -> dict[str, Any]:
     return _session(session_id).go_away()
