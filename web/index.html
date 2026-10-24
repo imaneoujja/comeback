@@ -30,9 +30,7 @@
     </div>
     <div class="bar-right">
       <button class="fan-chip fan-only" id="fan-chip" title="Change match or settings"></button>
-      <button class="key on studio-only" id="auto-direct" title="One monitor on air at a time">AUTO DIRECT</button>
-      <button class="key studio-only" id="outage-btn" title="Failure drill: cut the LLM for this session">⚡ CUT THE LLM</button>
-      <button class="key studio-only" id="console-btn">◂ LIVE NOW</button>
+      <button class="key studio-only" id="outage-btn" title="Failure drill: every LLM call fails for this session">SIMULATE LLM OUTAGE</button>
     </div>
   </header>
 
@@ -167,44 +165,32 @@
       </section>
     </aside>
 
-    <section class="mon agents-mon studio-only" data-mon="agents" aria-label="Agents">
-      <div class="mon-label"><span class="tally amber" id="agents-tally"><i></i>AGENTS</span><span class="src">AGENT FRAMEWORK · FOUNDRY</span></div>
-      <div class="screen" id="agents-screen"><div id="agents"></div><div class="factcheck" id="factcheck" hidden></div></div>
+    <section class="mon feed-mon studio-only" data-mon="feed" aria-label="Live agent feed">
+      <div class="mon-label"><span class="tally amber" id="feed-tally"><i></i>LIVE AGENT FEED</span>
+        <span class="src">ENGINE → ANALYST → VERIFIER → WATCHER</span></div>
+      <div class="screen feed" id="feed"></div>
     </section>
 
-    <section class="mon row2 studio-only" data-mon="decisions" aria-label="Watcher decisions">
-      <div class="mon-label"><span class="tally amber" id="decisions-tally"><i></i>DECISIONS</span><span class="src">WATCHER · WHY THESE FANS, WHY NOW</span></div>
-      <div class="screen decisions" id="decisions"><div class="empty">No call-back yet. When a side builds real pressure, the Watcher's reasoning appears here.</div></div>
+    <section class="numbers studio-only" id="numbers" aria-label="Audience"></section>
+
+    <section class="raw-bar studio-only">
+      <button id="raw-toggle" aria-expanded="false">RAW FEED ▸</button>
+      <span>overlay cues as timed JSON · engine data · timeline · for technical review</span>
     </section>
 
-    <section class="mon row2 studio-only" data-mon="pers" aria-label="Personalization">
-      <div class="mon-label"><span class="tally amber" id="pers-tally"><i></i>PERSONALIZE</span><span class="src">ONE CALL-BACK · THREE AUDIENCE SEGMENTS</span></div>
-      <div class="screen pers" id="pers"><div class="empty">The latest call-back, as three different fans receive it.</div></div>
-    </section>
-
-    <section class="mon row2 studio-only" data-mon="aud" aria-label="Audience">
-      <div class="mon-label"><span class="tally amber"><i></i>AUD</span><span class="src">10,000 SIMULATED FANS</span></div>
-      <div class="screen" id="audience"></div>
-    </section>
-
-    <section class="mon row3 cues-mon studio-only" data-mon="cues" aria-label="Overlay cue feed">
+    <section class="mon row3 cues-mon studio-only raw" data-mon="cues" aria-label="Overlay cue feed">
       <div class="mon-label"><span class="tally amber" id="cues-tally"><i></i>CUES</span><span class="src">TIMED JSON FOR A BROADCAST RENDERER</span>
         <a class="src right mono-link" data-overlays href="/api/overlays/demo-comeback" target="_blank" rel="noopener">GET /api/overlays</a>
         <a class="src mono-link" href="/docs" target="_blank" rel="noopener">/docs</a></div>
       <div class="screen cues" id="cues"><div class="empty">Cues appear as the match is rendered…</div></div>
     </section>
 
-    <section class="mon row3 data-mon studio-only" data-mon="data" aria-label="Match data">
+    <section class="mon row3 data-mon studio-only raw" data-mon="data" aria-label="Match data">
       <div class="mon-label"><span class="tally amber"><i></i>DATA</span><span class="src">MATCH ENGINE</span></div>
       <div class="screen data" id="data"></div>
     </section>
 
-    <section class="mon row3 rundown-mon studio-only" data-mon="rundown" aria-label="Rundown">
-      <div class="mon-label"><span class="tally amber"><i></i>RUNDOWN</span><span class="src">VERIFIED MOMENT CARDS</span></div>
-      <div class="screen rundown" id="cards"></div>
-    </section>
-
-    <section class="mon tl-mon" data-mon="tl" aria-label="Timeline">
+    <section class="mon tl-mon raw" data-mon="tl" aria-label="Timeline">
       <div class="mon-label"><span class="tally amber"><i></i>TL</span><span class="src" id="tl-src">MATCH TIMELINE</span>
         <span class="legend">
           <span><i class="lg-home"></i><b class="lg-home-name"></b></span><span><i class="lg-away"></i><b class="lg-away-name"></b></span>

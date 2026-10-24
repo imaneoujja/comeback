@@ -99,9 +99,9 @@ with broadcast graphics: player tags, pass difficulty, shot speed, speed and dis
 danger) and a panel to pair your phone. You do not choose when you step away: it happens,
 and COMEBACK notices. The **Studio console** lists the same live matches with their
 audience (viewers, fans away, call-backs sent) and opens a broadcaster's **control room** on
-one of them: the agents at work, the Watcher's decisions for the whole audience, the same
-call-back as three audience segments get it, a simulated audience of 10,000 fans, and
-**timed, machine-readable overlay cues** a broadcast graphics renderer could consume.
+one of them: the program, a live feed of the agents' work (one card per moment, one per
+call-back for the whole audience), the audience in five numbers, and **timed,
+machine-readable overlay cues** a broadcast graphics renderer could consume.
 
 ![The Fan app front door: pick a live match (Emberfield 0–2 Saltmarsh Comets, live 60'; Ashvale Wanderers 0–0 Larkhaven Athletic, live 23', quiet so far), your side and an optional player to follow, how you like it, then WATCH LIVE](docs/home.png)
 
@@ -163,11 +163,12 @@ and Verifier.
    minute, restart from kick-off, and **Autoplay**, which plays the whole scenario on the
    scripted match: you leave at 63', the call-backs at 65' and 69', back at 70' (replay,
    voice-over, What you missed), the 71' goal live, then full time and your receipt.
-3. **Studio console** (top bar): open a control room on a live match: the program feed, the
-   agents at work (drafts, Verifier rejections, revisions), the Watcher's decision for the
-   whole audience (**DECISIONS**), the same call-back as three audience segments get it
-   (**PERSONALIZE**), 10,000 simulated fans and the cost curve, the timed overlay cues
-   (**CUES**), and **⚡ CUT THE LLM** to watch the show go on without it.
+3. **Studio console** (top bar): open the producer's console on a live match: the program
+   on the left, the **LIVE AGENT FEED** on the right (one card per moment: detected → Analyst
+   → Verifier ✓ or ✗ with the draft struck through → on air; one card per call-back: why now,
+   how many fans, **PREVIEW** of the same call for three fans), the audience in five numbers
+   below, and **SIMULATE LLM OUTAGE** to watch the show go on without the model. **RAW FEED**
+   unfolds the timed overlay cues (JSON), the engine data and the timeline.
 
 ## How it works
 
@@ -209,7 +210,7 @@ flowchart LR
 - **Orchestration.** Analyst → Verifier → retry → fallback is a **Microsoft Agent
   Framework workflow** (`comeback/agents/workflow.py`) with typed executors and
   conditional edges. The *same* workflow serves the Storyteller. Every step is
-  traced live on the AGENTS monitor.
+  traced live in the studio's LIVE AGENT FEED, one card per moment.
 - **Shared state and handoffs.** The engine and the Moment Store are written once
   and read by every Watcher and by the Storyteller. A moment gets a template card
   instantly, so nobody waits for the LLM; it is upgraded when the verified card lands.
@@ -217,33 +218,32 @@ flowchart LR
   exhausted, invalid JSON, or three rejected drafts: each ends with a
   deterministic, fact-based template flagged `source: "template"`. Tests force
   every path.
-- **Failure drill, live.** In the STUDIO view, **⚡ CUT THE LLM** simulates an outage
+- **Failure drill, live.** In the studio, **SIMULATE LLM OUTAGE** cuts the model
   for your session only (`POST /api/session/{id}/outage`): every agent call fails
   as a real outage would, cards and catch-ups keep arriving as verified templates
   (amber badge), the stream never stops, and **RESTORE** brings the writers back.
-- **Fact-checks on screen.** When the Verifier rejects a draft, the studio's AGENTS
-  monitor shows it: the wrong words struck through, the Verifier's reason, then the
+- **Fact-checks on screen.** When the Verifier rejects a draft, the moment's card in the
+  LIVE AGENT FEED shows it: the wrong words struck through, the Verifier's reason, then the
   version that went on air. In the demo, at 81' the Analyst gave the ten men "their
   numerical advantage"; the Verifier caught it and only the corrected card aired.
 
-![Fact-check in the AGENTS monitor: the Analyst's draft with "numerical advantage" struck through, the Verifier's reason, and the corrected card that went on air](docs/factcheck.png)
+![The 81' card in the LIVE AGENT FEED: the Analyst's draft with "numerical advantage" struck through, the Verifier's reason, then the corrected card that went on air](docs/factcheck.png)
 
-The studio view shows the whole crew at work: the agents' live log, the Watcher's
-decisions, the personalization of one call-back for three audience segments, the
-10,000-fan audience, the overlay cues, engine data and the rundown of verified cards.
+The studio is a producer's console: the match on the left, the story of the agents on the
+right, the audience below.
 
-![Studio view: program feed, agents log, Watcher decision chain, one call-back for three segments, simulated audience, overlay cues, match data and rundown](docs/studio.png)
+![Studio console at 72': the program, the 71' goal card (detected, written, verified, on air, and the Watcher's call 2' before), the 69' call-back that called it, and the audience in five numbers](docs/studio.png)
 
-Every call-back comes with its decision chain, time-stamped (studio **DECISIONS**
-monitor): the events observed with their ids, the danger state and its trend, the insight
-(sustained pressure, not a prediction), and the decision with every condition checked and
-who was called: the away fans of both sides, counted per side.
+Every call-back has its own card: why now (danger and its trend, box entries and shots in
+the last two minutes, where), the rule checked (sustained pressure, not a prediction), who
+was called (the away fans of both sides, counted per side), whether it came true, and a
+**PREVIEW** of the same call as three different fans receive it.
 
-![Decision chain of the 69' call-back: events with their ids, danger state and trend, the insight without a goal promise, the conditions checked and how many away fans of each side were called](docs/decision.png)
+![The 69' call-back card with its preview: why now, the rule, 1,273 away fans called back, "called it: goal 71'", and the same call in French for home fans, in English for away fans and in Spanish for a fan following a player](docs/decision.png)
 
 ## One match brain for every fan
 
-The AUDIENCE monitor simulates 10,000 fans with random absences and late joins,
+The studio simulates an audience of 10,000 fans with random absences and late joins,
 all served by the same engine and agents. Alert decisions are computed **once per
 team**; a catch-up needs a new LLM story only when its (moments, language, level,
 club, length) combination has never been written.
@@ -316,8 +316,8 @@ design check of the story (a test), not a performance claim.
 
 ### The danger index, in the open
 
-Every call-back cites the events that triggered it (the STUDIO **DECISIONS** monitor
-shows the chain: events → state → insight → why this fan, why now).
+Every call-back cites the facts that triggered it (its card in the studio's LIVE AGENT FEED
+shows why now, the rule and who was called).
 
 | Ingredient (for the attacking team) | Weight |
 |---|---|
@@ -464,8 +464,8 @@ control row shows the judge is not lenient on gross errors. Details per text:
 | (i-a) **Ingest** events as they happen | `comeback/synth` generates the events; `api/replay.py` streams them; `engine/match.py` processes them one at a time, with no look-ahead |
 | (i-b) **Interpret** into stats, patterns, context | `engine/state.py`: possession (overall and rolling), pass accuracy and difficulty, xG, speeds, distance with the ball, control vs chaos; `engine/danger.py`, `engine/moments.py` |
 | (i-c) **Explain** why a moment matters | Analyst's "why it matters"; storylines (redemption, the substitute's impact, comeback, numerical advantage); delta-based catch-ups |
-| (i-d) **Render** on screen, machine-readable | 3D program feed with broadcast graphics; `GET /api/overlays/{match}`: timed JSON cues per layer and audience, streamed live in the STUDIO **CUES** monitor; OpenAPI at `/docs` |
-| (i-e) **Personalize** | What the fan saw or missed (away, back, late join, spoiler-free return, **What you missed** for their own absence window, their full-time receipt); the fan's own alert rules (goal threats, equaliser or winner, any big moment, only if this match gets good, night mode); club point of view; player mode (the followed player tagged all match); casual vs analyst live (words vs numbers on the danger and control graphics, different overlays and stories); language; one focus metric on screen. The studio's PERSONALIZE monitor shows each call-back as three audience segments get it |
+| (i-d) **Render** on screen, machine-readable | 3D program feed with broadcast graphics; `GET /api/overlays/{match}`: timed JSON cues per layer and audience, streamed live in the studio's **RAW FEED**; OpenAPI at `/docs` |
+| (i-e) **Personalize** | What the fan saw or missed (away, back, late join, spoiler-free return, **What you missed** for their own absence window, their full-time receipt); the fan's own alert rules (goal threats, equaliser or winner, any big moment, only if this match gets good, night mode); club point of view; player mode (the followed player tagged all match); casual vs analyst live (words vs numbers on the danger and control graphics, different overlays and stories); language; one focus metric on screen. In the studio, each call-back card previews the same call for three audience segments |
 | (ii) Player identification | Lower-third name tags; the followed player is labelled in 3D all match; player sheets in What you missed |
 | (ii) Speed and distance on thresholds | Speed tag at ≥ 32 km/h sprints; distance tag every 100 m a player covers with the ball |
 | (ii) Pass quality | Distance, accuracy and a 0–100 difficulty rating, with ball speed; key passes (the receiver shoots within 15 s) |
@@ -515,7 +515,7 @@ corners, high regains and successful pressure, squashed with tanh.
 
 Every endpoint is documented live by FastAPI at **`/docs`** (OpenAPI), on the
 [public demo](https://comeback.lemonforest-f9ddbdf8.switzerlandnorth.azurecontainerapps.io/docs) or locally at
-http://localhost:8000/docs. The STUDIO view's **CUES** monitor shows the same cues streaming as the match is
+http://localhost:8000/docs. The studio's **RAW FEED** shows the same cues streaming as the match is
 rendered. `GET /api/overlays/demo-comeback?profile=omar` returns timed, renderer-agnostic cues:
 
 ```json
@@ -649,8 +649,8 @@ the two playable matches are cached, so the demo needs no key.
 roles and their own decisions; we keep LLMs where language is needed and deterministic
 code where truth is needed. The comparison table shows what one LLM agent alone delivers.
 
-**What if the LLM fails?** Every text has a verified template fallback. Press **⚡ CUT THE
-LLM** in STUDIO: the show goes on.
+**What if the LLM fails?** Every text has a verified template fallback. Press **SIMULATE LLM
+OUTAGE** in the studio: the show goes on.
 
 **Won't fans get spammed or spoiled?** At most two calls per absence (1.9 per match on
 average in our simulation), the fan's own rules, night mode, and spoiler-free by default.

@@ -178,3 +178,22 @@ def test_live_now_and_any_followed_player() -> None:
     assert fan_profile("neutral", "es", "casual", None, "EMB", "SMC", "SMC-9") == \
         fan_profile("player", "es", "casual", None, "EMB", "SMC")       # same texts as the precomputed set-up
     assert fan_profile("home", "en", "casual", None, "EMB", "SMC", "XXX-1").favourite_player_id is None
+
+
+def test_milestone_cards_say_which_mark_was_reached() -> None:
+    from comeback.agents.templates import moment_card_text
+
+    names = {"EMB": "Emberfield", "SMC": "Saltmarsh Comets"}
+    base = {"type": "milestone", "minute": 69, "team": "EMB"}
+    speed = moment_card_text({**base, "facts": {"milestone": "top_speed_so_far", "player_name": "Ciro Oakenfold",
+                                                 "speed_kmh": 34.2, "previous_top_kmh": 33.1}}, names)
+    assert "top speed of the match: 34.2 km/h" in speed["headline"] and "33.1" in speed["why_it_matters"]
+    fifty = {"milestone": "50_completed_passes", "player_name": "Kiro Sableford"}
+    passes = moment_card_text({**base, "facts": fifty}, names)
+    assert "50 completed passes" in passes["headline"]
+    meta, events = load_match(DEMO)
+    engine = MatchEngine(meta)
+    for e in events:
+        for m in engine.process(e).moments:
+            if m.type == "milestone":
+                assert "milestone for" not in moment_card_text(m.to_dict(), engine.state.team_names)["headline"].lower()

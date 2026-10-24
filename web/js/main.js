@@ -9,21 +9,17 @@ import {
   renderGazette, milestoneTag, flashStat, statShowing,
 } from "./graphics.js";
 import {
-  renderData, renderRundown, drawTimeline, renderPresence, renderNotes, renderCatchup, hideCatchup, initToast, notify,
+  renderData, drawTimeline, renderPresence, renderNotes, renderCatchup, hideCatchup, initToast, notify,
   renderPrefs,
 } from "./panels.js";
 import { drawTactical } from "./tactical.js";
-import { initAgents } from "./agents.js";
-import { initAudience, loadScale } from "./audience.js";
 import { initPairing } from "./pairing.js";
-import { initFocus } from "./focus.js";
 import { unlockSpeech } from "./voice.js";
 import { isReplaying, buffer, playReplay, playVoice, interruptForLive, unlockAudio, cancelReplay, stopVoice } from "./replay.js";
 import { initSetup, openSetup, liveMatch } from "./setup.js";
 import { initAutoplay, startAutoplay, stopAutoplay, autoplayActive } from "./autoplay.js";
-import { initFactCheck } from "./factcheck.js";
-import { initDecisions } from "./decision.js";
 import { initCues } from "./cues.js";
+import { initStudio } from "./studio.js";
 import { initMissed, showMissed, hideMissed } from "./missed.js";
 
 let program = null;          // 3D renderer, or null → 2D fallback on the PGM canvas
@@ -41,13 +37,9 @@ const matches = new Map();
 
 async function boot() {
   buildControls();
-  initAgents();
-  initAudience();
   initPairing();
-  initFocus();
-  initFactCheck();
-  initDecisions();
   initCues();
+  initStudio();
   initToast();
   initMissed();
   initAutoplay({ setSpeed });
@@ -76,7 +68,6 @@ async function useMatch(id) {
   $(".lg-home-name").textContent = app.teams[app.home].name.toUpperCase();
   $(".lg-away-name").textContent = app.teams[app.away].name.toUpperCase();
   for (const a of document.querySelectorAll("[data-overlays]")) a.href = `/api/overlays/${id}`;
-  loadScale();
 }
 
 /** The 3D stadium is dressed in the fixture's colours: a new fixture gets a new one. */
@@ -144,7 +135,6 @@ function buildControls() {
   $("#autoplay-btn").addEventListener("click", () => { closeDemo(); restart("autoplay"); });
   $("#jump-go").addEventListener("click", () => { const m = Number($("#jump-min").value); if (m > 0) post(`seek?minute=${m}`); });
   $("#fan-chip").addEventListener("click", () => openSetup("fan"));
-  $("#console-btn").addEventListener("click", () => openSetup("studio"));
   $("#product-nav").addEventListener("click", (e) => { if (e.target.dataset.nav) openSetup(e.target.dataset.nav); });
   $("#demo-btn").addEventListener("click", () => ($("#demo").hidden ? openDemo() : closeDemo()));
   $("#demo-x").addEventListener("click", closeDemo);
@@ -280,7 +270,7 @@ function connect() {
   on("cue", (c) => { if (!isReplaying()) showCue(c); });   // live graphics wait during a replay
   on("card", (c) => {
     const isNew = !app.cards.has(c.moment_id);
-    app.cards.set(c.moment_id, c); renderRundown(); refreshBanner(c);
+    app.cards.set(c.moment_id, c); refreshBanner(c);
     if (isNew && c.type === "milestone" && !isReplaying()) milestoneTag(c);
     if (isNew && c.type === "momentum_swing" && !isReplaying()) flashStat("control", 7);
   });
@@ -325,7 +315,7 @@ function onState(s) {
     cards: new Map(s.cards.map((c) => [c.moment_id, c])), notes: [...s.notifications].reverse(),
     possession: s.snapshot.possession, crowd: s.crowd, settings: s.settings,
   });
-  renderControls(); renderScore(); renderFanChip(); renderPresence(); renderNotes(); renderRundown(); renderData(); renderPrefs();
+  renderControls(); renderScore(); renderFanChip(); renderPresence(); renderNotes(); renderData(); renderPrefs();
   renderMetric(profile());
   renderOutage(Boolean(s.outage));
   const fav = profile()?.favourite_player_id;               // sprints before a join or a seek were not streamed
@@ -378,7 +368,7 @@ function renderOutage(down) {
   app.outage = down;
   $("#outage-badge").hidden = !down;
   $("#outage-btn").classList.toggle("on", down);
-  $("#outage-btn").textContent = down ? "⚡ RESTORE THE LLM" : "⚡ CUT THE LLM";
+  $("#outage-btn").textContent = down ? "RESTORE THE LLM" : "SIMULATE LLM OUTAGE";
 }
 
 /* ------------------------------------------------------------------ render loop */

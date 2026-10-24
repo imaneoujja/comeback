@@ -61,7 +61,9 @@ class MatchBrain:
         data = moment.to_dict()
         situation = self._situations.get(moment.moment_id) or self._situation()
         task = AnalystTask(data, self.team_names, self.roster, self._recent_headlines(moment.t), situation)
-        card = {**await write_moment_card(task, self.gateway, trace), "pending": False}
+        # each step carries its moment: two moments can share a label ("81' big chance")
+        tagged = (lambda step: trace({**step, "moment_id": moment.moment_id})) if trace else None
+        card = {**await write_moment_card(task, self.gateway, tagged), "pending": False}
         self.cards[moment.moment_id] = card
         return card
 

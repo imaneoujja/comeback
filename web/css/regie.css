@@ -697,3 +697,76 @@ body.configuring .setup { display: block; }
 .lt-body { padding-bottom: 6px; white-space: nowrap; }
 .pr-copy { border: 0; background: none; padding: 0; color: var(--amber); font-family: var(--mono); font-size: 11px;
   text-decoration: underline; text-underline-offset: 3px; text-align: left; }
+
+/* ------------------------------------------------------------- STUDIO: the producer's console */
+[data-mode="studio"] .gallery { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  grid-template-areas: "pgm feed" "nums nums" "rawbar rawbar" "cues data" "tl tl"; }
+[data-mode="studio"] .pgm { grid-column: auto; grid-area: pgm; }
+[data-mode="studio"] .pgm .screen { height: max(380px, min(calc(100vh - 270px), 34vw)); }
+.feed-mon { grid-area: feed; }
+.feed-mon .screen { flex: none; height: max(380px, min(calc(100vh - 270px), 34vw)); }
+.numbers { grid-area: nums; }
+.raw-bar { grid-area: rawbar; }
+[data-mode="studio"] .cues-mon { grid-area: cues; grid-column: auto; }
+[data-mode="studio"] .data-mon { grid-area: data; grid-column: auto; }
+[data-mode="studio"] .tl-mon { grid-area: tl; }
+[data-mode="studio"]:not(.raw-open) .raw { display: none; }
+[data-mode="studio"] .pgm .mon-label { display: none; }
+
+.feed { background: #0a0a0a; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 10px; }
+.feed-wait { margin: auto; max-width: 440px; text-align: center; display: flex; flex-direction: column; gap: 8px; color: var(--label); }
+.feed-wait b { font-family: var(--cond); font-size: 22px; color: var(--text); }
+.feed-wait span { font-size: 15px; line-height: 1.45; }
+.fd-card { background: #121212; border: 1px solid #262626; border-left: 5px solid var(--team, #555); padding: 10px 12px;
+  display: flex; flex-direction: column; gap: 8px; }
+.fd-card.new { animation: drop .35s ease both; }
+.fd-card header { display: flex; align-items: baseline; gap: 10px; }
+.fd-card header b { font-family: var(--cond); font-size: 22px; color: var(--amber); }
+.fd-card header span { font-family: var(--cond); font-size: 17px; font-weight: 700; letter-spacing: .04em; }
+.fd-card .b { margin-left: auto; font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em; padding: 2px 6px; border: 1px solid #3a3a3a; color: var(--label); }
+.fd-card .b + .b { margin-left: 6px; }
+.fd-card .b.tpl { color: var(--amber); border-color: rgba(255, 176, 0, .5); }
+.fd-card ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.fd-card li { display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 10px; align-items: baseline; font-size: 15px; line-height: 1.38; color: #e4e2dc; }
+.fd-card li > i { font-style: normal; font-family: var(--mono); font-size: 10px; letter-spacing: .12em; color: var(--label); }
+.fd-card li.analyst > i { color: #8fd3ff; } .fd-card li.watcher > i { color: var(--red); }
+.fd-card li.verifier.ok b { color: var(--green); } .fd-card li.verifier.bad b { color: var(--red); }
+.fd-card li.verifier.tpl > div { color: var(--amber); }
+.fd-card .evs { display: block; font-family: var(--mono); font-size: 11.5px; color: var(--label); margin-top: 2px; }
+.fd-card q { display: block; quotes: "“" "”"; margin: 4px 0; padding: 6px 9px; background: #f3efe4; color: #16130e;
+  font-family: "Newsreader", Georgia, serif; font-size: 15px; line-height: 1.35; }
+.fd-card q del { text-decoration: line-through 2px #d0281e; color: #a01510; background: rgba(255, 59, 48, .14); }
+.fd-card .why { color: #ffb4ae; }
+.fd-card li.big b { font-family: var(--cond); font-size: 20px; color: #fff; }
+.fd-card footer { display: flex; flex-direction: column; gap: 3px; padding: 8px 10px; background: #0b0b0b; border: 1px solid #222; }
+.fd-card footer .air { align-self: flex-start; background: var(--red); color: #fff; font-family: var(--mono); font-size: 9.5px; font-weight: 700; letter-spacing: .14em; padding: 2px 6px; }
+.fd-card footer b { font-family: var(--cond); font-size: 19px; line-height: 1.2; }
+.fd-card footer small { font-size: 14px; color: var(--label); line-height: 1.35; }
+.fd-card .called { font-family: var(--cond); font-size: 15px; font-weight: 700; color: var(--green); }
+.fd-card .preview { align-self: flex-start; font-size: 10.5px; }
+.segs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.seg-c { background: #0b0b0b; border-top: 3px solid var(--team, #555); padding: 7px 8px; }
+.seg-c b { display: block; font-size: 14px; } .seg-c small { font-family: var(--mono); font-size: 9.5px; color: var(--label); text-transform: uppercase; }
+.seg-c p { margin: 4px 0 0; font-size: 13.5px; line-height: 1.32; }
+
+.numbers { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)) auto; gap: 8px; align-items: stretch; }
+.num { background: var(--bezel); border: 1px solid var(--rule); padding: 10px 14px; display: flex; flex-direction: column; gap: 2px; }
+.num span { font-family: var(--mono); font-size: 10.5px; letter-spacing: .14em; color: var(--label); }
+.num b { font-family: var(--cond); font-size: 38px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.num small { font-size: 13px; color: var(--dim); }
+.num-note { align-self: center; font-family: var(--mono); font-size: 10.5px; color: var(--dim); max-width: 170px; line-height: 1.45; }
+.raw-bar { display: flex; align-items: center; gap: 14px; font-family: var(--mono); font-size: 11px; color: var(--dim); }
+.raw-bar button { border: 1px solid #333; background: #121212; color: var(--label); font-family: var(--mono); font-size: 11px; letter-spacing: .12em; padding: 5px 10px; }
+
+/* program graphics never overlap: a strip is at most a third of the screen, the score stays alone at the top left */
+.ov-lower_third { max-width: 33%; }
+.ov-banner { width: min(520px, 33%); }
+.ov-top_right { max-height: 40%; overflow: hidden; }
+.bn-t { font-size: clamp(18px, 1.5vw, 27px); }
+.bn.goal .bn-t { font-size: clamp(20px, 1.8vw, 34px); }
+.lt-body { min-width: 0; }
+@media (max-width: 1100px) {
+  [data-mode="studio"] .gallery { grid-template-columns: minmax(0, 1fr); grid-template-areas: "pgm" "feed" "nums" "rawbar" "cues" "data" "tl"; }
+  .feed-mon .screen { height: 520px; flex: none; }
+  .numbers { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

@@ -2,7 +2,7 @@
  * the "Previously on…" catch-up on the TV, and the studio's DATA, RUNDOWN and TIMELINE. */
 
 import { $, app, esc, teamColour, sizeCanvas, emit, on, isStudio } from "./state.js";
-import { TYPE_LABEL, tag } from "./graphics.js";
+import { tag } from "./graphics.js";
 import { stopSpeech } from "./voice.js";
 import { playVoice, stopVoice } from "./replay.js";
 
@@ -39,18 +39,6 @@ export function renderData() {
   $("#data").innerHTML = `<table><tr><th></th><th style="color:${teamColour(s.home)}">${s.home}</th><th style="color:${teamColour(s.away)}">${s.away}</th></tr>
     ${rows.map(([k, x, y]) => `<tr><td>${k}</td><td class="v">${x}</td><td class="v">${y}</td></tr>`).join("")}
     <tr><td>CHAOS · DUELS+TURNOVERS/MIN</td><td class="v" colspan="2">${s.chaos_per_min.toFixed(1)}</td></tr></table>`;
-}
-
-/* ------------------------------------------------------------------ RUNDOWN */
-
-export function renderRundown() {
-  if (!isStudio()) return;
-  const list = [...app.cards.values()].filter((c) => (c.importance >= 50 && c.type !== "danger_peak") || c.type === "milestone")
-    .sort((x, y) => y.t - x.t);
-  $("#cards").innerHTML = list.length ? list.map((c) => `
-    <div class="rd" style="--team:${teamColour(c.team)}"><span class="tcx">${c.minute}'</span><span class="ty">${TYPE_LABEL[c.type] || c.type}</span>
-    <span class="hl" title="${esc(c.why_it_matters)}">${esc(c.headline)}</span>${tag(c)}</div>`).join("")
-    : `<div class="empty">AWAITING FIRST KEY MOMENT…</div>`;
 }
 
 /* ------------------------------------------------------------------ TIMELINE */

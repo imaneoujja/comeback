@@ -300,7 +300,8 @@ class ReplaySession:
             if moment.importance >= 50 and moment.type != "danger_peak":
                 label = f"{moment.minute}' {moment.type.replace('_', ' ')}"
                 detail = f"{moment.team or 'match'} · importance {moment.importance} · {len(moment.facts)} facts"
-                self.trace({"agent": "Engine", "step": "moment", "label": label, "detail": detail})
+                self.trace({"agent": "Engine", "step": "moment", "label": label, "detail": detail,
+                            "moment_id": moment.moment_id})
         if event["type"] == "match_end":
             asyncio.create_task(self._gazette())
         timeline = self.brain.engine.timeline
