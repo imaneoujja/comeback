@@ -6,7 +6,7 @@
 
 import { $, app, esc, on, teamName, teamColour, LANG_NAME } from "./state.js";
 
-const MAX_CARDS = 14;
+const MAX_CARDS = 40;   // the whole match stays in the feed: scroll down to an earlier fact-check
 const cards = new Map();          // key → { key, kind, t, minute, team, steps, call, el }
 window.__feed = cards;            // read-only handle for automated UI checks
 const queue = [];
@@ -122,12 +122,21 @@ function render() {
   }).join("");
 }
 
-function badges(card) {
-  const cached = card.steps.some((s) => s.cached);
-  const tpl = card.steps.some((s) => s.step === "template");
-  return `${cached ? `<span class="b pre" title="Model reply written once and replayed (offline demo)">precomputed</span>` : ""}${
-    tpl ? `<span class="b tpl">template</span>` : ""}`;
+/** Where the text on air comes from: LIVE LLM (a Foundry call now), RECORDED (a verified model reply recorded
+ * once and replayed: the offline demo) or TEMPLATE (built from verified facts, no model). */
+const SOURCE = {
+  live: ["LIVE LLM", "Written by the model just now (Microsoft Foundry), then verified"],
+  recorded: ["RECORDED", "A verified model reply, recorded once and replayed (offline demo)"],
+  template: ["TEMPLATE", "Built from verified facts, no model call"],
+};
+export const sourceBadge = (kind) => (kind ? `<span class="b src-${kind}" title="${SOURCE[kind][1]}">${SOURCE[kind][0]}</span>` : "");
+function sourceOf(steps) {
+  if (steps.some((s) => s.step === "template")) return "template";
+  const drafts = steps.filter((s) => s.step === "draft");
+  if (!drafts.length) return null;
+  return drafts.at(-1).cached === false ? "live" : "recorded";
 }
+const badges = (card) => sourceBadge(sourceOf(card.steps.filter((s) => s.agent !== "Researcher" && s.writer !== "Researcher")));
 
 function momentHtml(card) {
   const c = momentCard(card);
@@ -148,10 +157,15 @@ function momentHtml(card) {
     else if (s.step === "unavailable") rows.push(`<li class="verifier tpl"><i>FOUNDRY</i><div>Model unavailable: ${esc(s.detail)}</div></li>`);
   }
   const tp = app.talking?.[card.id];
-  for (const s of researcher.filter((x) => x.step === "rejected")) {
-    rows.push(`<li class="verifier bad"><i>VERIFIER</i><div><b>✗ Talking point rejected</b> <span class="why">${esc(reason(s.detail))}</span></div></li>`);
+  const rejected = researcher.filter((x) => x.step === "rejected");
+  for (const s of rejected) {
+    rows.push(`<li class="verifier bad"><i>VERIFIER</i><div><b>✗ Talking point rejected</b> ${s.draft ? `<q>${strike(s.draft, s.detail)}</q>` : ""}
+      <span class="why">${esc(reason(s.detail))}</span></div></li>`);
   }
-  if (tp) rows.push(`<li class="researcher"><i>RESEARCHER</i><div>${tp.source === "llm" ? "✓" : "⚑"} “${esc(tp.points[0].text)}”
+  // after a rejection, every point of the version that passed (the corrected sentence included); otherwise the first
+  const shown = tp ? (rejected.length && tp.source === "llm" ? tp.points : tp.points.slice(0, 1)) : [];
+  if (tp) rows.push(`<li class="researcher"><i>RESEARCHER</i><div>${tp.source === "llm" ? "✓" : "⚑"} ${shown.map((p) => `“${esc(p.text)}”`).join(" ")}
+    ${sourceBadge(sourceOf(researcher) || (tp.source === "llm" ? "recorded" : "template"))}
     <small class="src">${esc(tp.points[0].source)} → Research Desk</small></div></li>`);
   const done = card.steps.some((s) => (s.step === "verified" || s.step === "template") && s.writer !== "Researcher");
   const prior = callBefore(c);
@@ -184,7 +198,7 @@ function callCard(card) {
   const preview = card.open && k.segments ? `<div class="segs">${k.segments.map((s) => `<div class="seg-c" style="--team:${teamColour(s.club_id || app.roster[s.favourite_player_id]?.team)}">
       <b>${segName(s)}</b><small>${LANG_NAME[s.language]} · ${s.level}</small><p>“${esc(s.text)}”</p></div>`).join("")}</div>` : "";
   return `<article class="fd-card call" style="--team:${teamColour(k.team)}">
-    <header><b>${k.minute}'</b><span>CALL-BACK · ${team.toUpperCase()} PUSHING</span></header>
+    <header><b>${k.minute}'</b><span>CALL-BACK · ${team.toUpperCase()} PUSHING</span>${sourceBadge("template")}</header>
     <ol>
       <li class="watcher"><i>WHY NOW</i><div>Danger <b>${k.danger}</b>/100, rising +${k.slope} in 30 s ·
         ${plural(r.box_entries, "box entry", "box entries")}, ${plural(r.shots, "shot")} in 2 min${r.main_channel ? ` · ${r.main_channel === "centre" ? "through the centre" : `down the ${r.main_channel}`}` : ""}</div></li>
@@ -232,6 +246,11 @@ function reason(detail) {
 }
 
 const CLAIMS = [/numerical (?:dis)?advantage|man advantage|extra man|full[- ]strength/gi, /ten[- ]m[ae]n|10 men/gi];
+const RESEARCH_CLAIMS = [   // [the Verifier's reason, the words it is about]
+  [/^Wrong side/, /\d+\s*[-–]\s*\d+\s+(?:lead|d['’]avance)|(?:lead(?:ing)?|ahead|avance de|ventaja(?: de)?|trail(?:ing)?|behind)\s+\d+\s*[-–]\s*\d+/gi],
+  [/fewer goals .* than the xG|more goals .* than the xG/, /superando[^.,]*|clinical[^.,]*|outperform\w*|below (?:his |the )?(?:expected|xg)/gi],
+  [/^That meeting was in/, /last season|this season|saison (?:dernière|passée)|cette saison|temporada pasada|esta temporada/gi],
+];
 function strike(draft, detail) {
   const spans = [];
   const quote = /^'(.+)': /s.exec(detail || "")?.[1];
@@ -240,6 +259,9 @@ function strike(draft, detail) {
     for (const n of numbers[1].split(/,\s*/)) {
       for (const m of draft.matchAll(new RegExp(`(?<![\\d.])${n.replace(/[.]/g, "\\.")}(?![\\d])`, "g"))) spans.push([m.index, m.index + m[0].length]);
     }
+  } else if (RESEARCH_CLAIMS.some(([why]) => why.test(detail || ""))) {    // a Researcher claim check: strike the claim
+    const re = RESEARCH_CLAIMS.find(([why]) => why.test(detail))[1];
+    for (const m of draft.matchAll(re)) spans.push([m.index, m.index + m[0].length]);
   } else if (quote && draft.includes(quote)) {
     const start = draft.indexOf(quote);
     const found = CLAIMS.map((re) => [...quote.matchAll(re)]).find((ms) => ms.length) || [];

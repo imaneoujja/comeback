@@ -62,7 +62,7 @@ function renderTalking() {
     return;
   }
   el.innerHTML = `<div class="tp-k"><span>NEXT TALKING POINT · ${tp.minute}' ${TYPE[tp.type] || ""}${tp.team ? ` · ${esc(teamName(tp.team))}` : ""}</span>
-      <span class="b ${tp.source === "llm" ? "pre" : "tpl"}">${tp.source === "llm" ? "researcher → verifier" : "template"}</span>
+      <span class="b ${tp.source === "llm" ? "src-recorded" : "src-template"}">${tp.source === "llm" ? "RECORDED · researcher → verifier" : "TEMPLATE"}</span>
       <span class="seg tp-lang">${langs}</span></div>
     ${tp.points.map((p) => `<div class="tp-point" style="--team:${teamColour(tp.team)}"><b>${esc(p.text)}</b>
       <small>Source: ${esc(p.source)}</small></div>`).join("")}`;

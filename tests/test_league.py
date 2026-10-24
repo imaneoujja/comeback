@@ -6,7 +6,13 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from comeback.agents.researcher import ResearchTask, ResearchWriter, check_claims, template_point
+from comeback.agents.researcher import (
+    ResearchTask,
+    ResearchWriter,
+    check_claims,
+    check_full_names,
+    template_point,
+)
 from comeback.api.server import app
 from comeback.engine.match import MatchEngine, load_match
 from comeback.league import LEAGUE_PATH, load_league
@@ -119,6 +125,8 @@ def test_the_verifier_catches_wrong_claims_from_real_drafts() -> None:
         ("Last season's meeting ended in a 1-1 draw on matchday 5.", h2h, (0, 2), False),
         ("This is the first meeting this season, after a 1-1 on matchday 5.", h2h, (0, 2), False),
         ("Emberfield maintain their top spot with this 3-2 win over Saltmarsh Comets.", form, (3, 2), False),
+        ("Emberfield est en tête avec deux victoires cette saison.", form, (2, 2), False),
+        ("Emberfield cambia a una formación agresiva.", {"kind": "absence", "name": "Quin Cindervale"}, (0, 2), False),
     ]
     for text, fact, score, finished in wrong:
         assert check_claims(text, fact, score, clubs, season, finished), text
@@ -132,21 +140,37 @@ def test_the_verifier_catches_wrong_claims_from_real_drafts() -> None:
         assert check_claims(text, fact, score, clubs, season, finished) == [], text
 
 
-def test_what_you_missed_gives_a_scorers_season_count() -> None:
-    from comeback.fans.missed import what_you_missed
 
-    meta, events = load_match(ROOT / "data" / "matches" / "demo-comeback.jsonl")
-    engine, left, seen = MatchEngine(meta), None, []
-    for e in events:
-        engine.process(e)
-        seen.append(e)
-        clock = e["minute"] + e["second"] / 60
-        if left is None and e["period"] == 2 and clock >= 75.5:
-            left, from_t = engine.snapshot(), e["t"]
-        if e["period"] == 2 and clock >= 86:
-            break
-    missed = what_you_missed(meta, seen, engine.state, from_t, e["t"], left, engine.snapshot(), "fr")
-    scorer = next(p for p in missed["players"] if p["window"]["goals"])
-    nth = load_league().player_season(scorer["id"])["goals"] + 1
-    assert scorer["season"] == f"{nth}e but de la saison"
-    assert all("season" not in p for p in missed["players"] if not p["window"]["goals"])
+def test_injured_players_share_no_surname_with_a_live_player() -> None:
+    lg = load_league()
+    on_sheets = {p["name"].split()[-1] for match_id in lg.data["live"] for side in ("home", "away")
+                 for p in _sheet(match_id)[side]["players"]}
+    injured = [lg.players[i["player"]]["name"].split()[-1] for i in lg.data["injuries"]]
+    assert len(set(injured)) == len(injured) and not set(injured) & on_sheets
+
+
+def test_the_two_seasons_have_their_own_seeds_and_calendars() -> None:
+    lg = load_league()
+    this, last = lg.results, lg.data["last_season_results"]
+    assert not {r["seed"] for r in this} & {r["seed"] for r in last}
+    rounds = lambda results, md: {(r["home"], r["away"]) for r in results if r["matchday"] == md}  # noqa: E731
+    assert all(rounds(this, md) != rounds(last, md) for md in range(1, 10))
+    meetings = lg.head_to_head("EMB", "SMC")
+    assert len({(m["season"], m["matchday"]) for m in meetings}) == len(meetings)
+
+
+def test_no_season_xg_point_for_a_player_with_nothing_to_show() -> None:
+    lg = load_league()
+    quiet = next(pid for pid in lg.players if lg.player_season(pid)["apps"] and not lg.player_season(pid)["goals"]
+                 and lg.player_season(pid)["xg"] < 1 and lg.players[pid]["club"] == "EMB")
+    card = {"moment_id": "m", "minute": 81, "type": "big_chance", "team": "EMB", "facts": {"player": quiet}}
+    assert all(f["kind"] != "player_xg" for f in lg.talking_facts(card, "EMB", "SMC"))
+    card["facts"]["player"] = "EMB-9"                                  # 12 goals: worth saying
+    assert lg.talking_facts(card, "EMB", "SMC")[0]["kind"] == "player_xg"
+
+
+def test_talking_points_name_players_in_full() -> None:
+    facts = [{"kind": "scorer_season", "name": "Ciro Oakenfold"}]
+    assert check_full_names("A pesar del gol de Oakenfold, Emberfield sigue primero.", facts)
+    assert check_full_names("Oakenfold's 13th goal of the season.", facts)
+    assert check_full_names("Ciro Oakenfold has scored 13 this season.", facts) == []

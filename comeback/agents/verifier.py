@@ -130,6 +130,9 @@ _OVERCOMING = re.compile(
 )
 _FOR_TEAM = re.compile(r"^\s*(?:for|of|to|pour|des|de|du|d['’]|para|a favor de|del)\s*(?:the |les? |la |el |los )?",
                        re.IGNORECASE)
+# "l'infériorité numérique adverse", "la superioridad del rival": the claim is about the opponents.
+_ADVERSE = re.compile(r"^\s*(?:adverse|de l['’]adversaire|des adversaires|del rival|rival|del adversario"
+                      r"|of the opponents)\b", re.IGNORECASE)
 _GENERIC_WORDS = {"FC", "United", "City", "Athletic", "St.", "Point"}
 # In a fan's own catch-up, "you" / "we" / "your team" / "l'équipe" / "quedamos" is the fan's side.
 _FAN_SIDE = re.compile(
@@ -182,7 +185,12 @@ def _misattributed(sentence: str, pattern: re.Pattern, expected: str, kind: str,
         after = [(start - claim.end(), team) for start, end, team in mentions if start >= claim.end()]
         owner = expected
         opposing = _OPPOSING.search(sentence[:claim.start()])
-        if after and (opposing or _FOR_TEAM.match(sentence[claim.end():])):
+        if after and min(after)[0] <= 1:      # an adjective on the club: "the full-strength X", "ten-man X"
+            attached = min(after)[1]
+        elif before and _ADVERSE.match(sentence[claim.end():]):    # "X … l'infériorité numérique adverse"
+            nearest = min(before)[1]
+            attached = full if nearest == short else short
+        elif after and (opposing or _FOR_TEAM.match(sentence[claim.end():])):
             attached = min(after)[1]          # explicit owner: "against ten-man X", "an advantage for X"
         elif opposing and before:             # "X … against ten men": the ten men are X's opponents
             nearest = min(before)[1]
@@ -206,6 +214,32 @@ _FINAL_RESULT = re.compile(   # "drew level" and "el empate" (the equaliser) hap
     r"|ganaron|derrota)\b",
     re.IGNORECASE,
 )
+
+
+def _mentions_score(text: str, home: int, away: int) -> bool:
+    """'0-2', '2-0', '0–2', '0 à 2', '0 a 2', '0 to 2': either order, the team names say who."""
+    pattern = r"(?<!\d)(?<!\d[.,]){}\s*(?:[-–:]|à|a|to)\s*{}(?!\d|[.,]\d)"
+    return any(re.search(pattern.format(x, y), text) for x, y in ((home, away), (away, home)))
+
+
+def check_omissions(text: str, scores: list[tuple[int, int]], team_names: dict[str, str]) -> list[str]:
+    """A full-time recap must give the final score and, when a team led by two or more, that biggest gap.
+
+    ``scores`` is the score after each goal, in order (home, away). Without the 0-2 a comeback story
+    reads as an ordinary win; without the final score it is not a recap.
+    """
+    if not scores:
+        return []
+    home, away = team_names.values()
+    issues = []
+    final = scores[-1]
+    if not _mentions_score(text, *final):
+        issues.append(f"Give the final score: {home} {final[0]}-{final[1]} {away}.")
+    widest = max(scores, key=lambda s: abs(s[0] - s[1]))
+    if abs(widest[0] - widest[1]) >= 2 and widest != final and not _mentions_score(text, *widest):
+        issues.append(f"Mention the biggest gap of the match: {home} {widest[0]}-{widest[1]} {away} "
+                      "(it is what the result came back from, or held on to).")
+    return issues
 
 
 def check_no_final_result(text: str, finished: bool) -> list[str]:

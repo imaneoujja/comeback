@@ -32,7 +32,7 @@ _MOMENT_LINES: dict[str, dict[str, str]] = {
         "es": "Min. {minute} — {scorer_name} recorta distancias para {team}: {score_after}.",
     },
     "goal.extends_lead": {
-        "en": "{minute}' — {scorer_name} extends {team}'s lead: {score_after}.",
+        "en": "{minute}' — {scorer_name} extends {team_poss} lead: {score_after}.",
         "fr": "{minute}e — {scorer_name} creuse l'écart pour {team} : {score_after}.",
         "es": "Min. {minute} — {scorer_name} amplía la ventaja de {team}: {score_after}.",
     },
@@ -174,7 +174,7 @@ GOOD_TEXT = {  # "only call me if this match gets good": the match woke up after
 
 
 SIDE_TEXT = {
-    "en": ", {opponent}'s {side} side is cracking",
+    "en": ", {opponent_poss} {side} side is cracking",
     "fr": ", le côté {side} de {opponent} craque",
     "es": ", la banda {side} de {opponent} se resquebraja",
 }
@@ -220,6 +220,11 @@ STORY_INTRO = {
     "es": "La historia hasta ahora (min. {minute}): {score_now}.",
 }
 
+FINAL_GAP = {   # a full-time recap always gives the biggest gap of the match (the Verifier's omission check)
+    "en": "Biggest gap of the match: {home} {a}-{b} {away}.",
+    "fr": "Plus gros écart du match : {home} {a}-{b} {away}.",
+    "es": "Mayor diferencia del partido: {home} {a}-{b} {away}.",
+}
 FINAL_INTRO = {
     "en": "Full-time: {score_now}.",
     "fr": "Coup de sifflet final : {score_now}.",
@@ -240,12 +245,18 @@ class _Defaults(dict):
         return ""
 
 
+def possessive(name: str) -> str:
+    """English possessive of a club name: "Emberfield's", but "Saltmarsh Comets'" (the name ends in s)."""
+    return f"{name}'" if name.endswith("s") else f"{name}'s"
+
+
 def moment_values(moment: dict[str, Any], team_names: dict[str, str]) -> dict[str, Any]:
     """Placeholder values for a moment: its facts plus readable team names."""
     team = moment.get("team")
     opponent = next((name for code, name in team_names.items() if code != team), "")
     values = {**moment["facts"], "minute": moment["minute"],
               "team": team_names.get(team, ""), "opponent": opponent}
+    values |= {"team_poss": possessive(values["team"]), "opponent_poss": possessive(opponent)}
     return values
 
 

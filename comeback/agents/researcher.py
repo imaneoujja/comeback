@@ -142,8 +142,22 @@ def check_claims(point: str, fact: dict[str, Any], score: tuple[int, int], clubs
             issues.append(f"That meeting was in {fact['season']}.")
         if _FIRST_MEETING.search(point):
             issues.append("Today is not their first meeting: the last one is in the facts.")
+    if fact["kind"] == "form" and _THIS_SEASON.search(point):
+        issues.append("The form is the last five matches, not the season.")
+    if fact.get("name") and fact["name"] not in point:
+        issues.append(f"This point is about {fact['name']}: name them (one point per fact, in order).")
     if fact["kind"] == "scorer_season" and fact["recent"] < fact["nth"] and _ALL_OF_THEM.search(point):
         issues.append(f"Only {fact['recent']} of the {fact['nth']} goals came in the last {fact['last_apps']} matches.")
+    return issues
+
+
+def check_full_names(point: str, facts: list[dict[str, Any]]) -> list[str]:
+    """A player is always named in full ("Ciro Oakenfold", never "Oakenfold"): surnames can repeat across clubs."""
+    issues = []
+    for name in {f["name"] for f in facts if f.get("name")}:
+        first, _, surname = name.rpartition(" ")
+        if first and re.search(rf"(?<!{re.escape(first)} )\b{re.escape(surname)}\b", point):
+            issues.append(f"Use the full name: {name}.")
     return issues
 
 
@@ -234,6 +248,7 @@ class ResearchWriter:
             if fact["kind"] == "table_if":      # the only point about today's score; form and h2h are past results
                 issues += check_no_final_result(point, finished)
             issues += check_claims(point, fact, task.score, task.clubs, task.season, finished)
+            issues += check_full_names(point, task.facts)
         return issues
 
     def fallback(self, task: ResearchTask) -> dict[str, Any]:

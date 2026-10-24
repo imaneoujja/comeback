@@ -6,7 +6,7 @@
  * No new computation and no model call: engine timeline, moment cards, /insights (shots, influence).
  * Open by default for analysts; casual fans get a lighter version. */
 
-import { $, app, esc, on, teamColour, teamName, sizeCanvas, L, W, profile } from "./state.js";
+import { $, app, esc, on, teamColour, teamName, sizeCanvas, L, W, profile, isStudio } from "./state.js";
 import { showPlayerSheet } from "./missed.js";
 
 const REFRESH_MS = 8000;
@@ -16,7 +16,7 @@ let root = null;                // where the pictures were last drawn
 let timer = null;
 let tab = null;                 // "alerts" | "insights": the fan's own choice wins over the default
 
-const analyst = () => profile()?.level === "analyst";
+const analyst = () => profile()?.level === "analyst" || isStudio();   // the studio sees the full analysis
 
 /** The insights data (shots, influence) of this session. */
 export const fetchInsights = () => fetch(`/api/session/${app.session}/insights`).then((r) => (r.ok ? r.json() : null)).catch(() => null);
@@ -57,7 +57,7 @@ export function renderMatchInsights(el, insights, deep) {
   data = insights || data;
   root = el;
   if (!app.snapshot || !el) { if (el) el.innerHTML = ""; return; }
-  el.innerHTML = `
+  el.innerHTML = `${deep ? `<section class="in-block"><div class="cp-k">DANGER NOW · AND WHY</div>${dangerLines()}</section>` : ""}
     <section class="in-block"><div class="cp-k">THE MATCH SO FAR</div>
       <canvas class="in-curve" aria-label="Momentum and chaos minute by minute, key moments marked"></canvas>
       <div class="in-legend"><span><i style="background:${teamColour(app.home)}"></i>${esc(teamName(app.home))} in control</span>
@@ -71,6 +71,21 @@ export function renderMatchInsights(el, insights, deep) {
   drawShots();
   renderPlayers();
   renderTurning();
+}
+
+/* 0 ----------------------------------------------------------------- danger now, and the reason in one line */
+function dangerLines() {
+  const s = app.snapshot;
+  const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+  return [s.home, s.away].map((code) => {
+    const t = s.teams[code], r = t.last_2min;
+    const why = [plural(r.box_entries, "box entry", "box entries"), plural(r.shots, "shot", "shots"),
+      ...(r.corners ? [plural(r.corners, "corner", "corners")] : [])].join(", ");
+    const lane = r.main_channel ? ` · ${r.main_channel === "centre" ? "through the centre" : `down the ${r.main_channel}`}` : "";
+    const trend = t.danger_slope > 2 ? "rising" : t.danger_slope < -2 ? "falling" : "steady";
+    return `<div class="in-danger" style="--team:${teamColour(code)}"><b>${esc(teamName(code))}</b>
+      <span class="v">${Math.round(t.danger)}<small>/100 · ${trend}</small></span><span>${why} in the last 2 min${lane}</span></div>`;
+  }).join("");
 }
 
 /* 1 ----------------------------------------------------------------- the match curve */
@@ -144,7 +159,7 @@ function renderPlayers() {
   if (!el || !data) return;
   const deep = analyst();
   const top = data.players[0]?.influence || 1;
-  el.innerHTML = data.players.slice(0, deep ? 4 : 3).map((p) => `
+  el.innerHTML = data.players.slice(0, deep && !isStudio() ? 4 : 3).map((p) => `
     <button class="in-player" data-player="${esc(p.id)}" style="--team:${teamColour(p.team)}">
       <span class="ms-num">${p.number}</span>
       <span class="in-who"><b>${esc(p.name)}</b><small>${esc(p.position)} · ${esc(teamName(p.team))}</small>

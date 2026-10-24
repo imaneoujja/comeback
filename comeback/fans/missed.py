@@ -12,7 +12,6 @@ the fan's language; for precomputed windows a verified LLM line replaces them
 from typing import Any
 
 from comeback.engine.state import MatchState, PlayerStats
-from comeback.league import load_league, ordinal
 
 # Influence = Σ weight × stat over the window. Goals and chances count fully; volume (forward
 # passes, duels, interceptions, completed passes) is capped so a long window ranks the players
@@ -119,20 +118,6 @@ def _team_view(snapshot: dict[str, Any], code: str) -> dict[str, Any]:
             "pass_accuracy": t["pass_accuracy"], "box_entries": t["box_entries"]}
 
 
-SEASON_GOAL = {"en": "{nth} goal of the season", "fr": "{nth} but de la saison", "es": "{nth} gol de la temporada"}
-
-
-def add_season_context(meta: dict[str, Any], players: list[dict[str, Any]], live: MatchState, lang: str) -> None:
-    """A scorer's season count from the synthetic league ("13th goal of the season"); no model call."""
-    league = load_league()
-    if meta.get("match_id") not in league.data["live"]:
-        return
-    for p in players:
-        if p["window"]["goals"] and p["id"] in league.players:
-            nth = league.player_season(p["id"])["goals"] + live.players[p["id"]].goals
-            p["season"] = SEASON_GOAL[lang].format(nth=ordinal(nth, lang))
-
-
 def what_you_missed(meta: dict[str, Any], events: list[dict[str, Any]], live: MatchState, from_t: float,
                     to_t: float, left: dict[str, Any] | None, now: dict[str, Any], lang: str) -> dict[str, Any]:
     """The return screen's data: top players of the window, both teams then vs now, template lines.
@@ -155,7 +140,6 @@ def what_you_missed(meta: dict[str, Any], events: list[dict[str, Any]], live: Ma
             "team": info["team"], "influence": score, "reasons": reasons,
             "window": win.players[pid].to_dict(), "match": live.players[pid].to_dict(),
         })
-    add_season_context(meta, players, live, lang)
     teams = {}
     for code in (win.home, win.away):
         window = _team_window(win, code)

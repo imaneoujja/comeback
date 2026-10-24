@@ -285,7 +285,9 @@ class ReplaySession:
     # ------------------------------------------------------------ the loop
 
     def _process(self, event: dict[str, Any], silent: bool = False) -> EngineUpdate:
+        started = time.perf_counter()
         update = self.brain.process(event)
+        engine_ms = (time.perf_counter() - started) * 1000
         for moment in update.moments:
             if self.brain.cards[moment.moment_id]["pending"]:
                 self._card_queue.put_nowait(moment)
@@ -313,8 +315,13 @@ class ReplaySession:
         timeline = self.brain.engine.timeline
         if timeline and timeline[-1]["t"] == event["t"]:
             self.publish("timeline", timeline[-1])
-        for note in self.watcher.on_update(self.brain.engine, update):
-            payload = {**note.__dict__, "decided_at": time.time()}   # for end-to-end latency measurements
+        started = time.perf_counter()
+        notes = self.watcher.on_update(self.brain.engine, update)
+        watcher_ms = (time.perf_counter() - started) * 1000
+        for note in notes:
+            # "Why this alert?": measured times of each step, and the send time for the delivery latency
+            payload = {**note.__dict__, "decided_at": time.time(),
+                       "timing": {"engine_ms": round(engine_ms, 2), "watcher_ms": round(watcher_ms, 2)}}
             self.publish("notification", payload)
             if note.kind == "come_back":
                 detail = (f"{note.team} danger {note.facts['danger']} & rising · "

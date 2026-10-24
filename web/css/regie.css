@@ -589,7 +589,6 @@ body.configuring .setup { display: block; }
 .ms-name.big { font-size: 30px; }
 .ms-meta { font-family: var(--mono); font-size: 10.5px; letter-spacing: .06em; color: var(--label); text-transform: uppercase; }
 .ms-line { font-size: 14.5px; line-height: 1.3; color: #e4e2dc; }
-.ms-ctx { display: block; margin-top: 3px; font: 600 12px/1.3 var(--mono, monospace); letter-spacing: .04em; color: var(--amber, #f5b83d); }
 .ms-bar { display: flex; flex-direction: column; gap: 3px; align-items: flex-end; }
 .ms-bar i { display: block; height: 5px; width: 0; background: var(--team); align-self: stretch; max-width: 100%; }
 .ms-bar em { font-style: normal; font-family: var(--mono); font-size: 10px; color: var(--label); }
@@ -858,3 +857,28 @@ body.configuring .setup { display: block; }
 .dk-h2h b { font-family: var(--cond); font-size: 32px; } .dk-h2h span { font-size: 12.5px; color: var(--label); text-align: center; }
 .fd-card li.researcher > i { color: var(--amber); }
 .fd-card li.researcher .src { display: block; font-family: var(--mono); font-size: 10.5px; color: var(--label); margin-top: 2px; }
+
+/* "Why this alert?" on a call-back: the decision chain with its times */
+.why-b { margin-top: 6px; background: none; border: 1px solid #3a3a3a; color: var(--label); font: 600 10px var(--mono); letter-spacing: .14em; padding: 4px 8px; cursor: pointer; }
+.why-b:hover { color: #fff; border-color: #777; }
+.why-chain { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 5px; font-size: 12.5px; line-height: 1.35; color: #d9d7d0; }
+.why-chain li { display: grid; grid-template-columns: 74px 1fr; gap: 8px; }
+.why-chain li > i { font: 600 9.5px var(--mono); letter-spacing: .14em; color: var(--red); font-style: normal; padding-top: 2px; }
+.why-chain li span i { font: 10px var(--mono); color: var(--dim); font-style: normal; }
+.why-chain .why-note { display: block; color: var(--dim); font-size: 11.5px; }
+
+/* Source of every text in the feed: LIVE LLM / RECORDED / TEMPLATE */
+.b.src-live { color: var(--green); border-color: rgba(48, 209, 88, .55) !important; }
+.b.src-recorded { color: #9fc8ff; border-color: rgba(120, 170, 255, .5) !important; }
+.b.src-template { color: var(--amber); border-color: rgba(255, 176, 0, .5) !important; }
+.fd-card li.researcher .b { margin-left: 6px; font: 9.5px var(--mono); letter-spacing: .1em; padding: 1px 5px; border: 1px solid; }
+
+/* Every live screen says what it is: a synthetic feed */
+.synth-tag { position: absolute; right: 10px; bottom: 8px; z-index: 6; pointer-events: none; font: 600 9.5px var(--mono);
+  letter-spacing: .16em; color: rgba(236, 235, 230, .62); background: rgba(0, 0, 0, .45); padding: 3px 7px; }
+
+.in-danger { display: grid; grid-template-columns: 170px 110px 1fr; gap: 10px; align-items: baseline; padding: 5px 0 5px 10px;
+  border-left: 3px solid var(--team); font-size: 14px; color: #d9d7d0; }
+.in-danger + .in-danger { margin-top: 4px; }
+.in-danger .v { font: 700 20px var(--mono); color: #fff; }
+.in-danger .v small { font-size: 10px; color: var(--dim); letter-spacing: .08em; }

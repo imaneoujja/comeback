@@ -281,6 +281,7 @@ function connect() {
   });
   on("timeline", (t) => app.timeline.push(t));
   on("notification", (n) => {
+    n.received_at = Date.now() / 1000;            // with the server's decided_at: the delivery time in "Why this alert?"
     app.notes.unshift(n); renderNotes();
     if (!n.silent) notify(n);                     // night mode: delivered without a buzz
   });

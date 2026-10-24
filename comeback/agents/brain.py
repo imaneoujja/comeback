@@ -10,7 +10,7 @@ from typing import Any
 
 from comeback.agents.analyst import AnalystTask, needs_analyst, write_moment_card
 from comeback.agents.llm import LLMGateway
-from comeback.agents.storyteller import CatchupTask, write_catchup
+from comeback.agents.storyteller import CatchupTask, goal_scores, write_catchup
 from comeback.agents.templates import moment_card_text
 from comeback.agents.workflow import Tracer
 from comeback.engine.match import EngineUpdate, MatchEngine
@@ -81,7 +81,8 @@ class MatchBrain:
         selected = select_cards(cards, from_t, to_t, profile, bucket)
         now = snapshot or self.engine.snapshot()
         delta = build_delta(self.engine.timeline, now, from_t, self.team_names, in_window)
-        task = CatchupTask(profile, bucket, selected, delta, self.team_names, self.roster, late_join, final)
+        task = CatchupTask(profile, bucket, selected, delta, self.team_names, self.roster, late_join, final,
+                           goal_scores([c for c in cards if c["t"] <= to_t]))
         return await write_catchup(task, self.gateway, trace)
 
     async def final_recap(self, profile: FanProfile, trace: Tracer | None = None) -> dict[str, Any]:

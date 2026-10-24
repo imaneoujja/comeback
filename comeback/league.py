@@ -119,8 +119,9 @@ class League:
                         "recent": s["goals_last_4"] + today, "last_apps": s["last_apps"] + 1,
                         "source": f"season stats · {s['name']}: {plural(s['goals'], 'goal')} in "
                                   f"{plural(s['apps'], 'match', 'matches')} before today"})
-        if mtype in ("big_chance", "penalty") and facts.get("player") in self.players:
-            s = self.player_season(facts["player"])
+        season = self.player_season(facts["player"]) if facts.get("player") in self.players else None
+        if mtype in ("big_chance", "penalty") and season and (season["goals"] or season["xg"] >= 1):
+            s = season                                # "0 goals, 0.0 xG" is not a talking point
             out.append({"kind": "player_xg", "name": s["name"], "goals": s["goals"], "xg": s["xg"], "apps": s["apps"],
                         "source": f"season stats · {s['name']}: {plural(s['goals'], 'goal')}, {s['xg']} xG, "
                                   f"{plural(s['apps'], 'match', 'matches')}"})

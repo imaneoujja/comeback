@@ -19,6 +19,7 @@ from comeback.agents.templates import (
     RED_CARD_ALERT_TEXT,
     SIDE_TEXT,
     SIDE_WORDS,
+    possessive,
     pressure_texts,
 )
 from comeback.engine.alerts import ANTICIPATION_S, AlertRule, AlertTracker
@@ -111,7 +112,9 @@ class Watcher:
                                           **pressure_texts(lang, reasons["box_entries"], reasons["shots"]))
         elif attacking_view:
             side = _DEFENDING_SIDE.get(reasons["main_channel"] or "")
-            side_text = SIDE_TEXT[lang].format(opponent=names[st.opponent(team)], side=SIDE_WORDS[side][lang]) \
+            side_text = SIDE_TEXT[lang].format(opponent=names[st.opponent(team)],
+                                                  opponent_poss=possessive(names[st.opponent(team)]),
+                                                  side=SIDE_WORDS[side][lang]) \
                 if side else ""
             text = ALERT_TEXT["attacking"][lang].format(
                 team=names[team], side_text=side_text, **pressure_texts(lang, reasons["box_entries"], reasons["shots"]))

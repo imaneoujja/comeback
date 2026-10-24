@@ -41,6 +41,9 @@ INJURIES = [
     ("THU", "ST", "THU-9", 7, "thigh strain", 11),
     ("CBC", "LB", "CBC-3", 9, "concussion protocol", 11),
 ]
+# Surnames kept for the injured players: none of them is worn by anyone on a live team sheet, so a
+# talking point about an absent player can never be confused with a player on the pitch.
+INJURED_SURNAMES = ("Cindervale", "Mossgrove", "Tallowmere", "Wexcombe", "Ferncastle")
 
 
 def fixtures() -> list[list[tuple[str, str]]]:
@@ -61,6 +64,15 @@ def fixtures() -> list[list[tuple[str, str]]]:
     return first_leg + [[(b, a) for a, b in r] for r in first_leg]
 
 
+def last_season_fixtures(schedule: list[list[tuple[str, str]]]) -> list[list[tuple[str, str]]]:
+    """Last season's calendar: the same pairs in another order, so that no matchday repeats this season's."""
+    rng = random.Random(f"calendar:{LAST_SEASON}")
+    order = list(range(len(schedule)))
+    while any(i == j for i, j in enumerate(order)):
+        rng.shuffle(order)
+    return [schedule[i] for i in order]
+
+
 def squads() -> tuple[dict[str, Team], dict[str, tuple[Any, str]]]:
     """The six squads (the live squads exactly as in the live matches) and the injured shirt-16 players."""
     emb, smc = build_fixture("EMB", "SMC", 2026)
@@ -68,11 +80,10 @@ def squads() -> tuple[dict[str, Team], dict[str, tuple[Any, str]]]:
     thu, cbc = build_fixture("THU", "CBC", 777)
     teams = {t.club.id: t for t in (emb, smc, avw, lka, thu, cbc)}
     extras = {}
-    for club, position, replaced, *_ in INJURIES:
+    for (club, position, replaced, *_), surname in zip(INJURIES, INJURED_SURNAMES, strict=True):
         team = teams[club]
-        used = {p.name.split()[-1] for p in team.players}
         rng = random.Random(f"injured:{club}")
-        surname = next(s for s in rng.sample(LAST_NAMES, len(LAST_NAMES)) if s not in used)
+        rng.sample(LAST_NAMES, len(LAST_NAMES))           # keeps the random stream (and his ratings) unchanged
         extras[club] = (_build_player(team.club, 16, position, f"{rng.choice(FIRST_NAMES)} {surname}", rng), replaced)
     return teams, extras
 
@@ -162,16 +173,17 @@ def build() -> dict[str, Any]:
             home, away = lineup(teams[h], h, md, extras), lineup(teams[a], a, md, extras)
             for offset in range(50):                      # skip seeds that would suspend a live player
                 meta, events = play(home, away, 20_000 + md * 100 + k * 10 + offset, f"s{md:02d}-{h}-{a}")
-                summary = summarise(meta, events, md)
+                summary = summarise(meta, events, md) | {"seed": meta["seed"]}
                 if md < 9 or not (set(suspended([*results, summary])) & sheet):
                     break
             results.append(summary)
     last = []
-    for md, round_ in enumerate(schedule, start=1):
+    for md, round_ in enumerate(last_season_fixtures(schedule), start=1):
         for k, (h, a) in enumerate(round_):
-            _, events = play(teams[h], teams[a], 90_000 + md * 100 + k, f"p{md:02d}-{h}-{a}")
+            seed = 90_000 + md * 100 + k
+            _, events = play(teams[h], teams[a], seed, f"p{md:02d}-{h}-{a}")
             score = [sum(1 for e in events if e["type"] == "goal" and e["team"] == c) for c in (h, a)]
-            last.append({"matchday": md, "home": h, "away": a, "score": score})
+            last.append({"matchday": md, "home": h, "away": a, "score": score, "seed": seed})
     players = {p.id: {"id": p.id, "club": c, "name": p.name, "number": p.number, "position": p.position}
                for c, team in teams.items() for p in team.players}
     for club, (p, _) in extras.items():
