@@ -21,6 +21,14 @@ export function interruptForLive() {
   if (active && !active.done) { active.interrupted = true; finish(); }
 }
 
+/** A new session: drop the replay and its buffered events (they belong to the old one). */
+export function cancelReplay() {
+  if (!active || active.done) return;
+  active.buffer = [];
+  active.interrupted = true;
+  finish();
+}
+
 let program_ = null;
 function finish() {
   if (!active || active.done) return;

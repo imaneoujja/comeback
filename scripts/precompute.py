@@ -5,7 +5,8 @@ screen; the agents' texts for each combination are recorded once so the demo run
 with real model output:
 
 * every Moment Card (shared by all fans);
-* for each of the 18 configurations: the late join at 60', the returns of the two demo
+* for each configuration (home, away, neutral, following the away #9 × 3 languages × 2 styles):
+  the late join where the match is "live" (60' / 23'), the returns of the two demo
   absences (63' → 70.5', the autoplay window, and 75.5' → 86'), and the full-time recap;
 * an English version of every non-English text ("Show English");
 * the "what you missed" lines of each window, once per language (``comeback/agents/notes.py``);
@@ -33,13 +34,13 @@ from comeback.agents.llm import LLMGateway  # noqa: E402
 from comeback.agents.notes import write_notes  # noqa: E402
 from comeback.agents.speech import SpeechGateway  # noqa: E402
 from comeback.agents.translator import english_version  # noqa: E402
+from comeback.api.replay import LIVE_MINUTE  # noqa: E402
 from comeback.engine.match import load_match  # noqa: E402
 from comeback.fans.missed import what_you_missed  # noqa: E402
 from comeback.fans.profiles import LANGUAGES, LEVELS, SIDES, fan_profile  # noqa: E402
 
 MATCHES = Path(__file__).resolve().parents[1] / "data" / "matches"
 PLAYABLE = [MATCHES / "demo-comeback.jsonl", MATCHES / "random-3112.jsonl"]
-JOIN_AT = 60.0
 ABSENCES = [(63.0, 70.5, True), (75.5, 86.0, False)]   # (leave, back, spoken on the demo match)
 
 
@@ -80,7 +81,8 @@ async def precompute(path: Path, gateway: LLMGateway, speech: SpeechGateway | No
             if brain.cards[moment.moment_id]["pending"]:
                 await brain.write_card(moment)
         m = clock(event)
-        if not joined and m >= JOIN_AT:
+        join_at = LIVE_MINUTE[path.stem]
+        if not joined and (event["period"], event["minute"] + event["second"] / 60) >= (1 + (join_at >= 45), join_at):
             joined = True
             for fan in fans:
                 await finish(await brain.catchup(fan, 0.0, event["t"], late_join=True), spoken=True)

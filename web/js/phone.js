@@ -85,7 +85,8 @@ function render() {
   const p = st.profile;
   if (p) {
     const fav = Object.values(st.teams).flatMap((t) => t.players).find((x) => x.id === p.favourite_player_id);
-    const who = p.club_id ? `${st.teams[p.club_id]?.name} fan` : `Follows ${fav?.name || p.favourite_player_id}`;
+    const follows = fav ? `follows ${fav.name}` : "";
+    const who = p.club_id ? `${st.teams[p.club_id]?.name} fan${follows ? ` · ${follows}` : ""}` : follows ? `F${follows.slice(1)}` : "Neutral";
     $("#who").innerHTML = `<b>${esc(who)}</b> · ${LANG[p.language] || p.language} · ${esc(p.level)}`;
   }
   $("#state").className = `state ${st.present ? "" : "away"}`;

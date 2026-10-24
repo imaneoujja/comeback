@@ -75,11 +75,11 @@ export function createProgram(canvas) {
     const c = ledCanvas.getContext("2d");
     c.fillStyle = bg; c.fillRect(0, 0, 2048, 64);
     c.fillStyle = fg; c.font = "700 40px 'IBM Plex Sans Condensed', sans-serif"; c.textBaseline = "middle";
-    const stepX = c.measureText(text).width + 120;
+    const stepX = c.measureText(text).width + 420;   // a short word, well spaced
     for (let x = 30; x < 2048; x += stepX) c.fillText(text, x, 34);
     ledTex.needsUpdate = true;
   };
-  paintLed("#05060a", "#d9d7d0", "COMEBACK  ·  SYNTHETIC MATCH");
+  paintLed("#05060a", "#9a988f", "COMEBACK");
   const ledMat = new THREE.MeshBasicMaterial({ map: ledTex });
   const board = (w, x, z, ry) => {
     const m = new THREE.Mesh(new THREE.PlaneGeometry(w, 0.9), ledMat);
@@ -90,7 +90,7 @@ export function createProgram(canvas) {
   board(W + 6, L / 2 + 5, 0, -Math.PI / 2);
 
   /* ---------------------------------------------------------------- stands + crowd */
-  const standMat = new THREE.MeshStandardMaterial({ color: 0x15181d, roughness: 0.9 });
+  const standMat = new THREE.MeshStandardMaterial({ color: 0x0b0d10, roughness: 0.95 });
   const crowdSpots = [];
   const tierStand = (length, along, base, dir, tiers) => {
     for (let i = 0; i < tiers; i++) {
@@ -129,6 +129,7 @@ export function createProgram(canvas) {
     if (awaySector ? r < 0.6 : r < 0.35) team = awaySector ? app.away : app.home;
     crowdTeam.push(team);
     colour.set(team ? app.teams[team].colour : ["#22252b", "#2e3138", "#3d4047", "#8d8a83", "#1a1c21"][Math.floor(Math.random() * 5)]);
+    colour.multiplyScalar(0.45);                         // a TV camera exposes for the pitch: the stands fall darker
     colour.multiplyScalar(team ? 0.35 + Math.random() * 0.3 : 0.5 + Math.random() * 0.4);
     crowd.setColorAt(i, colour);
     dummy.position.set(s.x, s.y + 0.38, s.z); dummy.updateMatrix(); crowd.setMatrixAt(i, dummy.matrix);
@@ -206,6 +207,10 @@ export function createProgram(canvas) {
   const favRing = new THREE.Mesh(new THREE.RingGeometry(1.35, 1.7, 40), new THREE.MeshBasicMaterial({ color: 0xffb000 }));
   favRing.rotation.x = -Math.PI / 2; favRing.position.y = 0.035;
   scene.add(favLabel, favRing);
+  // the player named by the lower third: a ring in their team's colour while the graphic is on screen
+  const tagRing = new THREE.Mesh(new THREE.RingGeometry(1.5, 1.95, 40), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true }));
+  tagRing.rotation.x = -Math.PI / 2; tagRing.position.y = 0.04;
+  scene.add(tagRing);
   let favourite = null;
   function setFavourite(pid) {
     favourite = pid;
@@ -252,8 +257,8 @@ export function createProgram(canvas) {
   /* ---------------------------------------------------------------- celebration */
   function celebrate(team) {
     excitement = { team, until: performance.now() + 5000 };
-    paintLed(app.teams[team].colour, "#0a0a0a", `GOAL  ·  ${app.teams[team].name.toUpperCase()}`);
-    setTimeout(() => paintLed("#05060a", "#d9d7d0", "COMEBACK  ·  SYNTHETIC MATCH"), 5000);
+    paintLed(app.teams[team].colour, "#0a0a0a", "GOAL");
+    setTimeout(() => paintLed("#05060a", "#9a988f", "COMEBACK"), 5000);
   }
 
   function animateCrowd(now) {
@@ -301,6 +306,14 @@ export function createProgram(canvas) {
     if (fp) {
       favLabel.position.set(toX(fp.x), 4.3, toZ(fp.y));
       favRing.position.x = toX(fp.x); favRing.position.z = toZ(fp.y);
+      favRing.material.color.set(app.teams[app.roster[favourite].team].colour);
+    }
+    const tag = app.tagged && performance.now() < app.tagged.until && app.pos[app.tagged.pid];
+    tagRing.visible = Boolean(tag);
+    if (tag) {
+      tagRing.position.x = toX(tag.x); tagRing.position.z = toZ(tag.y);
+      tagRing.material.color.set(app.teams[app.roster[app.tagged.pid].team].colour);
+      tagRing.material.opacity = 0.65 + 0.35 * Math.sin(performance.now() / 160);
     }
     const holder = app.holder && app.pos[app.holder];
     ring.visible = Boolean(holder);

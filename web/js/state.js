@@ -4,7 +4,8 @@
 
 export const DEMO_MATCH = "demo-comeback";
 export const SPEEDS = [1, 5, 10, 20, 40];
-export const L = 105, W = 68;
+export { L, W } from "./formation.js";
+import { L, W, formationTargets, lineOf, nearestTo } from "./formation.js";
 
 export const $ = (sel) => document.querySelector(sel);
 export const esc = (s) => String(s ?? "")
@@ -45,8 +46,9 @@ export const LANG_NAME = { en: "English", fr: "Français", es: "Español" };
 /** Who this fan is, in words: "Emberfield fan" or "Follows Halen Merewood". */
 export function fanLabel(p = app.fan) {
   if (!p) return "";
-  if (p.club_id) return `${teamName(p.club_id)} fan`;
-  return `Follows ${app.roster[p.favourite_player_id]?.name || p.favourite_player_id}`;
+  const follows = p.favourite_player_id ? `follows ${app.roster[p.favourite_player_id]?.name || p.favourite_player_id}` : "";
+  if (p.club_id) return `${teamName(p.club_id)} fan${follows ? ` · ${follows}` : ""}`;
+  return follows ? follows[0].toUpperCase() + follows.slice(1) : "Neutral";
 }
 
 /** The side a fan's story is told from: their club, or their player's team. */
@@ -61,6 +63,8 @@ export function clockText(s) {
 
 /* ------------------------------------------------------------------ events → ball & holder */
 
+const ON_BALL = new Set(["carry", "sprint", "shot", "possession_change", "throw_in", "goal_kick", "corner", "period_start", "goal"]);
+
 function animateBall(x, y, ex, ey, realSeconds, height = 0) {
   const wall = Math.min(0.95, Math.max(0.12, realSeconds / app.speed));
   app.ballAnim = { x0: x, y0: y, x1: ex, y1: ey, h: height, start: performance.now(), dur: wall * 1000 };
@@ -70,6 +74,7 @@ function snapBall(x, y) { animateBall(app.ball.x, app.ball.y, x, y, 0.15 * app.s
 
 export function applyEvent(e) {
   const team = e.team;
+  if (e.type !== "pass" && ON_BALL.has(e.type)) app.pass = null;     // a new action ends any pass in flight
   switch (e.type) {
     case "pass": {
       app.possession = team;
@@ -77,7 +82,10 @@ export function applyEvent(e) {
       const secs = e.distance_m / Math.max(5, e.ball_speed_kmh / 3.6);
       const loft = e.distance_m > 22 ? Math.min(9, e.distance_m * 0.13) : (e.cross ? 4 : 0);
       animateBall(e.x, e.y, e.end_x, e.end_y, secs, loft);
-      if (e.success) setTimeout(() => { app.holder = e.receiver; }, Math.min(950, (secs / app.speed) * 1000));
+      const flight = Math.min(950, (secs / app.speed) * 1000);
+      app.pass = { passer: e.player, receiver: e.receiver, x: e.x, y: e.y, end_x: e.end_x, end_y: e.end_y,
+        until: performance.now() + flight };
+      if (e.success) setTimeout(() => { if (app.pass?.receiver === e.receiver) app.holder = e.receiver; }, flight);
       break;
     }
     case "carry":
@@ -95,6 +103,7 @@ export function applyEvent(e) {
       const wide = e.outcome === "off_target";
       const gy = W / 2 + (wide ? (Math.random() < 0.5 ? -5.5 : 5.5) : (Math.random() - 0.5) * 5);
       animateBall(e.x, e.y, gx, gy, 0.9, wide ? 3 : 1.4);
+      app.anchor = { x: e.x, y: e.y, until: performance.now() + 2500 };   // players react to the shot, not to the ball in the net
       break;
     }
     case "possession_change":
@@ -125,33 +134,22 @@ export function applyEvent(e) {
 /* ------------------------------------------------------------------ positions */
 
 function playerTargets() {
-  const poss = app.possession || app.home;
-  const flip = !isHome(poss);
-  const toFrame = (x, y) => (flip ? [L - x, W - y] : [x, y]);   // absolute ⇄ possessing team's frame
-  const [bx, by] = toFrame(app.ball.x, app.ball.y);
-  const out = {};
-  const now = performance.now();
+  const players = [];
   for (const team of [app.home, app.away]) {
     for (const [pid, [sx, sy]] of Object.entries(app.lineup[team] || {})) {
-      const gk = app.roster[pid]?.position === "GK";
-      let x, y;
-      if (team === poss) {
-        if (gk) { x = sx + Math.max(0, bx - 50) * 0.1; y = sy; }
-        else {
-          x = Math.min(Math.max(sx + (bx - 45) * 0.45, 2), Math.min(95, Math.max(84, bx + 6)));
-          y = sy + (by - sy) * 0.2;
-        }
-      } else {
-        const mx = L - sx, my = W - sy;
-        const pull = gk ? 0.04 : 0.3;
-        x = mx + (bx - mx) * pull; y = my + (by - my) * pull;
-      }
-      const seed = pid.charCodeAt(0) * 3 + pid.length * 7 + sx;
-      const wobble = Math.sin(now / 1100 + seed) * 0.7;
-      out[pid] = toFrame(x + wobble, y + Math.cos(now / 1300 + seed) * 0.5);
+      players.push({ id: pid, team, sx, sy, line: lineOf(app.roster[pid]?.position, sx) });
     }
   }
-  if (app.holder && out[app.holder]) out[app.holder] = [app.ball.x - 0.7, app.ball.y + 0.5];
+  const pass = app.pass && performance.now() < app.pass.until ? app.pass : null;
+  const ref = app.anchor && performance.now() < app.anchor.until ? app.anchor : app.ball;
+  const out = formationTargets({ players, ball: ref, possession: app.possession || app.home, homeTeam: app.home,
+    holder: pass ? null : app.holder, pass });
+  const now = performance.now();
+  for (const [pid, xy] of Object.entries(out)) {               // a little life, never off the shape
+    if (pid === app.holder || pid === pass?.receiver) continue;
+    const seed = pid.charCodeAt(0) * 3 + pid.length * 7;
+    out[pid] = [xy[0] + Math.sin(now / 1100 + seed) * 0.5, xy[1] + Math.cos(now / 1300 + seed) * 0.4];
+  }
   return out;
 }
 
@@ -165,11 +163,16 @@ export function step(dt) {
     app.ball = { x: a.x0 + (a.x1 - a.x0) * ease, y: a.y0 + (a.y1 - a.y0) * ease, z: 4 * a.h * k * (1 - k) };
     if (k >= 1) app.ballAnim = null;
   }
+  if (!app.holder && !app.ballAnim && app.possession) {       // a loose ball: the nearest player of the team in possession has it
+    const ids = Object.keys(app.lineup[app.possession] || {});
+    app.holder = nearestTo(app.ball, app.pos, ids);
+  }
   const targets = playerTargets();
   const follow = 1 - Math.exp(-dt * (2.2 + app.speed * 0.22));
   for (const [pid, [tx, ty]] of Object.entries(targets)) {
     const p = app.pos[pid] || (app.pos[pid] = { x: tx, y: ty, vx: 0, vy: 0 });
-    const nx = p.x + (tx - p.x) * follow, ny = p.y + (ty - p.y) * follow;
+    const glued = pid === app.holder;                           // the holder stays on the ball, no lag
+    const nx = glued ? tx : p.x + (tx - p.x) * follow, ny = glued ? ty : p.y + (ty - p.y) * follow;
     p.vx = (nx - p.x) / Math.max(dt, 1e-3); p.vy = (ny - p.y) / Math.max(dt, 1e-3);
     p.x = nx; p.y = ny;
   }

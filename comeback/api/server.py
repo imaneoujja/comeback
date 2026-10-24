@@ -18,7 +18,7 @@ from fastapi.staticfiles import StaticFiles
 
 from comeback.agents.llm import LLMGateway
 from comeback.agents.speech import AUDIO_DIR
-from comeback.api.replay import MATCHES_DIR, SPEEDS, ReplaySession, cue_visible, shared_crowd
+from comeback.api.replay import LIVE_MINUTE, MATCHES_DIR, SPEEDS, ReplaySession, cue_visible, shared_crowd
 from comeback.engine.match import load_match, run_engine
 from comeback.engine.state import KEY_PASS_WINDOW_S
 from comeback.fans.crowd import scaling_curve
@@ -87,10 +87,10 @@ def _profile(profile_id: str, match_id: str = DEFAULT_MATCH):
     return for_match(profiles[profile_id], meta["home"]["id"], meta["away"]["id"])
 
 
-def _fan(match_id: str, side: str, lang: str, level: str, metric: str | None):
-    """The fan as configured on the first screen (side, language, style, metric), for this fixture."""
+def _fan(match_id: str, side: str, lang: str, level: str, metric: str | None, player: str | None = None):
+    """The fan as configured on the first screen (side, followed player, language, style, metric)."""
     meta = _match_meta(match_id)
-    return fan_profile(side, lang, level, metric, meta["home"]["id"], meta["away"]["id"])
+    return fan_profile(side, lang, level, metric, meta["home"]["id"], meta["away"]["id"], player)
 
 
 @cache
@@ -140,6 +140,40 @@ def matches() -> list[dict[str, Any]]:
     return out
 
 
+QUIET_XG = 1.0            # no goal and under 1.0 xG in total: "quiet so far"
+
+
+@cache
+def _live_view(match_id: str) -> dict[str, Any]:
+    from comeback.engine.match import MatchEngine
+
+    meta, events = load_match(_match_path(match_id))
+    minute = LIVE_MINUTE.get(match_id, 0.0)
+    engine = MatchEngine(meta)
+    target = (2, minute) if minute >= 45 else (1, minute)
+    index = next(i for i, e in enumerate(events) if (e["period"], e["minute"] + e["second"] / 60) >= target)
+    for e in events[: index + 1]:
+        engine.process(e)
+    st = engine.state
+    _, frames = shared_crowd(match_id)
+    frame = frames[max(i for i in frames if i <= index)] if any(i <= index for i in frames) else {}
+    chances = sum(t.xg for t in st.teams.values())
+    return {"match_id": match_id, "home": meta["home"]["name"], "away": meta["away"]["name"],
+            "home_id": st.home, "away_id": st.away,
+            "home_colour": meta["home"]["colour"], "away_colour": meta["away"]["colour"],
+            "score": st.score_str(), "minute": st.minute, "live_minute": minute,
+            "quiet": sum(st.score.values()) == 0 and chances < QUIET_XG, "xg": round(chances, 2),
+            "scripted": meta.get("scenario") is not None,
+            "audience": {"viewers": frame.get("size", 0), "away": frame.get("away", 0),
+                         "call_backs": frame.get("alerts_sent", 0)}}
+
+
+@app.get("/api/live")
+def live_matches() -> list[dict[str, Any]]:
+    """The matches "live now", at the minute a new viewer joins them, with their audience."""
+    return [_live_view(path.stem) for path in sorted(MATCHES_DIR.glob("*.jsonl"))]
+
+
 @app.get("/api/profiles")
 def profiles(match_id: str = DEFAULT_MATCH) -> list[dict[str, Any]]:
     return [_profile(pid, match_id).__dict__ for pid in load_profiles()]
@@ -180,7 +214,8 @@ async def scale(match_id: str) -> dict[str, Any]:
 @app.get("/api/stream")
 async def stream(request: Request, match_id: str = DEFAULT_MATCH, session: str | None = None,
                  profile: str = "omar", side: str | None = None, lang: str = "en", level: str = "casual",
-                 metric: str | None = None, speed: int = 10, device: bool = False) -> StreamingResponse:
+                 metric: str | None = None, player: str | None = None, speed: int = 10,
+                 device: bool = False) -> StreamingResponse:
     """Server-Sent Events: events, snapshots, overlay cues, moment cards, alerts, catch-ups.
 
     The fan is either configured (``side``/``lang``/``level``/``metric``, the first screen) or a
@@ -192,7 +227,7 @@ async def stream(request: Request, match_id: str = DEFAULT_MATCH, session: str |
     if device and replay is None:
         raise HTTPException(404, "no such session: scan the QR code shown next to the match")
     if replay is None or replay.match_id != match_id:
-        fan = _fan(match_id, side, lang, level, metric) if side else _profile(profile, match_id)
+        fan = _fan(match_id, side, lang, level, metric, player) if side else _profile(profile, match_id)
         replay = ReplaySession(session_id, match_id, fan, gateway, speed)
         sessions[session_id] = replay
     queue = replay.subscribe(device=device)
@@ -361,10 +396,10 @@ async def pause(session_id: str, paused: bool = True) -> dict[str, Any]:
 
 @app.post("/api/session/{session_id}/fan")
 async def configure_fan(session_id: str, side: str, lang: str = "en", level: str = "casual",
-                        metric: str | None = None) -> dict[str, Any]:
+                        metric: str | None = None, player: str | None = None) -> dict[str, Any]:
     """Change the fan's configuration on a running session (same match, same moment)."""
     replay = _session(session_id)
-    replay.set_profile(_fan(replay.match_id, side, lang, level, metric))
+    replay.set_profile(_fan(replay.match_id, side, lang, level, metric, player))
     replay.away_bands = []
     replay.publish("state", replay.state_message())
     return replay.fan.profile.__dict__

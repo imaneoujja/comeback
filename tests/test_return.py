@@ -163,3 +163,18 @@ def test_player_actions_for_the_2d_view() -> None:
         assert client.get("/api/session/actions/player/XXX-1/actions").status_code == 404
     finally:
         server.sessions.pop("actions", None)
+
+
+def test_live_now_and_any_followed_player() -> None:
+    """The front door: matches "live now" with their audience; neutral fans and any player to follow."""
+    live = {m["match_id"]: m for m in client.get("/api/live").json()}
+    assert (live["demo-comeback"]["minute"], live["demo-comeback"]["score"]) == (60, "0-2")
+    assert live["random-3112"]["quiet"] and live["random-3112"]["score"] == "0-0"
+    assert all(m["audience"]["viewers"] == 10_000 and m["audience"]["call_backs"] > 0 for m in live.values())
+    neutral = fan_profile("neutral", "en", "casual", None, "EMB", "SMC")
+    assert neutral.club_id is None and neutral.favourite_player_id is None and neutral.pov_team() is None
+    follows = fan_profile("home", "fr", "analyst", None, "EMB", "SMC", "EMB-7")
+    assert (follows.club_id, follows.favourite_player_id, follows.focus_metric) == ("EMB", "EMB-7", "top_speed")
+    assert fan_profile("neutral", "es", "casual", None, "EMB", "SMC", "SMC-9") == \
+        fan_profile("player", "es", "casual", None, "EMB", "SMC")       # same texts as the precomputed set-up
+    assert fan_profile("home", "en", "casual", None, "EMB", "SMC", "XXX-1").favourite_player_id is None

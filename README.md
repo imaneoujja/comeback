@@ -41,7 +41,7 @@ away in 21 seconds."* (You left the match. COMEBACK didn't.)
 
 ### Try it in 60 seconds
 
-1. Open the **[live demo](https://comeback.lemonforest-f9ddbdf8.switzerlandnorth.azurecontainerapps.io)** on a computer, choose **A fan**, your side and language, and press **START**: the default *Step away 63'–70'* runs the whole loop in about 90 s.
+1. Open the **[live demo](https://comeback.lemonforest-f9ddbdf8.switzerlandnorth.azurecontainerapps.io)** on a computer, pick a live match, your side and language, and press **WATCH LIVE**. To see the whole loop in about two minutes, open **DEMO** (bottom right, or press **D**) → **Autoplay**.
 2. Or **[open it in GitHub Codespaces](https://codespaces.new/imaneoujja/comeback)**: it starts by itself on port 8000.
 3. Or locally: `pip install -r requirements.txt && python -m comeback` → http://localhost:8000
 
@@ -91,12 +91,19 @@ live nor caught up; the seconds are measured by the screen (replays plus voice-o
 
 ![The full-time front page with the receipt: live for all 3 goals, caught up on 7 minutes away in 21 seconds; 29 of 36 minutes live, 2 call-backs, 1 followed by a chance within 90 s, 1 of 3 goals announced](docs/receipt.png)
 
-The first screen asks **who is watching**. A **fan** gets the TV (a 3D program feed with
-broadcast graphics: player tags, pass difficulty, shot speed, speed and distance tags,
-danger index) and a panel to pair their phone. A **studio** gets the broadcaster's
-control room: the agents at work, the Watcher's decisions for the whole audience, the same
+Two products on one engine, side by side in the top bar. The **Fan app** (the default)
+opens on the matches **live now**: pick one, your side (or neutral, and optionally a player
+to follow), how you like it (casual or analyst, your language), and **WATCH LIVE**. You join
+the match where it is, with the story so far, then watch live: the TV (a 3D program feed
+with broadcast graphics: player tags, pass difficulty, shot speed, speed and distance tags,
+danger) and a panel to pair your phone. You do not choose when you step away: it happens,
+and COMEBACK notices. The **Studio console** lists the same live matches with their
+audience (viewers, fans away, call-backs sent) and opens a broadcaster's **control room** on
+one of them: the agents at work, the Watcher's decisions for the whole audience, the same
 call-back as three audience segments get it, a simulated audience of 10,000 fans, and
 **timed, machine-readable overlay cues** a broadcast graphics renderer could consume.
+
+![The Fan app front door: pick a live match (Emberfield 0–2 Saltmarsh Comets, live 60'; Ashvale Wanderers 0–0 Larkhaven Athletic, live 23', quiet so far), your side and an optional player to follow, how you like it, then WATCH LIVE](docs/home.png)
 
 ## Why not just stream it on your phone?
 
@@ -138,36 +145,29 @@ engine, the danger index, the Watchers, the Verifier and the simulated audience 
 for real. Only the agents' texts for the two playable matches are cached
 (`data/llm_cache.jsonl`, written once by Foundry), so you see real model output
 without any key; a window we did not precompute gets a verified template instead.
-The first screen also offers an **unscripted match**, replayed with the same engine,
-Watchers and Verifier.
+Two synthetic matches are "live": a scripted storyline (the comeback, joined at 60') and
+an unscripted one (joined at 23', quiet so far), replayed with the same engine, Watchers
+and Verifier.
 
 ### What to try
 
-The first screen asks who is watching.
-
-1. **A fan.** Pick a side (home club, away club, or follow a player), a language
-   (English, French, Spanish), a style (casual or analyst), your one number, and when
-   you watch:
-   - **Step away 63'–70'** (the default): the match starts at 59'; you leave at 63',
-     COMEBACK calls you back at 65' and 69' with the reason, and at 70' the TV replays
-     what you missed while a neural voice reads your "Previously on…". Then the 71' goal,
-     live, and **What you missed**: tap a player for their sheet, or a team.
-   - **Join late at 60'**: you missed the first hour, you get the story so far and its
-     players.
-   - **From kick-off**: watch it all; if you have to step away, switch browser tab or press
-     I'M AWAY.
-
-   Next to the match, **Pair your phone** shows a QR code: scan it and the call-backs
-   ring and speak on your own phone. **CALL ME BACK FOR** sets your rules (try *Only if
-   this match gets good* on the unscripted match). **CHANGE** (top bar) switches language,
-   side or style without restarting the match. Set the rate to ×40 to reach full time and
-   your receipt.
-2. **A studio.** The broadcaster's control room, from 60': the program feed, the agents
-   at work (drafts, Verifier rejections, revisions), the Watcher's decision for the whole
-   audience (**DECISIONS**), the same call-back as three audience segments get it
+1. **Fan app** (the default). Pick a live match, your side, how you like it, **WATCH LIVE**.
+   You join where the match is: the TV replays the goals you missed while a neural voice
+   tells the story so far, then **What you missed** shows the players who made it. Then you
+   watch live. When you have to step away, switch browser tab or press **I'M AWAY**: COMEBACK
+   calls you back before the big moment (pair your phone with the QR code to get the call
+   on it), and catches you up when you return. On the quiet match, try **Only call me if it
+   gets good**. **CHANGE** (top bar) switches side, player, language or style without
+   restarting the match.
+2. **Demo controls** (the **DEMO** button bottom right, or the **D** key): rate, jump to a
+   minute, restart from kick-off, and **Autoplay**, which plays the whole scenario on the
+   scripted match: you leave at 63', the call-backs at 65' and 69', back at 70' (replay,
+   voice-over, What you missed), the 71' goal live, then full time and your receipt.
+3. **Studio console** (top bar): open a control room on a live match: the program feed, the
+   agents at work (drafts, Verifier rejections, revisions), the Watcher's decision for the
+   whole audience (**DECISIONS**), the same call-back as three audience segments get it
    (**PERSONALIZE**), 10,000 simulated fans and the cost curve, the timed overlay cues
    (**CUES**), and **⚡ CUT THE LLM** to watch the show go on without it.
-3. Let a fan's match run to full-time: they get their own front page.
 
 ## How it works
 
@@ -454,7 +454,7 @@ control row shows the judge is not lenient on gross errors. Details per text:
 | Agentic design | Agent Framework workflow Writer → Verifier → retry → fallback ([`comeback/agents/workflow.py`](comeback/agents/workflow.py)); one Watcher per fan with a visible decision chain ([`comeback/agents/watcher.py`](comeback/agents/watcher.py), [`web/js/decision.js`](web/js/decision.js)); shared match brain ([`comeback/agents/brain.py`](comeback/agents/brain.py)); failure drill ([`comeback/agents/llm.py`](comeback/agents/llm.py) `SwitchableGateway`); MCP server ([`comeback/mcp_server.py`](comeback/mcp_server.py)) |
 | Multi-agent vs one agent | [`scripts/compare_single_agent.py`](scripts/compare_single_agent.py) → [`docs/single_agent_comparison.json`](docs/single_agent_comparison.json) |
 | Real-world impact | Alert protocol and numbers ([`scripts/evaluate_alerts.py`](scripts/evaluate_alerts.py) → [`docs/alerts_eval.json`](docs/alerts_eval.json)), cost at scale ([`comeback/fans/crowd.py`](comeback/fans/crowd.py), `/api/scale`), load test ([`scripts/load_test.py`](scripts/load_test.py)), overlay cues for renderers (`/api/overlays`, `/docs`) |
-| UX and presentation | A first screen that sets up the experience (fan or studio, side, language, style, metric, when you watch: [`web/js/setup.js`](web/js/setup.js)); a TV-only fan view with a phone pairing panel; a studio control room; spoiler-free return; the fan's own alert rules ([`comeback/fans/session.py`](comeback/fans/session.py)) |
+| UX and presentation | Two products in one top bar: a Fan app that opens on the matches live now (side, player to follow, style, language: [`web/js/setup.js`](web/js/setup.js)) and a Studio console; demo controls kept apart in a drawer; a TV-only fan view with a phone pairing panel; spoiler-free return; the fan's own alert rules ([`comeback/fans/session.py`](comeback/fans/session.py)); readable team shapes on the pitch, checked by tests ([`web/js/formation.js`](web/js/formation.js)) |
 | Category fit (multi-agent) | Distinct roles, shared state, handoffs, recovery, and an outcome one agent does not reach: the table above |
 
 ## Challenge requirement → where in COMEBACK
@@ -676,7 +676,7 @@ LLM_MODE=record python scripts/precompute.py     # re-record the cache: 18 fan s
 ## Development
 
 ```bash
-pytest                        # 76 tests: realism, engine, verifier, workflows, watchers, called-it, crowd, API, setup, what you missed, receipt, drill, concurrency
+pytest                        # 78 tests: realism, engine, verifier, workflows, watchers, called-it, crowd, API, setup, what you missed, receipt, drill, concurrency
 ruff check .
 python -m comeback.synth.cli random --count 5    # more synthetic matches
 python scripts/evaluate_alerts.py

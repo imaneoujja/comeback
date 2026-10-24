@@ -32,6 +32,9 @@ log = logging.getLogger(__name__)
 
 MATCHES_DIR = Path(__file__).resolve().parents[2] / "data" / "matches"
 SPEEDS = (1, 5, 10, 20, 40)
+# Where each match is "live" when a viewer opens it (synthetic matches replayed as if live): a viewer
+# joins there and gets the story so far. The texts for these join points are precomputed.
+LIVE_MINUTE = {"demo-comeback": 60.0, "random-3112": 23.0}
 MAX_SLEEP_S = 1.5  # dead-ball pauses are shortened so the replay never feels frozen
 CARD_WAIT_S = 20.0
 CROWD_SIZE = 10_000
