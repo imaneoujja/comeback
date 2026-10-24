@@ -171,10 +171,18 @@
       </div>
     </aside>
 
-    <section class="mon feed-mon studio-only" data-mon="feed" aria-label="Live agent feed">
-      <div class="mon-label"><span class="tally amber" id="feed-tally"><i></i>LIVE AGENT FEED</span>
-        <span class="src">ENGINE → ANALYST → VERIFIER → WATCHER</span></div>
+    <section class="mon feed-mon studio-only" data-mon="feed" aria-label="Live agent feed and research desk">
+      <div class="mon-label rtabs" id="rtabs"><span class="tally amber" id="feed-tally"><i></i></span>
+        <button data-rtab="feed" class="on">LIVE AGENT FEED</button><button data-rtab="desk">RESEARCH DESK</button>
+        <span class="src right" id="rtab-src">ENGINE → ANALYST → VERIFIER → WATCHER</span></div>
       <div class="screen feed" id="feed"></div>
+      <div class="screen desk" id="desk" hidden>
+        <div class="tp-card" id="tp-card"></div>
+        <nav class="desk-tabs" id="desk-tabs">
+          <button data-dtab="match" class="on">THIS MATCH</button><button data-dtab="standings">STANDINGS</button><button data-dtab="form">FORM</button><button data-dtab="players">PLAYERS</button><button data-dtab="injuries">INJURIES</button><button data-dtab="h2h">HEAD-TO-HEAD</button>
+        </nav>
+        <div class="desk-pane" id="desk-pane"></div>
+      </div>
     </section>
 
     <section class="numbers studio-only" id="numbers" aria-label="Audience"></section>

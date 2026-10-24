@@ -170,6 +170,28 @@ and Verifier.
    below, and **SIMULATE LLM OUTAGE** to watch the show go on without the model. **RAW FEED**
    unfolds the timed overlay cues (JSON), the engine data and the timeline.
 
+## Research Desk: a commentator's notes
+
+The studio's **RESEARCH DESK** (next to the LIVE AGENT FEED) gives the commentator context the
+match alone cannot: a synthetic league built around the live matches (`scripts/build_league.py`,
+`data/league/league.json`). The current season's first nine matchdays and last season are
+simulated by the same simulator and read by the same engine; matchday 10 holds the two live
+matches. Injured players started before their injury and are not on today's team sheet;
+nobody on a live team sheet is suspended (both tested).
+
+On top, one card: the **next talking point** the Researcher recommends, with its source in the
+records ("13th goal of the season for Ciro Oakenfold, 6 in the last 5 matches" · *season stats:
+12 goals in 9 matches before today*), in English, French or Spanish. Below: This match (the
+engine's pictures), Standings, Form, Players (season leaders and records), Injuries,
+Head-to-head. The Researcher is a fifth agent with its own role: it only adds context, every
+number and name is verified against the league's records, and a factual template takes over
+when there is no verified text. On the demo match, 41 of 51 talking-point sets (moment ×
+language) are verified model text; the other 10 fell back to the template after three rejected
+drafts. The fan side gets one line of it too: a scorer in *What you missed* shows their season
+count ("7.º gol de la temporada").
+
+![Research Desk at 71': the next talking point on Oakenfold's 13th goal of the season with its source, and the standings with the live match highlighted](docs/research.png)
+
 ## What the engine understands
 
 A pure-Python engine reads every event once, as it happens (`comeback/engine/`), and every
@@ -233,10 +255,11 @@ flowchart LR
 | **Verifier** | A draft + the facts + the roster | Pass, or precise feedback for a retry | Rules (deterministic) |
 | **Watcher** (one per fan) | The live danger index, the fan's presence and profile | "Come back" decision + reason, goal notifications, a "called it" receipt when a goal follows its call-back | No: instant and free per fan |
 | **Storyteller** | The verified cards of the away window, a "what changed" delta, the fan profile | Catch-up or full-time recap in the fan's language, level and point of view | Yes |
+| **Researcher** | A verified moment card + one or two context facts from the synthetic league's records (scorer's season, the table if the score holds, form, injuries, suspensions, head-to-head), each with its source | A commentator's talking points for the studio, in English, French or Spanish, checked by the Verifier against those records | Yes (precomputed for the demo; factual template otherwise) |
 
 - **Orchestration.** Analyst → Verifier → retry → fallback is a **Microsoft Agent
   Framework workflow** (`comeback/agents/workflow.py`) with typed executors and
-  conditional edges. The *same* workflow serves the Storyteller. Every step is
+  conditional edges. The *same* workflow serves the Storyteller and the Researcher. Every step is
   traced live in the studio's LIVE AGENT FEED, one card per moment.
 - **Shared state and handoffs.** The engine and the Moment Store are written once
   and read by every Watcher and by the Storyteller. A moment gets a template card
@@ -401,6 +424,8 @@ tests caught). Each one became a rule:
 | "Emberfield won, *overcoming a numerical advantage for Saltmarsh Comets*" | Saltmarsh Comets had 10 players | Numerical advantage or disadvantage claims must attach to the right team, including "for X", "against ten-man X" and "overcoming…" |
 | "The striker scores his *9th*" (test case) | Invented: the 9 came from the player id `EMB-9` | Every number must exist in the facts; ids are not statistics |
 | "Larkhaven drew 2-2 *despite fewer chances*" | Larkhaven had 21 shots to 7. Our rules missed it; **Foundry's groundedness judge caught it** (2/5) | Comparative claims (fewer/more chances, shots, possession) must agree with the per-team stats |
+| Researcher, 59': "*With this 2-0 lead at home*, Emberfield…" | Emberfield were trailing 0-2: every number was right, the side was wrong | A lead or a deficit in a talking point must belong to the right club |
+| Researcher, 68': "Oakenfold, 12 goles, *superando su xG* de 14.07" | 12 goals is below 14.07 xG | Over/under-xG, "last season" vs this season, "first meeting" and "all of his goals" claims must agree with the league's records |
 
 The Verifier also rejects players who are not part of the moment, clubs outside
 the match, insulting or mocking words about players, betting talk, and over-long
@@ -500,7 +525,7 @@ control row shows the judge is not lenient on gross errors. Details per text:
 | (ii) Auto-eventing from video | **Not implemented.** COMEBACK works on event streams (synthetic here) |
 | (iii) Narratives, player context, milestones, recaps | Moment cards; milestones (fastest shot, top speed, 50 completed passes); catch-ups; the players who changed the game in the fan's absence, with a verified line each; per-fan full-time recap and receipt |
 | (iv) Control vs chaos, pressure, rhythm | Live "control vs chaos" graphic (rolling possession × accuracy; duels + turnovers per minute); danger index and its trend; momentum swings; momentum timeline; every call-back's decision chain (events → state → insight → decision); "this match got good" (a quiet rhythm turning into danger); team sheets: control and danger as you left vs as you found them |
-| (v) Synthetic data innovation | Possession simulator with spells of dominance, transparent scripted beats, realism tests, a 10,000-fan audience simulation |
+| (v) Synthetic data innovation | Possession simulator with spells of dominance, transparent scripted beats, realism tests, a 10,000-fan audience simulation, and a synthetic league built around the live matches: this season (9 matchdays simulated and read by the same engine) and last season, injuries and suspensions, all coherent with the live team sheets (tested) |
 | (vi) Multi-language storytelling | Catch-ups, alerts and recaps in English, French and Spanish, neural voice per language, and a checked **Show English** translation under every non-English catch-up |
 
 ## Microsoft technologies

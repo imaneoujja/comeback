@@ -32,12 +32,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from comeback.agents.brain import MatchBrain  # noqa: E402
 from comeback.agents.llm import LLMGateway  # noqa: E402
 from comeback.agents.notes import write_notes  # noqa: E402
+from comeback.agents.researcher import talking_points  # noqa: E402
 from comeback.agents.speech import SpeechGateway  # noqa: E402
 from comeback.agents.translator import english_version  # noqa: E402
 from comeback.api.replay import LIVE_MINUTE  # noqa: E402
 from comeback.engine.match import load_match  # noqa: E402
 from comeback.fans.missed import what_you_missed  # noqa: E402
 from comeback.fans.profiles import LANGUAGES, LEVELS, SIDES, fan_profile  # noqa: E402
+from comeback.league import RESEARCH_TYPES, load_league  # noqa: E402
 
 MATCHES = Path(__file__).resolve().parents[1] / "data" / "matches"
 PLAYABLE = [MATCHES / "demo-comeback.jsonl", MATCHES / "random-3112.jsonl"]
@@ -48,7 +50,8 @@ def clock(e: dict) -> float:
     return e["minute"] + e["second"] / 60 if e["period"] == 2 else 0.0
 
 
-async def precompute(path: Path, gateway: LLMGateway, speech: SpeechGateway | None) -> list[str | None]:
+async def precompute(path: Path, gateway: LLMGateway, speech: SpeechGateway | None,
+                     research: bool = False) -> list[str | None]:
     """One match: every card, every configuration's catch-ups and recap, translations, voices."""
     meta, events = load_match(path)
     home, away = meta["home"]["id"], meta["away"]["id"]
@@ -56,7 +59,7 @@ async def precompute(path: Path, gateway: LLMGateway, speech: SpeechGateway | No
             for side, lang, level in itertools.product(SIDES, LANGUAGES, LEVELS)]
     brain = MatchBrain(meta, gateway)
     voiced: list[str | None] = []
-    stats = {"llm": 0, "template": 0, "notes_llm": 0, "notes_template": 0}
+    stats = {"llm": 0, "template": 0, "notes_llm": 0, "notes_template": 0, "research_llm": 0, "research_template": 0}
 
     async def finish(result: dict, spoken: bool) -> None:
         stats[result["source"]] += 1
@@ -79,7 +82,13 @@ async def precompute(path: Path, gateway: LLMGateway, speech: SpeechGateway | No
     for index, event in enumerate(events):
         for moment in brain.process(event).moments:
             if brain.cards[moment.moment_id]["pending"]:
-                await brain.write_card(moment)
+                card = await brain.write_card(moment)
+                if research and moment.type in RESEARCH_TYPES and moment.importance >= 50:
+                    for lang in LANGUAGES:            # the studio's Research Desk, demo match only
+                        tp = await talking_points({**card, "moment_id": moment.moment_id}, load_league(), home, away,
+                                                  lang, brain.team_names, brain.roster, gateway)
+                        if tp:
+                            stats["research_" + tp["source"]] += 1
         m = clock(event)
         join_at = LIVE_MINUTE[path.stem]
         if not joined and (event["period"], event["minute"] + event["second"] / 60) >= (1 + (join_at >= 45), join_at):
@@ -100,6 +109,7 @@ async def precompute(path: Path, gateway: LLMGateway, speech: SpeechGateway | No
         await finish(await brain.final_recap(fan), spoken=True)
     print(f"  catch-ups and recaps: {stats['llm']} verified LLM texts, {stats['template']} templates")
     print(f"  what-you-missed lines: {stats['notes_llm']} verified LLM sets, {stats['notes_template']} templates")
+    print(f"  talking points: {stats['research_llm']} verified LLM sets, {stats['research_template']} templates")
     return voiced
 
 
@@ -107,7 +117,7 @@ async def main() -> None:
     gateway = LLMGateway()
     speech = SpeechGateway()
     print(f"LLM mode: {gateway.settings.mode.value}")
-    voiced = await precompute(PLAYABLE[0], gateway, speech)
+    voiced = await precompute(PLAYABLE[0], gateway, speech, research=True)
     for path in PLAYABLE[1:]:
         await precompute(path, gateway, None)
     print(f"\nAudio: {sum(1 for v in voiced if v)}/{len(voiced)} spoken texts available (demo match)")

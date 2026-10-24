@@ -589,6 +589,7 @@ body.configuring .setup { display: block; }
 .ms-name.big { font-size: 30px; }
 .ms-meta { font-family: var(--mono); font-size: 10.5px; letter-spacing: .06em; color: var(--label); text-transform: uppercase; }
 .ms-line { font-size: 14.5px; line-height: 1.3; color: #e4e2dc; }
+.ms-ctx { display: block; margin-top: 3px; font: 600 12px/1.3 var(--mono, monospace); letter-spacing: .04em; color: var(--amber, #f5b83d); }
 .ms-bar { display: flex; flex-direction: column; gap: 3px; align-items: flex-end; }
 .ms-bar i { display: block; height: 5px; width: 0; background: var(--team); align-self: stretch; max-width: 100%; }
 .ms-bar em { font-style: normal; font-family: var(--mono); font-size: 10px; color: var(--label); }
@@ -800,3 +801,60 @@ body.configuring .setup { display: block; }
 .in-turn small { display: block; font-size: 12.5px; line-height: 1.35; color: var(--label); margin-top: 2px; }
 .in-empty { font-size: 13px; color: var(--dim); }
 .in-turn small { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* ------------------------------------------------------------- studio: agent feed | research desk */
+.rtabs { gap: 0; }
+.rtabs button { border: 0; background: none; color: var(--label); font-family: var(--mono); font-size: 10.5px; letter-spacing: .14em;
+  padding: 0 12px; height: 100%; border-right: 1px solid var(--rule); }
+.rtabs button.on { background: #1c1c1c; color: #fff; font-weight: 700; box-shadow: inset 0 -2px 0 var(--amber); }
+.feed-mon .screen.desk { flex: none; height: max(380px, min(calc(100vh - 270px), 34vw)); overflow-y: auto; background: #0a0a0a;
+  padding: 10px; display: flex; flex-direction: column; gap: 10px; }
+.feed-mon .screen[hidden] { display: none; }
+.tp-card { background: #15120a; border: 1px solid rgba(255, 176, 0, .45); border-left: 5px solid var(--amber); padding: 10px 12px;
+  display: flex; flex-direction: column; gap: 8px; }
+.tp-k { display: flex; align-items: center; gap: 10px; font-family: var(--mono); font-size: 10.5px; letter-spacing: .14em; color: var(--amber); }
+.tp-k .b { font-size: 9.5px; padding: 1px 6px; border: 1px solid #3a3a3a; color: var(--label); letter-spacing: .08em; }
+.tp-lang { margin-left: auto; } .tp-lang button { font-size: 10px; padding: 3px 8px; }
+.tp-point { display: flex; flex-direction: column; gap: 3px; padding-left: 10px; border-left: 3px solid var(--team, var(--amber)); }
+.tp-point b { font-family: var(--cond); font-size: 21px; line-height: 1.2; color: #fff; }
+.tp-point small { font-family: var(--mono); font-size: 10.5px; color: var(--label); }
+.tp-wait { margin: 0; font-size: 15px; line-height: 1.45; color: var(--label); }
+.desk-tabs { display: flex; flex-wrap: wrap; border: 1px solid #2a2a2a; }
+.desk-tabs button { flex: 1; border: 0; border-right: 1px solid #2a2a2a; background: #111; color: var(--label); font-family: var(--mono);
+  font-size: 10px; letter-spacing: .1em; padding: 7px 4px; }
+.desk-tabs button:last-child { border-right: 0; }
+.desk-tabs button.on { background: var(--text); color: #111; font-weight: 700; }
+.desk-pane { display: flex; flex-direction: column; gap: 8px; }
+.desk-pane .in-curve { height: 90px; } .desk-pane .in-shots { height: 190px; }
+.dk-k { font-family: var(--mono); font-size: 10.5px; letter-spacing: .14em; color: var(--amber); }
+.dk-table { width: 100%; border-collapse: collapse; font-size: 15px; }
+.dk-table th { font-family: var(--mono); font-size: 10px; letter-spacing: .1em; color: var(--dim); font-weight: 400; text-align: right; padding: 4px; }
+.dk-table td { padding: 6px 4px; border-bottom: 1px solid #1d1d1d; text-align: right; font-variant-numeric: tabular-nums; }
+.dk-table td:nth-child(2) { text-align: left; } .dk-table td:first-child { color: var(--label); }
+.dk-table tr.live td { background: #17140c; } .dk-table tr.live .club { font-weight: 700; color: #fff; }
+.club { display: inline-flex; align-items: center; gap: 7px; font-family: var(--cond); font-size: 16px; }
+.club i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.dots { white-space: nowrap; } .fd { font-style: normal; display: inline-block; width: 15px; height: 15px; line-height: 15px; text-align: center;
+  font-family: var(--mono); font-size: 9.5px; font-weight: 700; margin-left: 2px; color: #0a0a0a; }
+.fd.W { background: var(--green); } .fd.D { background: #8a8882; } .fd.L { background: var(--red); color: #fff; }
+.dots.big .fd { width: 22px; height: 22px; line-height: 22px; font-size: 11px; }
+.dk-form, .dk-inj { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; align-items: center; padding: 8px 6px; border-bottom: 1px solid #1d1d1d; }
+.dk-form.live, .dk-inj.live { background: #17140c; }
+.dk-m { grid-column: 1 / -1; font-family: var(--mono); font-size: 10.5px; color: var(--label); }
+.dk-inj b { font-family: var(--cond); font-size: 16px; } .dk-inj span { color: #ffb4ae; font-size: 14px; }
+.dk-inj small { grid-column: 1 / -1; font-family: var(--mono); font-size: 10.5px; color: var(--dim); }
+.dk-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.dk-lead { display: flex; flex-direction: column; gap: 2px; }
+.dk-row { display: grid; grid-template-columns: 54px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 5px 2px; border-bottom: 1px solid #1d1d1d; }
+.dk-row .n { font-family: var(--mono); font-size: 10.5px; color: var(--dim); }
+.dk-lead .dk-row { grid-template-columns: 18px minmax(0, 1fr) auto; }
+.dk-row .who { font-family: var(--cond); font-size: 15px; display: flex; flex-direction: column; }
+.dk-row .who small { font-family: var(--mono); font-size: 9.5px; color: var(--label); text-transform: uppercase; }
+.dk-row b { font-family: var(--cond); font-size: 17px; }
+.dk-rec { font-size: 13.5px; color: var(--label); line-height: 1.45; }
+.dk-rec b { color: var(--text); }
+.dk-h2h { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.dk-h2h div { background: #121212; border: 1px solid #262626; padding: 8px; display: flex; flex-direction: column; align-items: center; }
+.dk-h2h b { font-family: var(--cond); font-size: 32px; } .dk-h2h span { font-size: 12.5px; color: var(--label); text-align: center; }
+.fd-card li.researcher > i { color: var(--amber); }
+.fd-card li.researcher .src { display: block; font-family: var(--mono); font-size: 10.5px; color: var(--label); margin-top: 2px; }

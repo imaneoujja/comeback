@@ -126,7 +126,7 @@ class VerifierExecutor(Executor):
                     ctx: WorkflowContext[WriteRequest | FallbackRequest, WrittenResult]) -> None:
         request = draft.request
         issues = [draft.error] if draft.error else self.writer.verify(request.task, draft.output or {})
-        step = {"agent": "Verifier", "step": "rejected" if issues else "verified",
+        step = {"agent": "Verifier", "step": "rejected" if issues else "verified", "writer": self.writer.agent_name,
                 "label": self.writer.label(request.task), "attempt": request.attempt,
                 "detail": issues[0] if issues else self.writer.agent_name}
         if issues and draft.output:  # the rejected text itself, for the live fact-check display
@@ -156,7 +156,7 @@ class FallbackExecutor(Executor):
     async def fallback(self, request: FallbackRequest, ctx: WorkflowContext[Any, WrittenResult]) -> None:
         log.info("%s fell back to template: %s", self.writer.agent_name, request.reason)
         self.trace({"agent": "Fallback", "step": "template", "label": self.writer.label(request.request.task),
-                    "detail": request.reason})
+                    "detail": request.reason, "writer": self.writer.agent_name})
         await ctx.yield_output(WrittenResult(
             self.writer.fallback(request.request.task), "template", True,
             request.request.attempt, request.request.history, request.reason))

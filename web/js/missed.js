@@ -78,6 +78,9 @@ function render() {
   if (view.page === "player") drawActions(view.id);
 }
 
+/* Context from the synthetic league's records (the Research Desk's data): "13th goal of the season". */
+const season = (p) => (p.season ? `<span class="ms-ctx">${esc(p.season)} · league records</span>` : "");
+
 function list() {
   const top = data.players[0]?.influence || 1;
   const players = data.players.map((p, i) => `
@@ -85,7 +88,7 @@ function list() {
       <span class="ms-rank">${i + 1}</span><span class="ms-num">${p.number}</span>
       <span class="ms-who"><span class="ms-name">${surnameUp(p.name)}</span>
         <span class="ms-meta">${esc(teamName(p.team))} · ${esc(p.position)} · ${p.reasons.map(reason).join(" · ")}</span>
-        <span class="ms-line">${esc(data.lines[p.id] || "")}</span></span>
+        <span class="ms-line">${esc(data.lines[p.id] || "")}</span>${season(p)}</span>
       <span class="ms-bar"><i style="width:${Math.round((p.influence / top) * 100)}%"></i><em>${num(p.influence, 1)}</em></span>
     </button>`).join("");
   const teams = Object.entries(data.teams).map(([code, t]) => `
@@ -119,7 +122,7 @@ function playerSheet(p) {
       <div><div class="ms-name big">${surnameUp(p.name)}</div><div class="ms-meta">${esc(teamName(p.team))} · ${esc(p.position)}</div></div>
       ${data.whole ? "<span></span>" : `<div class="seg ms-scope"><button data-go="scope:window" class="${view.scope === "window" ? "on" : ""}">${away}</button>
         <button data-go="scope:match" class="${view.scope === "match" ? "on" : ""}">WHOLE MATCH</button></div>`}</div>
-    <div class="ms-why">${esc(data.lines[p.id] || "")}</div>
+    <div class="ms-why">${esc(data.lines[p.id] || "")}${season(p)}</div>
     <div class="ms-body"><div class="ms-pitch"><canvas id="ms-canvas"></canvas>
         <div class="ms-legend"><span><i class="lg-pass"></i>pass</span><span><i class="lg-key"></i>key pass</span>
           <span><i class="lg-lost"></i>lost</span><span><i class="lg-shot"></i>shot (size = xG)</span><span><i class="lg-run"></i>run</span>

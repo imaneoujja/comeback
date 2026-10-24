@@ -215,7 +215,7 @@ async def scale(match_id: str) -> dict[str, Any]:
 async def stream(request: Request, match_id: str = DEFAULT_MATCH, session: str | None = None,
                  profile: str = "omar", side: str | None = None, lang: str = "en", level: str = "casual",
                  metric: str | None = None, player: str | None = None, speed: int = 10,
-                 device: bool = False) -> StreamingResponse:
+                 device: bool = False, research: str | None = None) -> StreamingResponse:
     """Server-Sent Events: events, snapshots, overlay cues, moment cards, alerts, catch-ups.
 
     The fan is either configured (``side``/``lang``/``level``/``metric``, the first screen) or a
@@ -229,6 +229,8 @@ async def stream(request: Request, match_id: str = DEFAULT_MATCH, session: str |
     if replay is None or replay.match_id != match_id:
         fan = _fan(match_id, side, lang, level, metric, player) if side else _profile(profile, match_id)
         replay = ReplaySession(session_id, match_id, fan, gateway, speed)
+        if research in ("en", "fr", "es"):
+            replay.research_lang = research                # the studio's Research Desk
         sessions[session_id] = replay
     queue = replay.subscribe(device=device)
     replay.start()
@@ -336,6 +338,34 @@ async def player_actions(session_id: str, player: str, from_t: float = 0.0,
         a.pop("t", None)
         a.pop("receiver", None)
     return {"player": player, "team": replay.brain.engine.state.roster[player]["team"], "actions": actions}
+
+
+@app.post("/api/session/{session_id}/research")
+async def research_language(session_id: str, lang: str = "en") -> list[dict[str, Any]]:
+    """The Research Desk's language (en / fr / es): the talking points so far, rewritten."""
+    if lang not in ("en", "fr", "es"):
+        raise HTTPException(400, "lang must be en, fr or es")
+    points = await _session(session_id).set_research(lang)
+    _session(session_id).publish("talking_points", points)
+    return points
+
+
+@app.get("/api/league/{match_id}")
+def league(match_id: str) -> dict[str, Any]:
+    """The synthetic league around a live match: table, form, leaders, injuries, head-to-head, records."""
+    from comeback.league import load_league
+
+    meta = _match_meta(match_id)
+    lg = load_league()
+    home, away = meta["home"]["id"], meta["away"]["id"]
+    leaders = {k: lg.leaders(k, 5, 300 if k == "pass_accuracy" else 0)
+               for k in ("goals", "assists", "xg", "top_speed_kmh", "pass_accuracy")}
+    from comeback.synth.teams import CLUBS
+
+    return {"season": lg.data["season"], "matchday": lg.data["played_matchdays"] + 1, "home": home, "away": away,
+            "colours": {c: CLUBS[c].colour for c in lg.clubs},
+            "standings": lg.standings(), "leaders": leaders, "unavailable": lg.unavailable(),
+            "head_to_head": lg.head_to_head(home, away), "records": lg.records()}
 
 
 @app.get("/api/session/{session_id}/insights")

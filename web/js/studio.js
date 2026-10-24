@@ -31,6 +31,7 @@ export function initStudio() {
   });
   on("state", (s) => { reset(); for (const call of s.crowd?.calls || []) applyCall(call); renderNumbers(s.crowd); render(); });
   on("card", (c) => { if (cards.has(c.moment_id)) render(); });
+  for (const t of ["talking_point", "talking_points"]) on(t, () => setTimeout(render, 0));   // after the desk stores it
   $("#feed").addEventListener("click", (e) => {
     const b = e.target.closest("[data-preview]");
     if (b) { const card = cards.get(b.dataset.preview); card.open = !card.open; render(); }
@@ -136,7 +137,8 @@ function momentHtml(card) {
   const imp = /importance (\d+)/.exec(engine?.detail || "")?.[1] ?? c?.importance;
   const rows = [`<li class="engine"><i>ENGINE</i><div>Detected${imp ? ` · importance ${imp}` : ""}${events.length
     ? `<span class="evs">${events.map((e) => describeEvent(e)).join(" · ")}</span>` : ""}</div></li>`];
-  for (const s of card.steps) {
+  const researcher = card.steps.filter((s) => s.agent === "Researcher" || s.writer === "Researcher");
+  for (const s of card.steps.filter((x) => !researcher.includes(x))) {
     if (s.agent === "Analyst" && s.step === "draft") rows.push(`<li class="analyst"><i>ANALYST</i><div>Draft #${s.attempt}: “${esc(s.detail)}”</div></li>`);
     else if (s.step === "rejected") {
       rows.push(`<li class="verifier bad"><i>VERIFIER</i><div><b>✗ Rejected</b> ${s.draft ? `<q>${strike(s.draft, s.detail)}</q>` : ""}
@@ -145,7 +147,13 @@ function momentHtml(card) {
     else if (s.step === "template") rows.push(`<li class="verifier tpl"><i>FALLBACK</i><div>No draft passed: a template built from verified facts</div></li>`);
     else if (s.step === "unavailable") rows.push(`<li class="verifier tpl"><i>FOUNDRY</i><div>Model unavailable: ${esc(s.detail)}</div></li>`);
   }
-  const done = card.steps.some((s) => s.step === "verified" || s.step === "template");
+  const tp = app.talking?.[card.id];
+  for (const s of researcher.filter((x) => x.step === "rejected")) {
+    rows.push(`<li class="verifier bad"><i>VERIFIER</i><div><b>✗ Talking point rejected</b> <span class="why">${esc(reason(s.detail))}</span></div></li>`);
+  }
+  if (tp) rows.push(`<li class="researcher"><i>RESEARCHER</i><div>${tp.source === "llm" ? "✓" : "⚑"} “${esc(tp.points[0].text)}”
+    <small class="src">${esc(tp.points[0].source)} → Research Desk</small></div></li>`);
+  const done = card.steps.some((s) => (s.step === "verified" || s.step === "template") && s.writer !== "Researcher");
   const prior = callBefore(c);
   return `<article class="fd-card ${card.type}" style="--team:${teamColour(team)}">
     <header><b>${card.minute}'</b><span>${TYPE[card.type] || esc(card.type).toUpperCase()}${team ? ` · ${esc(teamName(team))}` : ""}</span>${badges(card)}</header>

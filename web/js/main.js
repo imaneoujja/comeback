@@ -21,6 +21,7 @@ import { initAutoplay, startAutoplay, stopAutoplay, autoplayActive } from "./aut
 import { initCues } from "./cues.js";
 import { initStudio } from "./studio.js";
 import { initInsights } from "./insights.js";
+import { initResearch } from "./research.js";
 import { initMissed, showMissed, hideMissed } from "./missed.js";
 
 let program = null;          // 3D renderer, or null → 2D fallback on the PGM canvas
@@ -42,6 +43,7 @@ async function boot() {
   initCues();
   initStudio();
   initInsights();
+  initResearch();
   initToast();
   initMissed();
   initAutoplay({ setSpeed });
@@ -237,7 +239,8 @@ function restart(then = null) {
 /* ------------------------------------------------------------------ stream */
 
 function connect() {
-  const url = `/api/stream?match_id=${encodeURIComponent(app.matchId)}&session=${app.session}&${fanQuery(app.config)}&speed=${app.speed}`;
+  const desk = app.config.mode === "studio" ? "&research=en" : "";       // the studio's Research Desk
+  const url = `/api/stream?match_id=${encodeURIComponent(app.matchId)}&session=${app.session}&${fanQuery(app.config)}&speed=${app.speed}${desk}`;
   const es = new EventSource(url);
   app.es = es;
   const on = (type, fn) => es.addEventListener(type, (m) => { const d = JSON.parse(m.data); fn(d); emit(type, d); });
@@ -292,7 +295,7 @@ function connect() {
   on("outage", (o) => renderOutage(o.down));
   on("end", () => put("banner", `<div class="bn" style="--team:#ecebe6"><div class="bn-k">FULL-TIME</div>
       <div class="bn-t">${app.teams[app.home].name} ${app.snapshot?.score_str ?? ""} ${app.teams[app.away].name}</div></div>`, 120, 999));
-  for (const type of ["agent", "device"]) on(type, () => {});   // forwarded to the AGENTS monitor and the pairing panel
+  for (const type of ["agent", "device", "talking_point", "talking_points"]) on(type, () => {});   // forwarded to the AGENTS monitor and the pairing panel
 }
 
 /** "Previously on…": the TV replays what was missed, then the card; the voice tells the story. */

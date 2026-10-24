@@ -12,22 +12,26 @@ import { showPlayerSheet } from "./missed.js";
 const REFRESH_MS = 8000;
 const TURNING = new Set(["goal", "red_card", "penalty", "big_chance", "momentum_swing", "shape_change"]);
 let data = null;
+let root = null;                // where the pictures were last drawn
 let timer = null;
 let tab = null;                 // "alerts" | "insights": the fan's own choice wins over the default
 
 const analyst = () => profile()?.level === "analyst";
 
+/** The insights data (shots, influence) of this session. */
+export const fetchInsights = () => fetch(`/api/session/${app.session}/insights`).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+
 export function initInsights() {
   $("#cp-tabs").addEventListener("click", (e) => { if (e.target.dataset.tab) { tab = e.target.dataset.tab; show(); } });
-  $("#insights").addEventListener("click", (e) => {
-    const b = e.target.closest("[data-player]");
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest(".in-player[data-player]");
     if (!b || !data) return;
     const player = data.players.find((p) => p.id === b.dataset.player);
     showPlayerSheet({ ...player, window: player.match }, data.players.map((p) => ({ ...p, window: p.match })), data.t, data.minute);
   });
   on("state", () => { show(); refresh(); });
-  on("card", () => { if (open()) renderTurning(); });
-  on("timeline", () => { if (open()) drawCurve(); });
+  on("card", () => { if (open() || root !== $("#insights")) renderTurning(); });
+  on("timeline", () => { if (open() || root !== $("#insights")) drawCurve(); });
 }
 
 const open = () => !$("#insights").hidden;
@@ -42,24 +46,27 @@ function show() {
 
 async function refresh() {
   if (!open() || !app.session) return;
-  data = await fetch(`/api/session/${app.session}/insights`).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+  data = await fetchInsights();
   render();
 }
 
-function render() {
-  const el = $("#insights");
-  if (!app.snapshot) { el.innerHTML = ""; return; }
-  const deep = analyst();
+function render() { renderMatchInsights($("#insights"), data, analyst()); }
+
+/** The four pictures, into ``el`` (the fan's companion or the studio's Research Desk). */
+export function renderMatchInsights(el, insights, deep) {
+  data = insights || data;
+  root = el;
+  if (!app.snapshot || !el) { if (el) el.innerHTML = ""; return; }
   el.innerHTML = `
     <section class="in-block"><div class="cp-k">THE MATCH SO FAR</div>
-      <canvas id="in-curve" aria-label="Momentum and chaos minute by minute, key moments marked"></canvas>
+      <canvas class="in-curve" aria-label="Momentum and chaos minute by minute, key moments marked"></canvas>
       <div class="in-legend"><span><i style="background:${teamColour(app.home)}"></i>${esc(teamName(app.home))} in control</span>
         <span><i style="background:${teamColour(app.away)}"></i>${esc(teamName(app.away))} in control</span>
         ${deep ? `<span><i class="chaos"></i>chaos (duels + turnovers / min)</span>` : ""}</div></section>
-    <section class="in-block"><div class="cp-k">SHOTS · SIZE = xG</div><canvas id="in-shots" aria-label="Shot map"></canvas>
-      <div class="in-legend" id="in-shots-sum"></div></section>
-    <section class="in-block"><div class="cp-k">PLAYERS OF THE MATCH</div><div id="in-players"></div></section>
-    <section class="in-block"><div class="cp-k">THE TURNING POINTS</div><div id="in-turning"></div></section>`;
+    <section class="in-block"><div class="cp-k">SHOTS · SIZE = xG</div><canvas class="in-shots" aria-label="Shot map"></canvas>
+      <div class="in-legend in-shots-sum"></div></section>
+    <section class="in-block"><div class="cp-k">PLAYERS OF THE MATCH</div><div class="in-players"></div></section>
+    <section class="in-block"><div class="cp-k">THE TURNING POINTS</div><div class="in-turning"></div></section>`;
   drawCurve();
   drawShots();
   renderPlayers();
@@ -68,7 +75,7 @@ function render() {
 
 /* 1 ----------------------------------------------------------------- the match curve */
 function drawCurve() {
-  const c = $("#in-curve");
+  const c = root?.querySelector(".in-curve");
   if (!c) return;
   const dpr = sizeCanvas(c);
   const ctx = c.getContext("2d");
@@ -105,7 +112,7 @@ function drawCurve() {
 
 /* 2 ----------------------------------------------------------------- the shot map */
 function drawShots() {
-  const c = $("#in-shots");
+  const c = root?.querySelector(".in-shots");
   if (!c || !data) return;
   const dpr = sizeCanvas(c);
   const ctx = c.getContext("2d");
@@ -128,12 +135,12 @@ function drawShots() {
   const sum = (team) => data.shots.filter((s) => s.team === team);
   const line = (team) => `<span><i style="background:${teamColour(team)}"></i>${esc(team)} ${sum(team).length} shots ·
     ${sum(team).reduce((a, s) => a + s.xg, 0).toFixed(2)} xG</span>`;
-  $("#in-shots-sum").innerHTML = `${line(app.home)}${line(app.away)}<span>○ white ring = goal</span>`;
+  root.querySelector(".in-shots-sum").innerHTML = `${line(app.home)}${line(app.away)}<span>○ white ring = goal</span>`;
 }
 
 /* 3 ----------------------------------------------------------------- players of the match */
 function renderPlayers() {
-  const el = $("#in-players");
+  const el = root?.querySelector(".in-players");
   if (!el || !data) return;
   const deep = analyst();
   const top = data.players[0]?.influence || 1;
@@ -149,7 +156,7 @@ function renderPlayers() {
 
 /* 4 ----------------------------------------------------------------- the turning points */
 function renderTurning() {
-  const el = $("#in-turning");
+  const el = root?.querySelector(".in-turning");
   if (!el) return;
   const top = [...app.cards.values()].filter((c) => TURNING.has(c.type) && !c.pending)
     .sort((a, b) => b.importance - a.importance).slice(0, 3).sort((a, b) => a.t - b.t);
