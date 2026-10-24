@@ -26,6 +26,12 @@ class FanProfile:
         """Teams whose danger matters to this fan: both — their side attacking *or* defending."""
         return [home, away]
 
+    @property
+    def display(self) -> str:
+        """A short label for logs and monitors, e.g. "EMB fan · FR · analyst" (fans have no names)."""
+        who = f"{self.club_id} fan" if self.club_id else f"follows {self.favourite_player_id}"
+        return self.name or f"{who} · {self.language.upper()} · {self.level}"
+
     def pov_team(self) -> str | None:
         """The side this fan's story is told from: their club, or their favourite player's team."""
         if self.club_id:
@@ -57,3 +63,25 @@ def for_match(profile: FanProfile, home: str, away: str) -> FanProfile:
         team, number = fav.split("-")
         fav = f"{side.get(team, away)}-{number}"
     return replace(profile, club_id=club, favourite_player_id=fav)
+
+
+SIDES = ("home", "away", "player")
+LANGUAGES = ("en", "fr", "es")
+LEVELS = ("casual", "analyst")
+METRICS = ("xg", "possession", "top_speed", "pass_difficulty")
+
+
+def fan_profile(side: str, language: str, level: str, metric: str | None, home: str, away: str) -> FanProfile:
+    """The fan as configured on the first screen. No name: texts address the fan as "you".
+
+    ``side``: "home" or "away" (supports that club) or "player" (neutral, follows the away
+    team's number 9). Unknown values fall back to the defaults (home, English, casual).
+    """
+    side = side if side in SIDES else "home"
+    language = language if language in LANGUAGES else "en"
+    level = level if level in LEVELS else "casual"
+    default_metric = "top_speed" if side == "player" else "xg" if level == "analyst" else "possession"
+    metric = metric if metric in METRICS else default_metric
+    club = home if side == "home" else away if side == "away" else None
+    favourite = f"{away}-9" if side == "player" else None
+    return FanProfile(f"fan-{side}-{language}-{level}", "", club, favourite, level, language, metric)  # type: ignore[arg-type]

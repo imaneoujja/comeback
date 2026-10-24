@@ -1,17 +1,19 @@
-/* Gallery monitors: DATA, RUNDOWN, TIMELINE and the FAN device feed. */
+/* Panels around the program feed: the fan's companion (presence, alert rules, alerts sent),
+ * the "Previously on…" catch-up on the TV, and the studio's DATA, RUNDOWN and TIMELINE. */
 
-import { $, app, esc, teamColour, teamName, profile, sizeCanvas, emit, on } from "./state.js";
+import { $, app, esc, teamColour, sizeCanvas, emit, on, isStudio } from "./state.js";
 import { TYPE_LABEL, tag } from "./graphics.js";
 import { stopSpeech } from "./voice.js";
 import { playVoice, stopVoice } from "./replay.js";
 
-const LANG_LABEL = { en: "English", fr: "Français", es: "Español" };
 const NOTE_LABEL = {
   come_back: "● COME BACK", goal: "● GOAL", big_moment: "● BIG MOMENT", called_it: "✓ CALLED IT", catchup: "PREVIOUSLY ON…",
 };
 const FOR_LABEL = { threat: "goal threats", equaliser: "equaliser / winner", big: "any big moment" };
+const ORIGINAL = { fr: "FRANÇAIS", es: "ESPAÑOL" };
 let reading = false;          // a voice-over is playing
-let phoneVisible = true;      // the fan's device panel is on screen (not scrolled away on a small screen)
+let companionVisible = true;  // the companion panel is on screen (not scrolled away on a small screen)
+const title = document.title;
 
 on("voice", ({ playing }) => {
   reading = playing;
@@ -23,7 +25,7 @@ on("voice", ({ playing }) => {
 
 export function renderData() {
   const s = app.snapshot;
-  if (!s) return;
+  if (!s || !isStudio()) return;
   const h = s.teams[s.home], a = s.teams[s.away];
   const pct = (v) => (v == null ? "–" : `${Math.round(v * 100)}%`);
   const rows = [
@@ -42,6 +44,7 @@ export function renderData() {
 /* ------------------------------------------------------------------ RUNDOWN */
 
 export function renderRundown() {
+  if (!isStudio()) return;
   const list = [...app.cards.values()].filter((c) => (c.importance >= 50 && c.type !== "danger_peak") || c.type === "milestone")
     .sort((x, y) => y.t - x.t);
   $("#cards").innerHTML = list.length ? list.map((c) => `
@@ -60,16 +63,17 @@ export function drawTimeline() {
   const X = (t) => pad + (t / app.durationT) * (w - 2 * pad);
   ctx.clearRect(0, 0, w, h);
   const nowT = app.snapshot?.t || 0;
+  const studio = isStudio();
 
-  for (const b of app.awayBands) {
+  for (const b of studio ? [] : app.awayBands) {
     const x0 = X(b.from_t), x1 = X(b.to_t ?? nowT), bw = Math.max(2, x1 - x0);
     ctx.save(); ctx.beginPath(); ctx.rect(x0, 2 * dpr, bw, h - 18 * dpr); ctx.clip();
-    ctx.fillStyle = "rgba(160,160,160,.12)"; ctx.fillRect(x0, 0, bw, h);
-    ctx.strokeStyle = "rgba(160,160,160,.25)"; ctx.lineWidth = dpr;
+    ctx.fillStyle = "rgba(255,176,0,.10)"; ctx.fillRect(x0, 0, bw, h);
+    ctx.strokeStyle = "rgba(255,176,0,.22)"; ctx.lineWidth = dpr;
     for (let x = x0 - h; x < x1; x += 6 * dpr) { ctx.beginPath(); ctx.moveTo(x, h); ctx.lineTo(x + h, 0); ctx.stroke(); }
     ctx.restore();
-    ctx.fillStyle = "#9a9892"; ctx.font = `500 ${9 * dpr}px "JetBrains Mono", monospace`; ctx.textAlign = "left";
-    ctx.fillText(b.late_join ? "NOT WATCHING" : "AWAY", x0 + 4 * dpr, 12 * dpr);
+    ctx.fillStyle = "#ffb000"; ctx.font = `500 ${9 * dpr}px "JetBrains Mono", monospace`; ctx.textAlign = "left";
+    ctx.fillText(b.late_join ? "NOT WATCHING YET" : "YOU WERE AWAY", x0 + 4 * dpr, 12 * dpr);
   }
 
   ctx.strokeStyle = "#262626"; ctx.lineWidth = dpr;
@@ -88,7 +92,9 @@ export function drawTimeline() {
   }
   ctx.globalAlpha = 1;
 
-  for (const n of app.notes.filter((x) => x.kind === "come_back")) {
+  // call-backs: this fan's own (fan view) or the whole audience's (studio)
+  const calls = studio ? (app.crowd?.calls || []) : app.notes.filter((x) => x.kind === "come_back");
+  for (const n of calls) {
     const x = X(n.t);
     ctx.strokeStyle = "rgba(255,59,48,.75)"; ctx.setLineDash([3 * dpr, 3 * dpr]);
     ctx.beginPath(); ctx.moveTo(x, 6 * dpr); ctx.lineTo(x, h - 16 * dpr); ctx.stroke(); ctx.setLineDash([]);
@@ -117,36 +123,21 @@ export function drawTimeline() {
   ctx.beginPath(); ctx.moveTo(X(nowT), 2 * dpr); ctx.lineTo(X(nowT), h - 14 * dpr); ctx.stroke();
 }
 
-/* ------------------------------------------------------------------ FAN DEVICE */
-
-/** The fan this screen belongs to (chosen in the "who are you?" picker). */
-export function renderProfiles() {
-  const p = profile();
-  if (!p) return;
-  const fav = app.roster[p.favourite_player_id];
-  const team = p.club_id || fav?.team;
-  const who = p.club_id ? `${teamName(p.club_id)} fan` : `follows ${fav?.name} (${teamName(fav?.team)})`;
-  $("#fan-card").innerHTML = `<span class="av" style="background:${teamColour(team)}">${esc(p.name[0])}</span>
-    <span class="who-t"><b>${esc(p.name)}</b><small>${esc(who)} · ${p.level} · ${LANG_LABEL[p.language]}</small></span>
-    <button class="key switch" id="switch-fan">SWITCH</button>`;
-  $("#switch-fan").addEventListener("click", () => emit("open-picker", {}));
-  $("#fan-src").textContent = `DEVICE FEED · ${p.name.toUpperCase()} · ${p.language.toUpperCase()}`;
-}
+/* ------------------------------------------------------------------ the fan's companion */
 
 export function renderPresence() {
   const el = $("#presence");
   const band = app.awayBands.at(-1);
   if (app.present) {
-    el.className = "presence";
+    el.className = "cp-presence";
     el.innerHTML = `<i></i><span>WATCHING LIVE</span>`;
   } else {
-    el.className = "presence away";
-    el.innerHTML = `<i></i><span>AWAY SINCE ${band ? minuteAt(band.from_t) : ""}'<small>COMEBACK is watching the match for this fan</small></span>`;
+    el.className = "cp-presence away";
+    el.innerHTML = `<i></i><span>AWAY SINCE ${band ? minuteAt(band.from_t) : ""}'<small>COMEBACK is watching the match for you</small></span>`;
   }
   $("#btn-away").disabled = !app.present;
   $("#btn-back").disabled = app.present;
-  $("#away-veil").hidden = app.present;
-  $("#fan-tally").className = `tally ${app.present ? "green" : "amber"}`;
+  $("#away-veil").hidden = app.present || isStudio();
 }
 
 function minuteAt(t) {
@@ -156,43 +147,16 @@ function minuteAt(t) {
 
 export function renderNotes() {
   const el = $("#notes");
-  if (!app.notes.length) { el.innerHTML = `<div class="empty">Nothing yet. Leave the match and COMEBACK watches it for you.</div>`; return; }
-  el.innerHTML = app.notes.slice(0, 6).map((n) => `
+  if (!app.notes.length) {
+    el.innerHTML = `<div class="empty">Nothing yet. Step away and COMEBACK watches the match for you.</div>`;
+    return;
+  }
+  el.innerHTML = app.notes.slice(0, 5).map((n) => `
     <div class="note ${n.kind}"><div class="note-h"><b>${NOTE_LABEL[n.kind] || n.kind}${n.silent ? " · SILENT" : ""}</b><span>${n.minute}'</span></div>
     <div class="note-x">${esc(n.text)}</div></div>`).join("");
 }
 
-/** On a small screen the fan's phone can be scrolled away: notifications then also appear as a toast. */
-export function initToast() {
-  const fan = document.querySelector(".mon.fan");
-  new IntersectionObserver(([e]) => { phoneVisible = e.intersectionRatio > 0.3; }, { threshold: [0, 0.3, 1] }).observe(fan);
-  $("#toast").addEventListener("click", () => {
-    fan.scrollIntoView({ behavior: "smooth", block: "start" });
-    $("#toast").hidden = true;
-  });
-}
-
-export function toast(n) {
-  if (phoneVisible) return;
-  const el = $("#toast");
-  el.className = `toast ${n.kind}`;
-  el.innerHTML = `<b>${NOTE_LABEL[n.kind] || ""}${n.minute ? ` · ${n.minute}'` : ""}</b><span>${esc(n.text)}</span>`;
-  el.hidden = false;
-  clearTimeout(toast.timer);
-  toast.timer = setTimeout(() => { el.hidden = true; }, 7000);
-}
-
-export function buzz(ringing = false) {
-  const fan = document.querySelector(".mon.fan");
-  fan.classList.remove("buzz"); void fan.offsetWidth; fan.classList.add("buzz");
-  if (ringing) {                                 // a call-back: the on-screen phone lights up for a few seconds
-    fan.classList.add("ringing");
-    clearTimeout(buzz.timer);
-    buzz.timer = setTimeout(() => fan.classList.remove("ringing"), 4500);
-  }
-}
-
-/** The fan's alert rules on the phone (opt-in). */
+/** The fan's alert rules (opt-in). */
 export function renderPrefs() {
   const st = app.settings || { alert_for: "threat", spoilers: false, night: false };
   for (const b of document.querySelectorAll("#pref-for button")) b.classList.toggle("on", b.dataset.for === st.alert_for);
@@ -201,37 +165,58 @@ export function renderPrefs() {
   $("#prefs-sum").textContent = `${FOR_LABEL[st.alert_for]}${st.night ? " · night" : ""} · ${st.spoilers ? "scores on" : "no spoilers"}`;
 }
 
-/** Spoiler-free return: if a goal happened while away, the story waits behind the replay. */
-export function renderVeiledCatchup() {
-  const el = $("#catchup");
-  el.hidden = false;
-  el.innerHTML = `<div class="cu-k"><span>PREVIOUSLY ON…</span></div><div class="cu-t">Something big happened</div>
-    <div class="cu-text veil">▶ Your replay is playing on the TV. The story and the score follow, spoiler-free.</div>`;
+/** On a small screen the companion can be scrolled away: notifications then also appear as a toast. */
+export function initToast() {
+  const panel = $("#companion");
+  new IntersectionObserver(([e]) => { companionVisible = e.intersectionRatio > 0.2; }, { threshold: [0, 0.2, 1] }).observe(panel);
+  $("#toast").addEventListener("click", () => {
+    panel.scrollIntoView({ behavior: "smooth", block: "start" });
+    $("#toast").hidden = true;
+  });
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) document.title = title; });
 }
+
+/** A notification reached the fan: flag the browser tab if they switched away, a toast if the panel is hidden. */
+export function notify(n) {
+  if (document.hidden) document.title = `${n.kind === "come_back" ? "● COME BACK" : NOTE_LABEL[n.kind] || "●"} · ${n.text}`;
+  const panel = $("#companion");
+  panel.classList.remove("ping"); void panel.offsetWidth; panel.classList.add("ping");
+  if (companionVisible) return;
+  const el = $("#toast");
+  el.className = `toast ${n.kind}`;
+  el.innerHTML = `<b>${NOTE_LABEL[n.kind] || ""}${n.minute ? ` · ${n.minute}'` : ""}</b><span>${esc(n.text)}</span>`;
+  el.hidden = false;
+  clearTimeout(notify.timer);
+  notify.timer = setTimeout(() => { el.hidden = true; }, 7000);
+}
+
+/* ------------------------------------------------------------------ "Previously on…" on the TV */
 
 export function renderCatchup(c) {
   const d = c.delta || {};
-  const title = c.final ? `Full-time · ${c.headline || ""}` : c.late_join ? "The story so far" : `While you were away · ${d.away_minutes} min`;
+  const head = c.final ? "FULL-TIME" : c.late_join ? "THE STORY SO FAR" : `WHILE YOU WERE AWAY · ${d.away_minutes} MIN`;
+  const title = c.final ? c.headline || "Full-time" : c.late_join ? "Previously on…" : "Welcome back";
   const chips = [
-    `<span class="chip">${esc(d.score_then)} → <b>${esc(d.score_now)}</b></span>`,
+    d.score_then != null ? `<span class="chip">${esc(d.score_then)} → <b>${esc(d.score_now)}</b></span>` : "",
     d.in_control_now ? `<span class="chip">IN CONTROL: ${d.in_control_then && !c.late_join ? `${esc(d.in_control_then)} → ` : ""}<b>${esc(d.in_control_now)}</b></span>` : "",
     d.players_on_pitch_now ? `<span class="chip">${Object.entries(d.players_on_pitch_now).map(([t, n]) => `${esc(t)} ${n}`).join(" v ")}</span>` : "",
   ].join("");
   const el = $("#catchup");
   el.hidden = false;
-  el.innerHTML = `<div class="cu-k"><span>PREVIOUSLY ON…</span><button aria-label="Close" id="cu-close">×</button></div>
+  el.innerHTML = `<div class="cu-k"><span>${head}</span><button aria-label="Close" id="cu-close">×</button></div>
     <div class="cu-t">${esc(title)}</div><div class="chips">${chips}</div>
     <div class="cu-text">${esc(c.text)}</div>
-    <div class="cu-ai" id="cu-ai">AI-generated · fact-checked against the match data${c.source === "template" ? " (template)" : ""}</div>
+    <div class="cu-ai" id="cu-ai">AI-written for you · fact-checked against the match data${c.source === "template" ? " (template)" : ""}</div>
     <div class="cu-f">${tag(c, "Storyteller")}<span class="cu-btns">${c.text_en ? `<button class="key" id="show-en">SHOW ENGLISH</button>` : ""}
       <button class="key ${reading ? "reading" : ""}" id="listen" aria-label="Read the catch-up aloud">${reading ? "■ STOP" : "▶ LISTEN"}</button></span></div>`;
+  el.classList.remove("in"); void el.offsetWidth; el.classList.add("in");
   $("#cu-close").addEventListener("click", hideCatchup);
   $("#show-en")?.addEventListener("click", (e) => {        // for viewers who do not read the fan's language
     const english = e.target.textContent === "SHOW ENGLISH";
     el.querySelector(".cu-text").textContent = english ? c.text_en : c.text;
     $("#cu-ai").textContent = english ? "English translation (AI), checked: same numbers and names as the original"
-      : "AI-generated · fact-checked against the match data";
-    e.target.textContent = english ? `SHOW ${({ fr: "FRANÇAIS", es: "ESPAÑOL" })[c.language] || "ORIGINAL"}` : "SHOW ENGLISH";
+      : "AI-written for you · fact-checked against the match data";
+    e.target.textContent = english ? `SHOW ${ORIGINAL[c.language] || "ORIGINAL"}` : "SHOW ENGLISH";
   });
   $("#listen").addEventListener("click", () => (reading ? stopVoice() : playVoice(c)));
 }

@@ -1,65 +1,39 @@
-/* COMEBACK control room: boot, SSE stream, controls and the render loop. */
+/* COMEBACK: boot, the setup screen, the SSE stream, controls and the render loop.
+ * Two views of the same engine: a FAN (the TV and a companion panel to pair a phone) and a
+ * STUDIO (the broadcaster's control room). The setup screen decides which, and for whom. */
 
-import { $, app, MATCH_ID, IS_DEMO, SPEEDS, post, newSessionId, applyEvent, step, emit, on as onMessage, profile } from "./state.js";
+import { $, app, SPEEDS, DEMO_MATCH, post, newSessionId, applyEvent, step, emit, on as onMessage, profile, fanLabel, fanTeam,
+  teamColour, isStudio, LANG_NAME } from "./state.js";
 import {
   renderScore, renderTimecode, showCue, expireOverlays, refreshBanner, clearOverlays, put, favouriteTag, renderMetric,
   renderGazette, milestoneTag,
 } from "./graphics.js";
 import {
-  renderData, renderRundown, drawTimeline, renderProfiles, renderPresence, renderNotes, renderCatchup, hideCatchup, buzz,
-  initToast, toast, renderPrefs, renderVeiledCatchup,
+  renderData, renderRundown, drawTimeline, renderPresence, renderNotes, renderCatchup, hideCatchup, initToast, notify,
+  renderPrefs,
 } from "./panels.js";
 import { drawTactical } from "./tactical.js";
 import { initAgents } from "./agents.js";
-import { initAudience } from "./audience.js";
+import { initAudience, loadScale } from "./audience.js";
 import { initPairing } from "./pairing.js";
 import { initFocus } from "./focus.js";
 import { unlockSpeech } from "./voice.js";
 import { isReplaying, buffer, playReplay, playVoice, interruptForLive, unlockAudio } from "./replay.js";
-import { initPicker, openPicker } from "./picker.js";
-import { initStory, startStory, exitStory, storyActive, storyClock } from "./story.js";
-import { initStoryViews } from "./storyviews.js";
+import { initSetup, openSetup } from "./setup.js";
+import { initAutoplay, startAutoplay, stopAutoplay, autoplayActive } from "./autoplay.js";
 import { initFactCheck } from "./factcheck.js";
 import { initDecisions } from "./decision.js";
 import { initCues } from "./cues.js";
 
 let program = null;          // 3D renderer, or null → 2D fallback on the PGM canvas
-const LATE_JOIN = { reda: 60 }; // demo fans who join the match late (minute)
-let pendingJoin = null;
+let programFor = null;       // the fixture the 3D stadium is dressed for
+let pendingStart = null;     // what to do once the stream is open: "away" | "join" | "seek" | null
+let pendingCard = null;      // a catch-up card waiting for its replay to end
 let lastFrame = performance.now();
 let lastSlow = 0;
+const matches = new Map();
 
 async function boot() {
-  const [match, profiles] = await Promise.all([
-    fetch(`/api/match/${MATCH_ID}`).then((r) => r.json()),
-    fetch(`/api/profiles?match_id=${MATCH_ID}`).then((r) => r.json()),
-  ]);
-  app.match = match;
-  app.profiles = profiles;
-  app.durationT = match.duration_t;
-  app.home = match.home.id;
-  app.away = match.away.id;
-  for (const side of ["home", "away"]) {
-    const club = match[side];
-    app.teams[club.id] = { ...club, isHome: side === "home" };
-    for (const p of club.players) app.roster[p.id] = { ...p, team: club.id };
-  }
-  document.documentElement.style.setProperty("--home", app.teams[app.home].colour);
-  document.documentElement.style.setProperty("--away", app.teams[app.away].colour);
-  $(".lg-home-name").textContent = app.teams[app.home].name.toUpperCase();
-  document.body.classList.toggle("other-match", !IS_DEMO);
-  for (const a of document.querySelectorAll("[data-overlays]")) a.href = `/api/overlays/${MATCH_ID}`;
-  $("#bar-sub").textContent = IS_DEMO ? "DEMO MATCH · SCRIPTED STORYLINE · FICTIONAL CLUBS"
-    : `UNSCRIPTED MATCH · ${app.teams[app.home].name.toUpperCase()} v ${app.teams[app.away].name.toUpperCase()}`;
-  $(".lg-away-name").textContent = app.teams[app.away].name.toUpperCase();
-
-  try {
-    const { createProgram } = await import("./program3d.js");
-    program = createProgram($("#pgm-canvas"));
-  } catch (err) {
-    console.warn("3D program unavailable, using the 2D camera:", err);
-    $("#pgm-src").textContent = "CAM 2 · TACTICAL (3D UNAVAILABLE)";
-  }
   buildControls();
   initAgents();
   initAudience();
@@ -68,49 +42,83 @@ async function boot() {
   initFactCheck();
   initDecisions();
   initCues();
-  initStoryViews();
   initToast();
-  initPicker({ onPick: pick, onStory: playStory });
-  initStory({ restart, setMode, setSpeed, pick, openPicker });
-  setMode(new URLSearchParams(location.search).get("view") === "studio" ? "studio" : "fan");
+  initAutoplay({ setSpeed });
   requestAnimationFrame(frame);
+  await initSetup({ getMatch, onStart: start });
 }
 
-/** Called from a tap: unlock sound (Safari, iOS) and speech, then play the guided story. */
-function playStory() {
+function getMatch(id) {
+  if (!matches.has(id)) matches.set(id, fetch(`/api/match/${encodeURIComponent(id)}`).then((r) => r.json()));
+  return matches.get(id);
+}
+
+/** Load a fixture: teams, rosters, colours. */
+async function useMatch(id) {
+  const match = await getMatch(id);
+  Object.assign(app, { matchId: id, match, durationT: match.duration_t, home: match.home.id, away: match.away.id, teams: {}, roster: {} });
+  for (const side of ["home", "away"]) {
+    const club = match[side];
+    app.teams[club.id] = { ...club, isHome: side === "home" };
+    for (const p of club.players) app.roster[p.id] = { ...p, team: club.id };
+  }
+  document.documentElement.style.setProperty("--home", app.teams[app.home].colour);
+  document.documentElement.style.setProperty("--away", app.teams[app.away].colour);
+  $(".lg-home-name").textContent = app.teams[app.home].name.toUpperCase();
+  $(".lg-away-name").textContent = app.teams[app.away].name.toUpperCase();
+  for (const a of document.querySelectorAll("[data-overlays]")) a.href = `/api/overlays/${id}`;
+  loadScale();
+}
+
+/** The 3D stadium is dressed in the fixture's colours: a new fixture gets a new one. */
+async function ensureProgram() {
+  if (programFor === app.matchId) return;
+  const old = $("#pgm-canvas");
+  if (programFor) { const fresh = old.cloneNode(false); old.replaceWith(fresh); }
+  programFor = app.matchId;
+  try {
+    const { createProgram } = await import("./program3d.js");
+    program = createProgram($("#pgm-canvas"));
+  } catch (err) {
+    console.warn("3D program unavailable, using the 2D camera:", err);
+    program = null;
+    $("#pgm-src").textContent = "CAM 2 · TACTICAL (3D UNAVAILABLE)";
+  }
+}
+
+/** From the setup screen's START (a click: sound can be unlocked here for Safari and iOS). */
+async function start(cfg) {
   unlockSpeech();
   unlockAudio();
-  startStory();
+  const prev = app.config;
+  app.config = cfg;
+  setMode(cfg.mode);
+  const sameRun = app.es && prev && cfg.mode === "fan" && prev.mode === "fan" && prev.match === cfg.match
+    && prev.start === cfg.start;
+  if (sameRun) {                      // same match, same moment: only the fan changes (language, side, style, metric)
+    stopAutoplay();
+    hideCatchup();
+    $("#gazette").hidden = true;
+    await post(`fan?${fanQuery(cfg)}`);
+    return;
+  }
+  await useMatch(cfg.match);
+  await ensureProgram();
+  restart();
 }
 
-/** Watch as one demo fan: the first pick starts the match, later picks switch fan on the same match. */
-async function pick(id) {
-  unlockSpeech();
-  unlockAudio();
-  exitStory();
-  const first = !app.es;
-  app.profileId = id;
-  pendingJoin = LATE_JOIN[id] ?? null;
-  if (first) { app.speed = 10; connect(); return; }
-  const s = app.snapshot;
-  if (pendingJoin != null && s && s.period === 2 && s.minute >= pendingJoin) { restart(); return; }  // too late to join late
-  hideCatchup();
-  $("#gazette").hidden = true;
-  await post(`profile?id=${id}`);
-  joinIfLate();
-}
-
-function joinIfLate() {
-  const s = app.snapshot;
-  if (pendingJoin == null || !s) return;
-  const minute = pendingJoin;
-  pendingJoin = null;
-  if (s.period === 1 || s.minute < minute) { hideCatchup(); post(`join?minute=${minute}`); }
+function fanQuery(cfg) {
+  const q = cfg.mode === "studio" ? { side: "home", lang: "en", level: "analyst" }
+    : { side: cfg.side, lang: cfg.lang, level: cfg.level, metric: cfg.metric };
+  return new URLSearchParams(q).toString();
 }
 
 function setMode(mode) {
   document.body.dataset.mode = mode;
-  for (const b of document.querySelectorAll("#view button")) b.classList.toggle("on", b.dataset.view === mode);
+  const studio = mode === "studio";
+  $("#tl-src").textContent = studio ? "MATCH TIMELINE · MOMENTUM · KEY MOMENTS · AUDIENCE CALL-BACKS"
+    : "MATCH TIMELINE · MOMENTUM · KEY MOMENTS · YOUR CALL-BACKS";
+  $("#lg-alert").textContent = studio ? "AUDIENCE CALL-BACK" : "YOUR CALL-BACK";
   emit("view", { mode });
 }
 
@@ -122,29 +130,28 @@ function setSpeed(speed) {
 
 function buildControls() {
   $("#speeds").innerHTML = SPEEDS.map((s) => `<button data-speed="${s}">×${s}</button>`).join("");
-  $("#speeds").addEventListener("click", (e) => {
-    const s = Number(e.target.dataset.speed);
-    if (!s) return;
-    app.speed = s; renderControls(); post(`speed?value=${s}`);
-  });
+  $("#speeds").addEventListener("click", (e) => { const s = Number(e.target.dataset.speed); if (s) setSpeed(s); });
   $("#pause").addEventListener("click", () => { app.paused = !app.paused; renderControls(); post(`pause?paused=${app.paused}`); });
-  $("#restart").addEventListener("click", () => { exitStory(); restart(); });
-  $("#btn-away").addEventListener("click", () => app.present && post("away"));
-  $("#btn-back").addEventListener("click", () => !app.present && post("back"));
-  $("#btn-join").addEventListener("click", () => { hideCatchup(); post("join?minute=60"); });
-  $("#view").addEventListener("click", (e) => { if (e.target.dataset.view) setMode(e.target.dataset.view); });
-  $("#story-btn").addEventListener("click", playStory);
-  $("#tk-open").addEventListener("click", () => setMode("studio"));
+  $("#restart").addEventListener("click", restart);
+  $("#setup-btn").addEventListener("click", openSetup);
+  $("#fan-chip").addEventListener("click", openSetup);
+  $("#jump-btn").addEventListener("click", () => post("seek?minute=59.5"));
+  $("#btn-away").addEventListener("click", () => { stopAutoplay(); if (app.present) post("away"); });
+  $("#btn-back").addEventListener("click", () => { stopAutoplay(); if (!app.present) post("back"); });
   $("#outage-btn").addEventListener("click", () => post(`outage?down=${!app.outage}`));
   $("#pref-for").addEventListener("click", (e) => { if (e.target.dataset.for) post(`settings?alert_for=${e.target.dataset.for}`); });
   $("#pref-night").addEventListener("change", (e) => post(`settings?night=${e.target.checked}`));
   $("#pref-spoilers").addEventListener("change", (e) => post(`settings?spoilers=${e.target.checked}`));
-  onMessage("open-picker", openPicker);
-  const clock = () => { $("#ph-time").textContent = storyClock() || new Date().toTimeString().slice(0, 5); };
-  clock(); setInterval(clock, 1000);
-  document.addEventListener("visibilitychange", () => {
-    if (!$("#auto-away").checked || !app.es || storyActive()) return;   // the guided story drives presence itself
+  document.addEventListener("visibilitychange", () => {     // switching tab = leaving the match
+    if (!app.es || isStudio() || autoplayActive() || document.body.classList.contains("configuring")) return;
     if (document.hidden) { if (app.present) post("away"); } else if (!app.present) post("back");
+  });
+  onMessage("replay-end", () => {               // the catch-up card follows the replay
+    if (!pendingCard) return;
+    const { c, voice } = pendingCard;
+    pendingCard = null;
+    renderCatchup(c);
+    if (voice) playVoice(c);
   });
 }
 
@@ -154,24 +161,30 @@ function renderControls() {
 }
 
 function restart() {
+  if (!app.config) return;
   if (app.es) app.es.close();
+  stopAutoplay();
   app.session = newSessionId();
-  Object.assign(app, { cards: new Map(), notes: [], timeline: [], awayBands: [], present: true, holder: null, pos: {}, topSpeed: {} });
+  Object.assign(app, { cards: new Map(), notes: [], timeline: [], awayBands: [], present: true, holder: null, pos: {}, topSpeed: {},
+    eventsById: new Map(), crowd: null, speed: 10 });
+  pendingCard = null;
   hideCatchup(); clearOverlays();
   $("#gazette").hidden = true;
+  const cfg = app.config;
+  pendingStart = cfg.mode === "studio" ? (cfg.studioStart === "60" ? "seek" : null) : { away: "away", join: "join" }[cfg.start] || null;
   connect();
 }
 
 /* ------------------------------------------------------------------ stream */
 
 function connect() {
-  const url = `/api/stream?match_id=${MATCH_ID}&session=${app.session}&profile=${app.profileId}&speed=${app.speed}`;
+  const url = `/api/stream?match_id=${encodeURIComponent(app.matchId)}&session=${app.session}&${fanQuery(app.config)}&speed=${app.speed}`;
   const es = new EventSource(url);
   app.es = es;
   const on = (type, fn) => es.addEventListener(type, (m) => { const d = JSON.parse(m.data); fn(d); emit(type, d); });
   on("state", onState);
   on("event", (e) => {
-    app.eventsById.set(e.id, e);                  // the decision chain cites events by id
+    app.eventsById.set(e.id, e);                  // decision chains cite events by id
     if (app.eventsById.size > 900) app.eventsById.delete(app.eventsById.keys().next().value);
     if (isReplaying()) {                        // the program feed is showing a replay
       buffer(e);
@@ -190,7 +203,12 @@ function connect() {
     }
   });
   on("snapshot", (s) => { app.snapshot = s; app.snapshotAt = performance.now(); renderScore(); renderMetric(profile()); });
-  on("gazette", (g) => { renderGazette(g, profile()); renderCatchup({ ...g, late_join: false }); playVoice(g); });
+  on("gazette", (g) => {
+    if (isStudio()) return;
+    hideCatchup();
+    renderGazette(g, profile());
+    playVoice(g);
+  });
   on("cue", (c) => { if (!isReplaying()) showCue(c); });   // live graphics wait during a replay
   on("card", (c) => {
     const isNew = !app.cards.has(c.moment_id);
@@ -200,46 +218,42 @@ function connect() {
   on("timeline", (t) => app.timeline.push(t));
   on("notification", (n) => {
     app.notes.unshift(n); renderNotes();
-    if (!n.silent) { buzz(n.kind === "come_back"); toast(n); }   // night mode: delivered without a buzz
+    if (!n.silent) notify(n);                     // night mode: delivered without a buzz
   });
   on("settings", (st) => { app.settings = st; renderPrefs(); });
   on("presence", (p) => {
     app.present = p.present; app.awayBands = p.away_bands;
-    if (!p.present) hideCatchup();
+    if (!p.present) { hideCatchup(); pendingCard = null; }
     renderPresence();
   });
-  on("catchup", (c) => {
-    const d = c.delta || {};
-    const spoiler = !app.settings?.spoilers && !c.late_join && d.score_then !== d.score_now && (c.replay || []).length;
-    toast({ kind: "catchup", text: c.late_join ? "The story so far is ready on the phone." : "Your catch-up is ready on the phone." });
-    if (spoiler) {                       // the score waits for the replay
-      renderVeiledCatchup();
-      let shown = false;
-      const reveal = () => { if (shown) return; shown = true; renderCatchup(c); playVoice(c); };
-      onMessage("replay-end", reveal);
-      setTimeout(reveal, 30000);
-    } else {
-      renderCatchup(c);
-      playVoice(c);
-    }
-    playReplay(c, program);
-  });
-  on("agent", () => {});         // forwarded to the AGENTS monitor through emit()
-  on("crowd", (c) => { app.crowd = c; });   // also drawn by the AUD monitor
-  on("device", () => {});        // phone paired / unpaired
+  on("catchup", onCatchup);
+  on("crowd", (c) => { app.crowd = c; });   // drawn by the AUD, DECISIONS and PERSONALIZE monitors
   on("outage", (o) => renderOutage(o.down));
   on("end", () => put("banner", `<div class="bn" style="--team:#ecebe6"><div class="bn-k">FULL-TIME</div>
       <div class="bn-t">${app.teams[app.home].name} ${app.snapshot?.score_str ?? ""} ${app.teams[app.away].name}</div></div>`, 120, 999));
+  for (const type of ["agent", "device"]) on(type, () => {});   // forwarded to the AGENTS monitor and the pairing panel
+}
+
+/** "Previously on…": the TV replays what was missed, then the card; the voice tells the story. */
+function onCatchup(c) {
+  hideCatchup();
+  const d = c.delta || {};
+  const clips = (c.replay || []).filter((clip) => clip.events.length);
+  if (!clips.length || !program) { renderCatchup(c); playVoice(c); return; }
+  const spoiler = !app.settings?.spoilers && !c.late_join && d.score_then !== d.score_now;
+  if (!spoiler) playVoice(c);                    // the voice-over runs over the replay…
+  pendingCard = { c, voice: spoiler };           // …unless it would give the score away before the replay does
+  playReplay(c, program);
 }
 
 function onState(s) {
   Object.assign(app, {
-    speed: s.speed, paused: s.paused, profileId: s.profile.id, present: s.present, awayBands: s.away_bands,
+    speed: s.speed, paused: s.paused, fan: s.profile, present: s.present, awayBands: s.away_bands,
     snapshot: s.snapshot, snapshotAt: performance.now(), timeline: s.timeline, lineup: s.lineup,
     cards: new Map(s.cards.map((c) => [c.moment_id, c])), notes: [...s.notifications].reverse(),
     possession: s.snapshot.possession, crowd: s.crowd, settings: s.settings,
   });
-  renderControls(); renderScore(); renderProfiles(); renderPresence(); renderNotes(); renderRundown(); renderData(); renderPrefs();
+  renderControls(); renderScore(); renderFanChip(); renderPresence(); renderNotes(); renderRundown(); renderData(); renderPrefs();
   renderMetric(profile());
   renderOutage(Boolean(s.outage));
   const fav = profile()?.favourite_player_id;               // sprints before a join or a seek were not streamed
@@ -249,9 +263,22 @@ function onState(s) {
       renderMetric(profile());
     }).catch(() => {});
   }
-  if (program) program.setFavourite(profile()?.favourite_player_id || null);
-  $("#btn-join").disabled = s.snapshot.period === 2 && s.snapshot.minute >= 60;
-  joinIfLate();
+  if (program) program.setFavourite(fav || null);
+  const todo = pendingStart;
+  pendingStart = null;
+  if (todo === "away") startAutoplay();
+  else if (todo === "join") post("join?minute=60");
+  else if (todo === "seek") post("seek?minute=59.5");
+}
+
+function renderFanChip() {
+  const m = app.match;
+  const fixture = m ? `${m.home.name} v ${m.away.name}`.toUpperCase() : "";
+  $("#bar-sub").textContent = `${fixture} · ${app.matchId === DEMO_MATCH ? "SCRIPTED STORYLINE" : "UNSCRIPTED"}`;
+  const p = profile();
+  if (!p || isStudio()) return;
+  $("#fan-chip").innerHTML = `<i style="background:${teamColour(fanTeam(p))}"></i>${fanLabel(p).toUpperCase()} · ${LANG_NAME[p.language].toUpperCase()}
+    · ${p.level.toUpperCase()}<span>CHANGE</span>`;
 }
 
 /** Failure drill: the LLM is cut for this session; agents keep the show going on verified templates. */
@@ -267,17 +294,16 @@ function renderOutage(down) {
 function frame(now) {
   const dt = Math.min(0.1, (now - lastFrame) / 1000);
   lastFrame = now;
-  step(dt);
-  if (program) program.render(dt); else drawTactical($("#pgm-canvas"));
-  drawTactical($("#tactical"), { numbers: false });
-  renderTimecode(now);
-  expireOverlays(now);
-  if (now - lastSlow > 250) {            // slower monitors: 4 Hz is plenty
-    lastSlow = now;
-    drawTimeline();
-    renderData();
-    const s = app.snapshot;
-    if (s) $("#btn-join").disabled = s.period === 2 && s.minute >= 60;
+  if (app.snapshot) {
+    step(dt);
+    if (program) program.render(dt); else drawTactical($("#pgm-canvas"));
+    renderTimecode(now);
+    expireOverlays(now);
+    if (now - lastSlow > 250) {            // slower monitors: 4 Hz is plenty
+      lastSlow = now;
+      drawTimeline();
+      renderData();
+    }
   }
   requestAnimationFrame(frame);
 }

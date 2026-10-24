@@ -131,19 +131,27 @@ _OVERCOMING = re.compile(
 _FOR_TEAM = re.compile(r"^\s*(?:for|of|to|pour|des|de|du|d['’]|para|a favor de|del)\s*(?:the |les? |la |el |los )?",
                        re.IGNORECASE)
 _GENERIC_WORDS = {"FC", "United", "City", "Athletic", "St.", "Point"}
+# In a fan's own catch-up, "you" / "we" / "your team" / "l'équipe" / "quedamos" is the fan's side.
+_FAN_SIDE = re.compile(
+    r"\b(?:you|we|us|your (?:team|side|club)|nous|nos|quedamos|estamos|jugamos)\b"
+    r"|\b(?:ton|votre|notre) équipe\b|\bl['’]équipe\b(?! adverse)"
+    r"|\b(?:tu|vuestro|nuestro) equipo\b|\bel equipo\b(?! rival)",
+    re.IGNORECASE,
+)
 
 
 def _team_tokens(name: str) -> set[str]:
     return {w for w in name.split() if w not in _GENERIC_WORDS} | {name}
 
 
-def check_numerical_claims(text: str, players_on_pitch: dict[str, int]) -> list[str]:
+def check_numerical_claims(text: str, players_on_pitch: dict[str, int], fan_team: str | None = None) -> list[str]:
     """A numerical disadvantage claim must be about the short-handed team, an advantage claim about the other.
 
     A claim is attached to the team named just before it in the sentence (usually the
     subject: "Comets must defend with 10 men"), or to the team just after it when it
     follows "against / versus / face à…" ("against ten-man Comets") or is followed by
     "for / of / pour…" ("a numerical advantage for Emberfield"). No team named → ambiguous.
+    In a fan's own text, ``fan_team`` is the fan's side: "leaving you with 10 men" names it.
     """
     if len(set(players_on_pitch.values())) < 2:
         if _EQUAL_NUMBERS_CLAIM.search(text):
@@ -155,7 +163,7 @@ def check_numerical_claims(text: str, players_on_pitch: dict[str, int]) -> list[
     claims = [(_SHORT_HANDED, short, "disadvantage"), (_EXTRA_MAN, full, "advantage")]
     for sentence in _SENTENCE.findall(text):
         for pattern, expected, kind in claims:
-            issue = _misattributed(sentence, pattern, expected, kind, short, full, players_on_pitch)
+            issue = _misattributed(sentence, pattern, expected, kind, short, full, players_on_pitch, fan_team)
             if issue:
                 issues.append(issue)
                 break
@@ -163,11 +171,13 @@ def check_numerical_claims(text: str, players_on_pitch: dict[str, int]) -> list[
 
 
 def _misattributed(sentence: str, pattern: re.Pattern, expected: str, kind: str, short: str, full: str,
-                   players_on_pitch: dict[str, int]) -> str | None:
+                   players_on_pitch: dict[str, int], fan_team: str | None = None) -> str | None:
     """Feedback if a numerical (dis)advantage claim in ``sentence`` is attached to the wrong team."""
     for claim in pattern.finditer(sentence):
         mentions = [(m.start(), m.end(), team) for team in (short, full) for token in _team_tokens(team)
                     for m in re.finditer(re.escape(token), sentence)]
+        if fan_team in (short, full):
+            mentions += [(m.start(), m.end(), fan_team) for m in _FAN_SIDE.finditer(sentence)]
         before = [(claim.start() - end, team) for start, end, team in mentions if end <= claim.start()]
         after = [(start - claim.end(), team) for start, end, team in mentions if start >= claim.end()]
         owner = expected
@@ -190,9 +200,10 @@ def _misattributed(sentence: str, pattern: re.Pattern, expected: str, kind: str,
     return None
 
 
-_FINAL_RESULT = re.compile(
-    r"\b(?:won|wins|win the match|victory|draw|drew|defeat|lost the match|victoire|match nul|gagn[ée]|d[ée]faite"
-    r"|victoria|empate|empataron|ganaron|derrota)\b",
+_FINAL_RESULT = re.compile(   # "drew level" and "el empate" (the equaliser) happen mid-match: not a result
+    r"\b(?:won|wins|win the match|victory|draw(?! level)|drew(?! level)|defeat|lost the match|victoire|match nul"
+    r"|gagn[ée]|d[ée]faite|victoria|un empate|(?:termin|acab|finaliz)\w*\s+(?:en\s+)?(?:un\s+)?empate"
+    r"|ganaron|derrota)\b",
     re.IGNORECASE,
 )
 

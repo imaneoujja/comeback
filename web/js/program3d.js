@@ -220,7 +220,12 @@ export function createProgram(canvas) {
 
   /* ---------------------------------------------------------------- camera director */
   const cam = { mode: "main", x: 0, fov: 24, side: 1 };
-  function setCamera(mode, opts = {}) { cam.mode = mode; if (opts.side) cam.side = opts.side; }
+  function setCamera(mode, opts = {}) {   // a cut, as in a real gallery: no zoom from one camera to the other
+    cam.mode = mode;
+    if (opts.side) cam.side = opts.side;
+    if (mode === "goal") camera.position.set(cam.side * (L / 2 + 6.5), 7.5, toZ(app.ball.y) * 0.3);
+    camera.fov = mode === "goal" ? 48 : 24;
+  }
 
   function directCamera(dt) {
     const bx = toX(app.ball.x), bz = toZ(app.ball.y);

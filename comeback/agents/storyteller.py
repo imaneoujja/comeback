@@ -45,7 +45,7 @@ Write JSON only: {"text": "..."}.
   they were away (or, for a late join, the story so far), then what it changes now.
 - Explain what CHANGED (use the delta block: score then/now, who was in control then/now).
 - Respect the word limit. Use ONLY names and numbers that appear in the input.
-  Never invent events. Address the fan directly by first name at most once.
+  Never invent events. Address the fan directly as "you"; there is no name, never invent one.
 - Keep player and club names exactly as written in the input, in every language.
 - Check "players_on_pitch_now" before mentioning a numerical advantage: the team
   with fewer players is the one that had a player sent off."""
@@ -95,7 +95,7 @@ class StorytellerWriter:
 
     def label(self, task: CatchupTask) -> str:
         what = "full-time recap" if task.final else "story so far" if task.late_join else task.bucket.replace("_", " ")
-        return f"{task.profile.name} · {task.profile.language} · {what}"
+        return f"{task.profile.display} · {what}"
 
     def _favourite_name(self, task: CatchupTask) -> str | None:
         pid = task.profile.favourite_player_id
@@ -111,7 +111,7 @@ class StorytellerWriter:
         p = task.profile
         payload: dict[str, Any] = {
             "fan": {
-                "first_name": p.name, "language": LANGUAGE_NAMES[p.language], "level": p.level,
+                "language": LANGUAGE_NAMES[p.language], "level": p.level,
                 "supports": task.team_names.get(p.club_id) if p.club_id else None,
                 "favourite_player": self._favourite_name(task),
             },
@@ -154,7 +154,7 @@ class StorytellerWriter:
         issues += check_names(text, players, task.roster, set(task.team_names.values()),
                               {c.name for c in CLUBS.values()})
         on_pitch = task.delta.get("players_on_pitch_now") or {name: 11 for name in task.team_names.values()}
-        issues += check_numerical_claims(text, on_pitch)
+        issues += check_numerical_claims(text, on_pitch, task.team_names.get(task.profile.pov_team() or ""))
         issues += check_scope(text)
         issues += check_no_final_result(text, task.final or any(c["type"] == "full_time" for c in task.cards))
         issues += check_respect(text)

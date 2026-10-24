@@ -1,8 +1,7 @@
-/* Auto-director: one monitor is ON AIR at a time, the others dim.
- * The focus follows the story: PGM by default, FAN on an alert or a catch-up,
- * AGENTS when the Verifier rejects or passes a text, AUD right after a goal.
- * Requests that cannot interrupt the current shot are queued, so the 71' goal
- * plays as PGM → AGENTS (rejection, revision) → AUD → PGM. */
+/* Auto-director (studio): one monitor is ON AIR at a time, the others dim.
+ * PGM by default; DECISIONS then PERSONALIZE when the audience is called back; AGENTS when
+ * the Verifier rejects or passes a text; AUD right after a goal. Requests that cannot
+ * interrupt the current shot are queued, so the 71' goal plays as PGM → AGENTS → AUD → PGM. */
 
 import { $, on } from "./state.js";
 
@@ -12,19 +11,9 @@ let queue = [];
 let auto = true;
 
 export function initFocus() {
-  on("notification", () => request("fan", 7, 3));
-  on("catchup", (c) => { if (!(c.replay || []).length) request("fan", 12, 3); });
-  on("replay-start", () => request("pgm", 90, 7));            // the replay is the shot
-  on("replay-end", () => { if (current.id === "pgm") current.until = 0; request("fan", 10, 3); });
-  on("gazette", () => request("pgm", 30, 6));
-  on("focus", ({ id, seconds }) => {                           // the guided story points at a monitor: at once
-    if (!auto) return;
-    queue = [];
-    current = { id, until: performance.now() + seconds * 1000, priority: 9 };
-    apply();
-  });
+  on("crowd-call", () => { request("decisions", 6, 3); request("pers", 6, 3); });
   on("agent-shown", (s) => {
-    if (s.agent === "Verifier") request("agents", s.step === "rejected" ? 5 : 3, s.step === "rejected" ? 2.5 : 1);
+    if (s.agent === "Verifier") request("agents", s.step === "rejected" ? 6 : 3, s.step === "rejected" ? 2.5 : 1);
   });
   on("event", (e) => {
     if (e.type !== "goal") return;

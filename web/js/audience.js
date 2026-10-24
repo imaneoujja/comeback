@@ -3,7 +3,7 @@
  * Right: what it costs — catch-ups delivered vs stories the LLM actually wrote,
  * and how LLM calls grow (barely) with the size of the audience. */
 
-import { $, MATCH_ID, on, sizeCanvas } from "./state.js";
+import { $, app, on, sizeCanvas } from "./state.js";
 
 const COLOURS = ["#1f3a2a", "#6b5216", "#ff3b30", "#1a1a1a"];   // watching, away, called back, not joined
 const fmt = (n) => Number(n).toLocaleString("en-US");
@@ -17,7 +17,12 @@ export function initAudience() {
   on("crowd", render);
   on("state", (s) => s.crowd && render(s.crowd));
   on("view", () => requestAnimationFrame(() => last && render(last)));   // the canvas was hidden in the fan view
-  fetch(`/api/scale/${MATCH_ID}`).then((r) => r.json()).then((d) => { curve = d.curve; if (last) render(last); }).catch(() => {});
+}
+
+/** The cost curve of this match (LLM calls vs audience size), fetched once per match. */
+export function loadScale() {
+  curve = null;
+  fetch(`/api/scale/${app.matchId}`).then((r) => r.json()).then((d) => { curve = d.curve; if (last) render(last); }).catch(() => {});
 }
 
 function render(c) {

@@ -1,5 +1,5 @@
 [
-  {"id": "omar", "name": "Omar", "club_id": "EMB", "favourite_player_id": null, "level": "analyst", "language": "fr", "focus_metric": "xg"},
-  {"id": "sofia", "name": "Sofia", "club_id": "SMC", "favourite_player_id": null, "level": "casual", "language": "en", "focus_metric": "possession"},
-  {"id": "reda", "name": "Reda", "club_id": null, "favourite_player_id": "SMC-9", "level": "casual", "language": "es", "focus_metric": "top_speed"}
+  {"id": "omar", "name": "", "club_id": "EMB", "favourite_player_id": null, "level": "analyst", "language": "fr", "focus_metric": "xg"},
+  {"id": "sofia", "name": "", "club_id": "SMC", "favourite_player_id": null, "level": "casual", "language": "en", "focus_metric": "possession"},
+  {"id": "reda", "name": "", "club_id": null, "favourite_player_id": "SMC-9", "level": "casual", "language": "es", "focus_metric": "top_speed"}
 ]

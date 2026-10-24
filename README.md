@@ -11,7 +11,7 @@
 **An AI match insights engine for studio and streaming that personalizes on what each fan
 saw, or missed.**
 
-![COMEBACK in 20 seconds: a fan goes pitchside, the phone buzzes before the goal with the reason, the replay and the goal live, the same moment for three fans, and backstage the agents and the Verifier's fact-check](docs/comeback.gif)
+![COMEBACK in 20 seconds: a fan sets up their match, steps away, gets called back before the goal with the reason, comes back to a replay and a spoken catch-up, then the studio's control room](docs/comeback.gif)
 
 ### You left the match. COMEBACK didn't.
 
@@ -27,7 +27,7 @@ changed. **Put your phone away. COMEBACK will tell you when it matters.**
   moments; we do not claim to predict goals.
 - **Verified text**: every number and name is checked before a fan sees it. A single
   LLM agent doing everything delivers a factual problem in 12% of its texts; COMEBACK in 0,
-  and Microsoft Foundry's evaluators score the 45 texts fans see 5.0/5 on groundedness.
+  and Microsoft Foundry's evaluators score the 46 texts fans see 5.0/5 on groundedness.
 - **One brain for every fan**: serving **200,000** simulated fans takes about
   **1,830** LLM calls instead of more than 630,000 (≈ $0.60 instead of ≈ $812).
 
@@ -35,7 +35,7 @@ changed. **Put your phone away. COMEBACK will tell you when it matters.**
 
 ### Try it in 60 seconds
 
-1. Open the **[live demo](https://comeback.lemonforest-f9ddbdf8.switzerlandnorth.azurecontainerapps.io)** on a computer and press **▶ Play the story** (about 100 s).
+1. Open the **[live demo](https://comeback.lemonforest-f9ddbdf8.switzerlandnorth.azurecontainerapps.io)** on a computer, choose **A fan**, your side and language, and press **START**: the default *Step away 63'–70'* runs the whole loop in about 90 s.
 2. Or **[open it in GitHub Codespaces](https://codespaces.new/imaneoujja/comeback)**: it starts by itself on port 8000.
 3. Or locally: `pip install -r requirements.txt && python -m comeback` → http://localhost:8000
 
@@ -51,22 +51,19 @@ No account, no key: it runs offline (see *What runs live, what is cached?* in th
 
 | | What happens | In the demo match |
 |---|---|---|
-| **1. You leave** | A Watcher agent keeps watching for you, under your own rules (goal threats, equaliser or winner only, any big moment; night mode). It knows your club, favourite player, level and language. | Omar (Emberfield fan, analyst, French) goes pitchside for a kids' match next door at 63'. |
+| **1. You leave** | A Watcher agent keeps watching for you, under your own rules (goal threats, equaliser or winner only, any big moment; night mode). It knows your side, favourite player, level and language. | An Emberfield fan (French, analyst) steps away at 63', 0–2 down. |
 | **2. It's heating up** | It calls you back **before** the moment, and says why. Your phone takes over the screen, rings, and reads the reason aloud. | 65' and 69': *"Reviens — Emberfield est entré 3 fois dans la surface en 2 minutes et a tenté 1 tir."* |
 | **3. You return** | Spoiler-free: if a goal happened, your phone only said "something big happened"; the score waits for your replay. The TV rewinds: the moments you missed are replayed in 3D from behind the goal while a neural voice reads your "Previously on…" catch-up of what **changed**, sized to your absence. A live goal cuts the replay short. | 70': a catch-up in French, then the 71' goal, seen live. The phone confirms: *"COMEBACK l'avait senti : alerte à la 69e, but à la 71e."* |
-| **4. Full-time** | Your own front page: the match told from your side. | Sofia (Comets fan): *"Heartbreaking loss for Saltmarsh Comets after strong start"*. |
+| **4. Full-time** | Your own front page: the match told from your side. | A Comets fan gets *"Heartbreak as Saltmarsh Comets lose late after red card"*. |
 
-![Omar is back: the screen replays the missed 68' chance while the phone shows the French catch-up, a SHOW ENGLISH button, and the two call-backs that came before the goal](docs/screenshot.png)
+![The fan view: back at 70', the TV shows the French catch-up of what changed, with SHOW ENGLISH and LISTEN; next to the match, the phone pairing panel and the two call-backs sent before the goal](docs/screenshot.png)
 
-The same moment, as three different fans got it (language, depth, side, metric):
-
-![Same moment, three fans: the 69' call-back in French for Omar, in English for Sofia (the other side), in Spanish for Reda (player mode), with each fan's graphic and metric](docs/personalize.png)
-
-Around this loop sits a **broadcast control room**: a 3D program feed with
-broadcast graphics (player tags, pass difficulty, shot speed, speed and distance
-tags, danger index), an AGENTS monitor showing the agents at work, a simulated
-audience of 10,000 fans, and **timed, machine-readable overlay cues** a broadcast
-graphics renderer could consume.
+The first screen asks **who is watching**. A **fan** gets the TV (a 3D program feed with
+broadcast graphics: player tags, pass difficulty, shot speed, speed and distance tags,
+danger index) and a panel to pair their phone. A **studio** gets the broadcaster's
+control room: the agents at work, the Watcher's decisions for the whole audience, the same
+call-back as three audience segments get it, a simulated audience of 10,000 fans, and
+**timed, machine-readable overlay cues** a broadcast graphics renderer could consume.
 
 ## Why not just stream it on your phone?
 
@@ -87,8 +84,8 @@ called fans return; a real figure needs an A/B test in production).
 
 ## Try it (zero configuration, no API key)
 
-**Online:** open the [live demo](https://comeback.lemonforest-f9ddbdf8.switzerlandnorth.azurecontainerapps.io) in a desktop browser. Click **PAIR PHONE**
-and scan the QR code with your phone: it becomes the fan's device, from anywhere.
+**Online:** open the [live demo](https://comeback.lemonforest-f9ddbdf8.switzerlandnorth.azurecontainerapps.io) in a desktop browser. As a fan, scan the
+**Pair your phone** QR code next to the match: your phone becomes your device, from anywhere.
 The app scales to zero when nobody uses it, so the first request wakes it up.
 
 **GitHub Codespaces:** click the Codespaces badge at the top. The server starts by itself; open
@@ -108,37 +105,32 @@ engine, the danger index, the Watchers, the Verifier and the simulated audience 
 for real. Only the agents' texts for the two playable matches are cached
 (`data/llm_cache.jsonl`, written once by Foundry), so you see real model output
 without any key; a window we did not precompute gets a verified template instead.
-**Try another match** (on the first screen) replays an unscripted fixture with the
-same engine, Watchers and Verifier.
+The first screen also offers an **unscripted match**, replayed with the same engine,
+Watchers and Verifier.
 
 ### What to try
 
-1. **▶ Play the story** on the first screen (about 100 s, three acts, a caption per step and
-   a pipeline strip INGEST → INTERPRET → EXPLAIN → RENDER → PERSONALIZE):
-   - **Pitchside:** Omar (Emberfield fan, French, analyst) leaves at 63' for a kids' match.
-     The TV is off but the engine keeps reading every event; the phone buzzes at 65' and
-     69', each time with the Watcher's decision chain (events → state → insight → why Omar,
-     why now).
-   - **Living room:** back at 70': replay of what was missed with a neural voice, the 71'
-     goal live, then the same moment as Omar, Sofia and Reda each got it.
-   - **Backstage (STUDIO):** the agents and the timed overlay cues, a real Verifier catch at
-     81', the LLM cut live (the 84' card still airs, from a verified template), the
-     audience and the cost.
-2. Or pick a fan and watch the match yourself:
-   - **Omar**: press **SKIP TO 60'**, set your rules in **⚙ MY ALERT RULES** on the phone,
-     then leave whenever you like (switch browser
-     tab, or **I'M AWAY** on the on-screen phone), for example from 63' to 70'. The bar
-     above the match suggests when a team is pushing.
-   - **Sofia** (English, casual, Saltmarsh Comets fan): away at about 76', back at
-     about 86'. Same match, a completely different story.
-   - **Reda** (Spanish, follows striker Halen Merewood): joins at 60' and gets the
-     story so far. The followed player carries a ★ label all match.
-3. **STUDIO** (top right) opens the full control room: tactical camera, match data,
-   the agents at work (drafts, Verifier rejections, revisions), a simulated audience
-   of 10,000 fans and the cost curve.
-4. Optional: **Use your real phone: PAIR** shows a QR code. Scan it, and the alerts
-   ring and speak on your own phone.
-5. Let it run to full-time: each fan gets their own front page.
+The first screen asks who is watching.
+
+1. **A fan.** Pick a side (home club, away club, or follow a player), a language
+   (English, French, Spanish), a style (casual or analyst), your one number, and when
+   you watch:
+   - **Step away 63'–70'** (the default): the match starts at 59'; you leave at 63',
+     COMEBACK calls you back at 65' and 69' with the reason, and at 70' the TV replays
+     what you missed while a neural voice reads your "Previously on…". Then the 71' goal,
+     live.
+   - **Join late at 60'**: you missed the first hour, you get the story so far.
+   - **From kick-off**: leave whenever you like (switch browser tab or press I'M AWAY).
+
+   Next to the match, **Pair your phone** shows a QR code: scan it and the call-backs
+   ring and speak on your own phone. **CALL ME BACK FOR** sets your rules. **CHANGE**
+   (top bar) switches language, side or style without restarting the match.
+2. **A studio.** The broadcaster's control room, from 60': the program feed, the agents
+   at work (drafts, Verifier rejections, revisions), the Watcher's decision for the whole
+   audience (**DECISIONS**), the same call-back as three audience segments get it
+   (**PERSONALIZE**), 10,000 simulated fans and the cost curve, the timed overlay cues
+   (**CUES**), and **⚡ CUT THE LLM** to watch the show go on without it.
+3. Let a fan's match run to full-time: they get their own front page.
 
 ## How it works
 
@@ -192,23 +184,25 @@ flowchart LR
   for your session only (`POST /api/session/{id}/outage`): every agent call fails
   as a real outage would, cards and catch-ups keep arriving as verified templates
   (amber badge), the stream never stops, and **RESTORE** brings the writers back.
-- **Fact-checks on screen.** When the Verifier rejects a draft, the program feed
-  shows it: the wrong words struck through, the Verifier's reason, then the version
-  that went on air. In the demo, at 81' the Analyst gave the ten men "their
+- **Fact-checks on screen.** When the Verifier rejects a draft, the studio's AGENTS
+  monitor shows it: the wrong words struck through, the Verifier's reason, then the
+  version that went on air. In the demo, at 81' the Analyst gave the ten men "their
   numerical advantage"; the Verifier caught it and only the corrected card aired.
 
-![Fact-check on the program feed: the Analyst's draft with "numerical advantage" struck through, the Verifier's reason, and the corrected card that went on air](docs/factcheck.png)
+![Fact-check in the AGENTS monitor: the Analyst's draft with "numerical advantage" struck through, the Verifier's reason, and the corrected card that went on air](docs/factcheck.png)
 
-The STUDIO view shows the whole crew at work: tactical camera, engine data, the
-agents' live log, the 10,000-fan audience and the rundown of verified cards.
+The studio view shows the whole crew at work: the agents' live log, the Watcher's
+decisions, the personalization of one call-back for three audience segments, the
+10,000-fan audience, the overlay cues, engine data and the rundown of verified cards.
 
-![STUDIO view: program feed, fan device, tactical camera, match data, agents log, simulated audience and rundown](docs/studio.png)
+![Studio view: program feed, agents log, Watcher decision chain, one call-back for three segments, simulated audience, overlay cues, match data and rundown](docs/studio.png)
 
+Every call-back comes with its decision chain, time-stamped (studio **DECISIONS**
+monitor): the events observed with their ids, the danger state and its trend, the insight
+(sustained pressure, not a prediction), and the decision with every condition checked and
+who was called: the away fans of both sides, counted per side.
 
-Every call-back comes with its decision chain, time-stamped (STUDIO **DECISIONS** monitor,
-and act 1 of the guided story):
-
-![Decision chain of the 65' call-back: events observed with their ids, danger state and trend, the insight without a goal promise, and why Omar, why now](docs/decision.png)
+![Decision chain of the 69' call-back: events with their ids, danger state and trend, the insight without a goal promise, the conditions checked and how many away fans of each side were called](docs/decision.png)
 
 ## One match brain for every fan
 
@@ -308,6 +302,7 @@ least 3 points over 30 s, not within 20 s of the team's own shot (that chance is
 | Alert decision → the fan's screen (server push over SSE, measured in the browser, localhost) | 10–13 ms |
 | Alert → the chance it announced (median) / → the goal (median, when announced) | 16 s / 60 s |
 | 10 simultaneous viewers, ×40 replay (`scripts/load_test.py`, local machine) | 0 errors · 13 events/s per viewer · API p50 5 ms, p95 9 ms |
+| 10 simultaneous viewers on the **public demo** (Azure Container Apps, 0.5 vCPU, measured from Paris) | 0 errors · full event rate · API p50 0.53 s, p95 0.64 s, the same as with 1 viewer (network distance, not load) |
 
 The engine, the Watchers and the Verifier run live for every viewer; the 10,000-fan
 audience is simulated once per match and shared, so a new viewer costs one replay loop.
@@ -377,16 +372,19 @@ fans actually see.
 
 | Texts (demo + unscripted match) | n | Groundedness | Coherence | Fluency | Groundedness < 4 |
 |---|---|---|---|---|---|
-| Before the Verifier: first drafts | 46 | 4.93 | 4.39 | 3.96 | 1 |
-| … of which the Verifier sent back | 6 | 4.50 | 4.33 | 4.00 | 1 |
-| **After the Verifier: texts shown to fans** | **45** | **5.00** | 4.36 | 3.96 | **0** |
+| Before the Verifier: first drafts | 46 | 4.93 | 4.39 | 4.00 | 1 |
+| … of which the Verifier sent back | 5 | 4.40 | 4.60 | 4.00 | 1 |
+| **After the Verifier: texts shown to fans** | **46** | **5.00** | 4.37 | 3.98 | **0** |
 | Control: 3 cards deliberately corrupted (teams swapped, invented stat) | 3 | **2.00** | 3.67 | 3.33 | 3 |
 
 What we learned: the LLM judge and the rule-based Verifier catch **different** errors. The
 judge scored most drafts the Verifier rejected 5/5 (a numerical advantage given to the wrong
 team, an invented number); the Verifier missed one qualitative claim the judge flagged
-("despite fewer chances" with 21 shots to 7), which we turned into a rule. The control row
-shows the judge is not lenient on gross errors. Details per text:
+("despite fewer chances" with 21 shots to 7), which we turned into a rule. The Verifier can
+be too strict as well: it once rejected every Comets fan's full-time story for "leaving
+**you** with 10 men" (true for that fan) and Spanish texts for *el empate* (the equaliser,
+not a final draw); both rules now read the fan's point of view and the language. The
+control row shows the judge is not lenient on gross errors. Details per text:
 [`docs/evaluation.json`](docs/evaluation.json).
 
 ## Responsible AI
@@ -415,7 +413,7 @@ shows the judge is not lenient on gross errors. Details per text:
 | Agentic design | Agent Framework workflow Writer → Verifier → retry → fallback ([`comeback/agents/workflow.py`](comeback/agents/workflow.py)); one Watcher per fan with a visible decision chain ([`comeback/agents/watcher.py`](comeback/agents/watcher.py), [`web/js/decision.js`](web/js/decision.js)); shared match brain ([`comeback/agents/brain.py`](comeback/agents/brain.py)); failure drill ([`comeback/agents/llm.py`](comeback/agents/llm.py) `SwitchableGateway`); MCP server ([`comeback/mcp_server.py`](comeback/mcp_server.py)) |
 | Multi-agent vs one agent | [`scripts/compare_single_agent.py`](scripts/compare_single_agent.py) → [`docs/single_agent_comparison.json`](docs/single_agent_comparison.json) |
 | Real-world impact | Alert protocol and numbers ([`scripts/evaluate_alerts.py`](scripts/evaluate_alerts.py) → [`docs/alerts_eval.json`](docs/alerts_eval.json)), cost at scale ([`comeback/fans/crowd.py`](comeback/fans/crowd.py), `/api/scale`), load test ([`scripts/load_test.py`](scripts/load_test.py)), overlay cues for renderers (`/api/overlays`, `/docs`) |
-| UX and presentation | Guided story in three acts ([`web/js/story.js`](web/js/story.js)), fan and studio views, spoiler-free return, the fan's own alert rules ([`comeback/fans/session.py`](comeback/fans/session.py)) |
+| UX and presentation | A first screen that sets up the experience (fan or studio, side, language, style, metric, when you watch: [`web/js/setup.js`](web/js/setup.js)); a TV-only fan view with a phone pairing panel; a studio control room; spoiler-free return; the fan's own alert rules ([`comeback/fans/session.py`](comeback/fans/session.py)) |
 | Category fit (multi-agent) | Distinct roles, shared state, handoffs, recovery, and an outcome one agent does not reach: the table above |
 
 ## Challenge requirement → where in COMEBACK
@@ -426,7 +424,7 @@ shows the judge is not lenient on gross errors. Details per text:
 | (i-b) **Interpret** into stats, patterns, context | `engine/state.py`: possession (overall and rolling), pass accuracy and difficulty, xG, speeds, distance with the ball, control vs chaos; `engine/danger.py`, `engine/moments.py` |
 | (i-c) **Explain** why a moment matters | Analyst's "why it matters"; storylines (redemption, the substitute's impact, comeback, numerical advantage); delta-based catch-ups |
 | (i-d) **Render** on screen, machine-readable | 3D program feed with broadcast graphics; `GET /api/overlays/{match}`: timed JSON cues per layer and audience, streamed live in the STUDIO **CUES** monitor; OpenAPI at `/docs` |
-| (i-e) **Personalize** | What the fan saw or missed (away, back, late join, spoiler-free return); the fan's own alert rules (goal threats, equaliser or winner, any big moment, night mode); club point of view; player mode (the followed player tagged all match); casual vs analyst live (words vs numbers on the danger and control graphics, different overlays and stories); language; one focus metric on screen. The guided story shows the same moment as three fans side by side |
+| (i-e) **Personalize** | What the fan saw or missed (away, back, late join, spoiler-free return); the fan's own alert rules (goal threats, equaliser or winner, any big moment, night mode); club point of view; player mode (the followed player tagged all match); casual vs analyst live (words vs numbers on the danger and control graphics, different overlays and stories); language; one focus metric on screen. The studio's PERSONALIZE monitor shows each call-back as three audience segments get it |
 | (ii) Player identification | Lower-third name tags; the followed player is labelled in 3D all match |
 | (ii) Speed and distance on thresholds | Speed tag at ≥ 32 km/h sprints; distance tag every 100 m a player covers with the ball |
 | (ii) Pass quality | Distance, accuracy and a 0–100 difficulty rating, with ball speed |
@@ -625,13 +623,13 @@ synthetic.
 ```bash
 cp .env.example .env    # set FOUNDRY_ENDPOINT, FOUNDRY_API_KEY, FOUNDRY_MODEL
 LLM_MODE=live python -m comeback                 # any absence gets a freshly written story
-LLM_MODE=record python scripts/precompute.py     # re-record the demo cache
+LLM_MODE=record python scripts/precompute.py     # re-record the cache: 18 fan set-ups × 2 matches
 ```
 
 ## Development
 
 ```bash
-pytest                        # 55 tests: realism, engine, verifier, workflows, watchers, called-it, crowd, API, story, drill, concurrency
+pytest                        # 68 tests: realism, engine, verifier, workflows, watchers, called-it, crowd, API, setup, drill, concurrency
 ruff check .
 python -m comeback.synth.cli random --count 5    # more synthetic matches
 python scripts/evaluate_alerts.py
@@ -645,7 +643,7 @@ comeback/
             watcher, templates, brain (shared state)
   fans/     profiles, session, catch-up selection, crowd (audience simulation)
   api/      FastAPI server, replay sessions (SSE)
-web/        control room (ES modules, no build step; Three.js from a CDN) + phone page
+web/        setup screen, fan view, studio control room (ES modules, no build step; Three.js from a CDN) + phone page
 scripts/    precompute.py, evaluate_alerts.py, evaluate_texts.py, scale_cache.py, hello_agent.py
 data/       demo match, profiles, committed LLM cache
 ```

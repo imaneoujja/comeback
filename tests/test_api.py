@@ -203,14 +203,11 @@ def test_a_scheduled_absence_is_applied_at_exact_minutes() -> None:
         return replay.away_bands, catchups[0] if catchups else None, calls
 
     bands, catchup, calls = asyncio.run(scenario())
-    # every call-back carries its decision chain and the same moment as the other demo fans get it
+    # every call-back carries its decision chain
     decision = calls[-1]["facts"]["decision"]
     assert decision["relation"] == "attacking" and decision["alert_number"] == 2 and decision["away_for_s"] > 0
     assert calls[-1]["facts"]["danger"] >= decision["threshold"] and decision["slope"] >= decision["min_slope"]
     assert calls[-1]["evidence_event_ids"]
-    variants = calls[-1]["variants"]
-    assert {v["language"] for v in variants.values()} == {"fr", "en", "es"}
-    assert len({v["text"] for v in variants.values()}) == 3
     (band,) = bands
     assert 7 * 60 <= band["to_t"] - band["from_t"] <= 8 * 60          # 63' → 70.5'
     assert catchup and catchup["source"] == "llm" and catchup["audio"] and catchup["delta"]["away_minutes"] == 7
@@ -279,3 +276,45 @@ def test_try_another_match_adapts_the_demo_fans_to_the_fixture() -> None:
     assert fans["reda"]["favourite_player_id"] == f"{away}-9"
     demo = {p["id"]: p for p in client.get("/api/profiles").json()}
     assert demo["omar"]["club_id"] == "EMB" and demo["reda"]["favourite_player_id"] == "SMC-9"
+
+
+def test_audience_call_backs_carry_their_reasons_and_three_segments() -> None:
+    """The studio's DECISIONS and PERSONALIZE monitors: one decision for the whole audience, phrased per segment."""
+    from comeback.api.replay import shared_crowd
+
+    _, frames = shared_crowd("demo-comeback")
+    calls = frames[max(frames)]["calls"]
+    assert calls
+    for call in calls:
+        called = sum(call["called"].values())
+        assert 0 < called <= call["away"]
+        assert call["danger"] >= call["threshold"] and call["slope"] >= call["min_slope"]
+        assert call["reasons"]["evidence_event_ids"]
+        assert {s["language"] for s in call["segments"]} == {"fr", "en", "es"}
+        assert len({s["text"] for s in call["segments"]}) == 3
+    before_71 = [c for c in calls if c["team"] == "EMB" and 66 <= c["minute"] < 71]
+    assert before_71 and before_71[-1]["goal"]["minute"] == 71           # the audience-level "called it"
+    early = frames[min(i for i, f in frames.items() if f["calls"])]["calls"]
+    assert all("goal" not in c for c in early if c["minute"] < 15)      # a later goal never leaks into an earlier frame
+
+
+def test_the_first_screen_configures_a_nameless_fan() -> None:
+    from comeback.api import server
+    from comeback.fans.profiles import fan_profile
+
+    reda_like = fan_profile("player", "es", "casual", None, "EMB", "SMC")
+    assert reda_like.favourite_player_id == "SMC-9" and reda_like.club_id is None and reda_like.name == ""
+    assert reda_like.focus_metric == "top_speed" and reda_like.pov_team() == "SMC"
+    assert fan_profile("home", "fr", "analyst", None, "EMB", "SMC").focus_metric == "xg"
+    fallback = fan_profile("nonsense", "jp", "expert", "nope", "EMB", "SMC")
+    assert (fallback.club_id, fallback.language, fallback.level) == ("EMB", "en", "casual")
+
+    replay = ReplaySession("setup", "demo-comeback", fan_profile("home", "en", "casual", None, "EMB", "SMC"),
+                           LLMGateway(LLMSettings(mode=LLMMode.OFFLINE)))
+    server.sessions["setup"] = replay
+    try:
+        out = client.post("/api/session/setup/fan?side=away&lang=fr&level=analyst").json()
+        assert out["club_id"] == "SMC" and out["language"] == "fr" and out["level"] == "analyst"
+        assert replay.fan.profile.club_id == "SMC" and replay.watcher.session is replay.fan
+    finally:
+        server.sessions.pop("setup", None)

@@ -11,6 +11,7 @@ key has never been written before.
 import random
 from typing import Any
 
+from comeback.agents.watcher import CALLED_IT_WINDOW_S
 from comeback.engine.alerts import AlertTracker
 from comeback.engine.match import EngineUpdate, MatchEngine
 from comeback.fans.catchup import length_bucket, select_cards
@@ -62,6 +63,7 @@ class Crowd:
         self.catchups = 0
         self.story_keys: set[tuple] = set()
         self.back_in_time: list[dict[str, Any]] = []
+        self.calls: list[dict[str, Any]] = []   # every audience-level call-back, with why and to whom
         self.ticked = False
 
     # ---------------------------------------------------------------- events
@@ -74,7 +76,7 @@ class Crowd:
         for team, tracker in self.trackers.items():   # one decision per team, whatever the audience size
             danger, slope = engine.danger_now(team)
             if tracker.check(t, danger, slope, st.seconds_since_shot(team)):
-                self._call_back(t)
+                self._call_back(engine, team, update.event, tracker)
         if update.event["type"] == "goal":
             self._goal(update.event, t)
         if t >= self._next_tick:
@@ -82,19 +84,42 @@ class Crowd:
             self._next_tick = t + TICK_S
             self.ticked = True
 
-    def _call_back(self, t: float) -> None:
-        rng = self.rng
+    def _call_back(self, engine: MatchEngine, team: str, event: dict[str, Any], tracker: AlertTracker) -> None:
+        """One decision for the whole audience: every away fan with alerts left is called back."""
+        rng, t = self.rng, engine.state.t
+        away, called = 0, {"attacking": 0, "defending": 0, "neutral": 0}
         for i in range(self.size):
-            if self.state[i] in (AWAY, CALLED) and self.alerts[i] < MAX_ALERTS_PER_ABSENCE:
-                self.alerts[i] += 1
-                self.alerts_sent += 1
-                self.state[i] = CALLED
-                self.called_at[i] = t
-                if rng.random() < RETURN_ON_ALERT:
-                    self.next_t[i] = min(self.next_t[i], t + rng.uniform(20, 120))
+            if self.state[i] not in (AWAY, CALLED):
+                continue
+            away += 1
+            if self.alerts[i] >= MAX_ALERTS_PER_ABSENCE:
+                continue
+            self.alerts[i] += 1
+            self.alerts_sent += 1
+            self.state[i] = CALLED
+            self.called_at[i] = t
+            club = self.club[i]
+            called["neutral" if club is None else "attacking" if club == team else "defending"] += 1
+            if rng.random() < RETURN_ON_ALERT:
+                self.next_t[i] = min(self.next_t[i], t + rng.uniform(20, 120))
+        danger, slope = engine.danger_now(team)
+        rule = tracker.rule
+        self.calls.append({
+            "t": t, "minute": event["minute"], "second": event["second"], "team": team,
+            "score": engine.state.score_str(), "danger": round(danger), "slope": round(slope, 1),
+            "threshold": rule.threshold, "min_slope": rule.min_slope, "cooldown_s": rule.cooldown_s,
+            "quiet_after_shot_s": rule.quiet_after_shot_s,
+            "since_own_shot_s": round(min(engine.state.seconds_since_shot(team), 9999)),
+            "reasons": engine.danger[team].reasons(t), "away": away, "called": called,
+            "max_alerts": MAX_ALERTS_PER_ABSENCE,
+        })
 
     def _goal(self, event: dict[str, Any], t: float) -> None:
         self.goal_notifications += sum(1 for s in self.state if s in (AWAY, CALLED))
+        for call in reversed(self.calls):    # the audience-level "called it"
+            if call["team"] == event["team"] and 0 < t - call["t"] <= CALLED_IT_WINDOW_S:
+                call["goal"] = {"minute": event["minute"], "lead_s": round(t - call["t"])}
+                break
         back = sum(1 for i in range(self.size)
                    if self.state[i] == PRESENT and t - self.called_at[i] <= BACK_IN_TIME_WINDOW_S)
         self.back_in_time.append({"minute": event["minute"], "team": event["team"], "fans": back})
@@ -177,9 +202,34 @@ def crowd_frames(meta: dict[str, Any], events: list[dict[str, Any]],
 
     brain = MatchBrain(meta, LLMGateway(LLMSettings(mode=LLMMode.OFFLINE)))
     crowd = Crowd(brain.engine, size)
-    initial, frames = crowd.snapshot(0), {}
+    initial, frames = {**crowd.snapshot(0), "calls": []}, {}
     for index, event in enumerate(events):
+        calls = len(crowd.calls)
         crowd.on_event(brain.engine, brain.process(event), brain.cards)
-        if crowd.ticked or event["type"] in ("goal", "match_end"):
-            frames[index] = {**crowd.snapshot(0), "back_in_time": list(crowd.back_in_time)}
+        if len(crowd.calls) > calls:
+            crowd.calls[-1]["segments"] = segment_texts(brain.engine, crowd.calls[-1]["team"], event)
+        if crowd.ticked or len(crowd.calls) > calls or event["type"] in ("goal", "match_end"):
+            frames[index] = {**crowd.snapshot(0), "back_in_time": list(crowd.back_in_time),
+                             "calls": [dict(c) for c in crowd.calls]}   # copies: a later goal must not leak back
     return initial, frames
+
+
+# Three audience segments, to show one call-back as different fans receive it.
+SEGMENTS = (("home", "fr", "analyst"), ("away", "en", "casual"), ("player", "es", "casual"))
+
+
+def segment_texts(engine: MatchEngine, team: str, event: dict[str, Any]) -> list[dict[str, Any]]:
+    """The same call-back as each segment gets it: language, depth and side change, the facts do not."""
+    from comeback.agents.watcher import Watcher
+    from comeback.fans.profiles import fan_profile
+    from comeback.fans.session import FanSession
+
+    st = engine.state
+    danger, _ = engine.danger_now(team)
+    out = []
+    for side, language, level in SEGMENTS:
+        profile = fan_profile(side, language, level, None, st.home, st.away)
+        text = Watcher(FanSession(profile), engine).phrase_for(engine, team, event, danger)
+        out.append({"side": side, "club_id": profile.club_id, "favourite_player_id": profile.favourite_player_id,
+                    "language": language, "level": level, "text": text})
+    return out

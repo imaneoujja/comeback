@@ -1,10 +1,9 @@
-/* FACT-CHECK on the program feed: when the Verifier rejects a draft, viewers see the
- * draft with the wrong words struck through, the Verifier's reason, and then the version
- * that passed. It follows the paced AGENTS steps, so it stays in sync with the ticker.
+/* FACT-CHECK in the studio's AGENTS monitor: when the Verifier rejects a draft, the draft
+ * shows with the wrong words struck through, the Verifier's reason, and then the version
+ * that passed. It follows the paced AGENTS log, so both stay in sync.
  * Only the first rejection of a text is shown; later drafts only update the outcome. */
 
 import { $, esc, on } from "./state.js";
-import { storyActive, storyStep } from "./story.js";
 
 // Wording the Verifier's numerical-advantage rule is about, most specific first: the first
 // pattern found in the quoted sentence is struck through (else the whole sentence is).
@@ -24,10 +23,9 @@ export function initFactCheck() {
 
 function show(s) {
   if (current?.label === s.label) return;                  // already on screen: the outcome will follow
-  if (storyActive() && storyStep() < 8) return;            // the guided story shows its fact-check in act 3
   const { quote, reason } = parse(s.detail);
   const el = $("#factcheck");
-  el.innerHTML = `<div class="fc-k"><span>AI CREW · FACT-CHECK</span><span>${esc(s.label.toUpperCase())}</span></div>
+  el.innerHTML = `<div class="fc-k"><span>VERIFIER · FACT-CHECK</span><span>${esc(s.label.toUpperCase())}</span></div>
     <div class="fc-d">${esc((writer[s.label]?.agent || "Writer").toUpperCase())} · DRAFT #${s.attempt}</div>
     <div class="fc-t">${highlight(s.draft, quote, s.detail)}</div>
     <div class="fc-r"><b>✗ VERIFIER</b> ${esc(reason)}</div>

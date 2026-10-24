@@ -21,7 +21,7 @@ from comeback.agents.speech import AUDIO_DIR
 from comeback.api.replay import MATCHES_DIR, SPEEDS, ReplaySession, cue_visible, shared_crowd
 from comeback.engine.match import load_match, run_engine
 from comeback.fans.crowd import scaling_curve
-from comeback.fans.profiles import for_match, load_profiles
+from comeback.fans.profiles import fan_profile, for_match, load_profiles
 
 WEB_DIR = Path(__file__).resolve().parents[2] / "web"
 SCALE_DIR = Path(__file__).resolve().parents[2] / "data" / "scale"
@@ -84,6 +84,12 @@ def _profile(profile_id: str, match_id: str = DEFAULT_MATCH):
         raise HTTPException(404, f"unknown profile {profile_id!r}")
     meta = _match_meta(match_id)
     return for_match(profiles[profile_id], meta["home"]["id"], meta["away"]["id"])
+
+
+def _fan(match_id: str, side: str, lang: str, level: str, metric: str | None):
+    """The fan as configured on the first screen (side, language, style, metric), for this fixture."""
+    meta = _match_meta(match_id)
+    return fan_profile(side, lang, level, metric, meta["home"]["id"], meta["away"]["id"])
 
 
 @cache
@@ -172,18 +178,21 @@ async def scale(match_id: str) -> dict[str, Any]:
 
 @app.get("/api/stream")
 async def stream(request: Request, match_id: str = DEFAULT_MATCH, session: str | None = None,
-                 profile: str = "omar", speed: int = 10, device: bool = False) -> StreamingResponse:
+                 profile: str = "omar", side: str | None = None, lang: str = "en", level: str = "casual",
+                 metric: str | None = None, speed: int = 10, device: bool = False) -> StreamingResponse:
     """Server-Sent Events: events, snapshots, overlay cues, moment cards, alerts, catch-ups.
 
-    ``device=true`` attaches a fan's phone to an existing session (never creates one).
+    The fan is either configured (``side``/``lang``/``level``/``metric``, the first screen) or a
+    preset ``profile`` id. ``device=true`` attaches a fan's phone to an existing session.
     """
     _match_path(match_id)
     session_id = session or uuid.uuid4().hex[:12]
     replay = sessions.get(session_id)
     if device and replay is None:
-        raise HTTPException(404, "no such session: scan the QR code shown in the control room")
+        raise HTTPException(404, "no such session: scan the QR code shown next to the match")
     if replay is None or replay.match_id != match_id:
-        replay = ReplaySession(session_id, match_id, _profile(profile, match_id), gateway, speed)
+        fan = _fan(match_id, side, lang, level, metric) if side else _profile(profile, match_id)
+        replay = ReplaySession(session_id, match_id, fan, gateway, speed)
         sessions[session_id] = replay
     queue = replay.subscribe(device=device)
     replay.start()
@@ -224,7 +233,7 @@ async def live_sessions() -> list[dict[str, Any]]:
     """Live replay sessions (read by the MCP server)."""
     return [{"session": r.session_id, "match_id": r.match_id, "minute": r.brain.engine.state.minute,
              "period": r.brain.engine.state.period, "score": r.brain.engine.state.score_str(),
-             "fan": r.fan.profile.name, "fan_present": r.fan.present} for r in sessions.values()]
+             "fan": r.fan.profile.display, "fan_present": r.fan.present} for r in sessions.values()]
 
 
 @app.get("/api/session/{session_id}/live")
@@ -236,7 +245,7 @@ async def live_state(session_id: str) -> dict[str, Any]:
     cards = [{k: c[k] for k in ("minute", "type", "team", "importance", "headline", "why_it_matters", "source")}
              for c in sorted(replay.brain.cards.values(), key=lambda c: c["t"]) if c["type"] != "danger_peak"]
     return {"snapshot": engine.snapshot(), "danger_reasons": reasons, "moments": cards,
-            "fan": replay.fan.profile.name, "fan_present": replay.fan.present}
+            "fan": replay.fan.profile.display, "fan_present": replay.fan.present}
 
 
 @app.get("/api/session/{session_id}/player/{player}")
@@ -305,6 +314,17 @@ async def set_speed(session_id: str, value: int) -> dict[str, Any]:
 async def pause(session_id: str, paused: bool = True) -> dict[str, Any]:
     _session(session_id).set_paused(paused)
     return {"paused": paused}
+
+
+@app.post("/api/session/{session_id}/fan")
+async def configure_fan(session_id: str, side: str, lang: str = "en", level: str = "casual",
+                        metric: str | None = None) -> dict[str, Any]:
+    """Change the fan's configuration on a running session (same match, same moment)."""
+    replay = _session(session_id)
+    replay.set_profile(_fan(replay.match_id, side, lang, level, metric))
+    replay.away_bands = []
+    replay.publish("state", replay.state_message())
+    return replay.fan.profile.__dict__
 
 
 @app.post("/api/session/{session_id}/profile")

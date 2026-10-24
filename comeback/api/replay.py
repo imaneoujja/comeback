@@ -22,7 +22,7 @@ from comeback.agents.translator import english_version
 from comeback.agents.watcher import Watcher
 from comeback.engine.match import EngineUpdate, load_match
 from comeback.fans.crowd import crowd_frames
-from comeback.fans.profiles import FanProfile, for_match, load_profiles
+from comeback.fans.profiles import FanProfile
 from comeback.fans.session import ALERT_FOR, FanSession
 
 log = logging.getLogger(__name__)
@@ -62,8 +62,6 @@ class ReplaySession:
         self._crowd_initial, self._crowd_frames = shared_crowd(match_id)
         self._crowd = self._crowd_initial
         self.speech = SpeechGateway()
-        home, away = self.meta["home"]["id"], self.meta["away"]["id"]
-        self.demo_profiles = {pid: for_match(p, home, away) for pid, p in load_profiles().items()}
         self.speed = speed if speed in SPEEDS else 10
         self.index = 0
         self.paused = False
@@ -182,7 +180,7 @@ class ReplaySession:
     def go_away(self) -> dict[str, Any]:
         t = self.brain.engine.state.t
         self.fan.go_away(t)
-        self.trace({"agent": "Watcher", "step": "watching", "label": self.fan.profile.name,
+        self.trace({"agent": "Watcher", "step": "watching", "label": self.fan.profile.display,
                     "detail": "fan left · watching " + " & ".join(self.watcher.teams)})
         self.away_bands.append({"from_t": t, "to_t": None})
         self.publish("presence", {"present": False, "t": t, "away_bands": self.away_bands})
@@ -198,7 +196,7 @@ class ReplaySession:
             self.away_bands[-1]["to_t"] = t
         self.publish("presence", {"present": True, "t": t, "away_bands": self.away_bands})
         await self._drain_cards()
-        self.trace({"agent": "Watcher", "step": "back", "label": self.fan.profile.name,
+        self.trace({"agent": "Watcher", "step": "back", "label": self.fan.profile.display,
                     "detail": f"back after {round((window[1] - window[0]) / 60)} min → Storyteller"})
         catchup = await self.brain.catchup(self.fan.profile, *window, trace=self.trace, snapshot=snapshot)
         catchup |= {"from_t": window[0], "to_t": window[1]}
@@ -254,7 +252,7 @@ class ReplaySession:
         self.away_bands.append({"from_t": 0.0, "to_t": t, "late_join": True})
         await self._drain_cards()
         self.publish("state", self.state_message())
-        self.trace({"agent": "Watcher", "step": "join", "label": self.fan.profile.name,
+        self.trace({"agent": "Watcher", "step": "join", "label": self.fan.profile.display,
                     "detail": "joined late → Storyteller: the story so far"})
         catchup = await self.brain.catchup(self.fan.profile, 0.0, t, late_join=True, trace=self.trace,
                                            snapshot=snapshot)
@@ -296,8 +294,6 @@ class ReplaySession:
             self.publish("timeline", timeline[-1])
         for note in self.watcher.on_update(self.brain.engine, update):
             payload = {**note.__dict__, "decided_at": time.time()}   # for end-to-end latency measurements
-            if note.kind == "come_back":   # the same moment as every demo fan would get it: language, level, side
-                payload["variants"] = self._variants(note, event)
             self.publish("notification", payload)
             if note.kind == "come_back":
                 detail = (f"{note.team} danger {note.facts['danger']} & rising · "
@@ -307,7 +303,7 @@ class ReplaySession:
                           " · fan back in time")
             else:
                 detail = f"goal while away ({note.facts['score']}) → notified"
-            self.trace({"agent": "Watcher", "step": note.kind, "label": self.fan.profile.name, "detail": detail})
+            self.trace({"agent": "Watcher", "step": note.kind, "label": self.fan.profile.display, "detail": detail})
         self.publish("snapshot", self.brain.engine.snapshot())
         return update
 
@@ -345,16 +341,6 @@ class ReplaySession:
             finally:
                 self._card_queue.task_done()
 
-    def _variants(self, note: Any, event: dict[str, Any]) -> dict[str, dict[str, Any]]:
-        engine, out = self.brain.engine, {}
-        for pid, profile in self.demo_profiles.items():
-            if pid == self.fan.profile.id:
-                text = note.text
-            else:
-                text = Watcher(FanSession(profile), engine).phrase_for(engine, note.team, event, note.facts["danger"])
-            out[pid] = {"name": profile.name, "language": profile.language, "level": profile.level, "text": text}
-        return out
-
     def replay_clips(self, from_t: float, to_t: float) -> list[dict[str, Any]]:
         """The missed moments worth replaying on the 3D feed, with the events around each of them."""
         cards = [c for c in self.brain.cards.values() if from_t <= c["t"] <= to_t and c["type"] in REPLAYABLE]
@@ -370,14 +356,14 @@ class ReplaySession:
         audio = await self.speech.audio_url(catchup["text"], catchup["language"])
         text_en = await english_version(catchup["text"], catchup["language"], self.llm, self.brain.known_names())
         if audio:
-            self.trace({"agent": "Storyteller", "step": "voice", "label": self.fan.profile.name,
+            self.trace({"agent": "Storyteller", "step": "voice", "label": self.fan.profile.display,
                         "detail": "Azure AI Speech neural voice"})
         return {"replay": self.replay_clips(from_t, to_t), "audio": audio, "text_en": text_en}
 
     async def _gazette(self) -> None:
         """Full-time: the Storyteller writes this fan's own recap of the match."""
         await self._drain_cards()
-        self.trace({"agent": "Watcher", "step": "full_time", "label": self.fan.profile.name,
+        self.trace({"agent": "Watcher", "step": "full_time", "label": self.fan.profile.display,
                     "detail": "full-time → Storyteller: personal recap"})
         recap = await self.brain.final_recap(self.fan.profile, trace=self.trace)
         recap["audio"] = await self.speech.audio_url(recap["text"], recap["language"])

@@ -1,6 +1,6 @@
 /* Broadcast graphics on the PGM: score bug, danger strip, overlay cues (one slot per layer). */
 
-import { $, app, esc, teamColour, teamName, level, clockText } from "./state.js";
+import { $, app, esc, teamColour, teamName, level, clockText, fanLabel } from "./state.js";
 
 const MIN_WALL_S = { lower_third: 2.6, top_right: 2.6, banner: 5.5 };
 export const TYPE_LABEL = {
@@ -198,7 +198,7 @@ export function renderGazette(g, fan) {
   const el = $("#gazette");
   el.innerHTML = `<div class="gz">
     <div class="gz-top"><span>FULL-TIME EDITION</span><span class="gz-mast">The Comeback Gazette</span>
-      <span>WRITTEN FOR ${esc(fan?.name?.toUpperCase() || "")} · ${esc((g.language || "").toUpperCase())}</span></div>
+      <span>WRITTEN FOR YOU · ${esc(fanLabel(fan).toUpperCase())} · ${esc((g.language || "").toUpperCase())}</span></div>
     <div class="gz-score">${esc(home)} <b>${s ? s.score[app.home] : ""}–${s ? s.score[app.away] : ""}</b> ${esc(away)}</div>
     <h1 class="gz-h">${esc(g.headline || "")}</h1>
     <div class="gz-body"><p class="gz-text">${esc(g.text)}</p>

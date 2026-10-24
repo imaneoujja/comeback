@@ -14,6 +14,7 @@ from comeback.agents.llm import LLMGateway, LLMMode, LLMSettings, LLMUnavailable
 from comeback.agents.verifier import (
     allowed_numbers,
     check_names,
+    check_no_final_result,
     check_numbers,
     check_numerical_claims,
     check_scope,
@@ -100,6 +101,14 @@ def test_numerical_claims_must_name_the_short_handed_team() -> None:
     assert check_numerical_claims("Emberfield win, overcoming a numerical advantage after Saltmarsh Comets "
                                   "lost a player.", on_pitch)
     assert check_numerical_claims("An early lead with both teams at full strength.", {"A": 11, "B": 11}) == []
+    # in a fan's own story, "you" / "your team" / "we" is the fan's side
+    comets = "Saltmarsh Comets"
+    assert check_numerical_claims("Hollins was sent off, leaving you with 10 men.", on_pitch, comets) == []
+    assert check_numerical_claims("Despite being a man down, your team fought hard.", on_pitch, comets) == []
+    assert check_numerical_claims("L'équipe a eu du courage malgré l'infériorité numérique.", on_pitch, comets) == []
+    assert check_numerical_claims("Tarjeta roja y quedamos con 10 jugadores.", on_pitch, comets) == []
+    assert check_numerical_claims("Hollins was sent off, leaving you with 10 men.", on_pitch, "Emberfield")
+    assert check_numerical_claims("You watched Emberfield play against 10 men.", on_pitch, comets) == []
     fr = {"Emberfield": 11, "Saltmarsh Comets": 10}
     assert check_numerical_claims(
         "Une gestion tactique d’Emberfield face à l’infériorité numérique des Saltmarsh Comets.", fr) == []
@@ -394,3 +403,12 @@ def test_comparative_claims_must_match_the_stats() -> None:
     assert check_comparisons("Larkhaven Athletic drew 2-2 despite fewer chances and less possession.", facts, names)
     assert check_comparisons("Larkhaven Athletic drew 2-2 despite less possession.", facts, names) == []
     assert check_comparisons("Ashvale Wanderers held on despite fewer chances.", facts, names) == []
+
+
+def test_no_final_result_before_full_time_but_equalisers_are_fine() -> None:
+    assert check_no_final_result("Emberfield won the match.", finished=False)
+    assert check_no_final_result("Larkhaven logró un empate justo.", finished=False)
+    assert check_no_final_result("El partido terminó en empate.", finished=False)
+    assert check_no_final_result("Elderglen logró el empate 2-2.", finished=False) == []   # "el empate": the equaliser
+    assert check_no_final_result("Larkhaven drew level at 2-2.", finished=False) == []
+    assert check_no_final_result("Emberfield won the match.", finished=True) == []

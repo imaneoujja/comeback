@@ -12,7 +12,7 @@ let audio = null;
 let pendingSpeech = null;            // text waiting for the profile (its language) to arrive
 
 if (!session) {
-  $("#pair-hint").textContent = "Open this page by scanning the QR code shown in the COMEBACK control room.";
+  $("#pair-hint").textContent = "Open this page by scanning the QR code shown next to the match in COMEBACK.";
   $("#pair-btn").disabled = true;
 }
 
@@ -78,11 +78,14 @@ function connect() {
 
 /* ------------------------------------------------------------------ render */
 
+const LANG = { en: "English", fr: "Français", es: "Español" };
+
 function render() {
   const p = st.profile;
   if (p) {
-    const team = p.club_id ? st.teams[p.club_id]?.name : null;
-    $("#who").innerHTML = `<b>${esc(p.name)}</b> · ${team ? `supports ${esc(team)}` : "neutral"} · ${p.language.toUpperCase()}`;
+    const fav = Object.values(st.teams).flatMap((t) => t.players).find((x) => x.id === p.favourite_player_id);
+    const who = p.club_id ? `${st.teams[p.club_id]?.name} fan` : `Follows ${fav?.name || p.favourite_player_id}`;
+    $("#who").innerHTML = `<b>${esc(who)}</b> · ${LANG[p.language] || p.language} · ${esc(p.level)}`;
   }
   $("#state").className = `state ${st.present ? "" : "away"}`;
   $("#state").textContent = st.present ? "● WATCHING THE MATCH" : "● AWAY — COMEBACK IS WATCHING FOR YOU";
@@ -124,7 +127,12 @@ function renderCatchup(c) {
     <div class="ct">${c.final ? esc(c.headline || "Full-time") : c.late_join ? "The story so far" : `You were away ${d.away_minutes} min`}</div>
     <div class="cx">${esc(c.text)}</div>
     <div class="cf"><span>${c.source === "llm" ? "✓ STORYTELLER → VERIFIER" : "TEMPLATE · VERIFIED FACTS"}</span>
-    <button class="btn" id="listen">▶ LISTEN</button></div>`;
+    <span>${c.text_en ? `<button class="btn" id="show-en">ENGLISH</button> ` : ""}<button class="btn" id="listen">▶ LISTEN</button></span></div>`;
+  $("#show-en")?.addEventListener("click", (e) => {
+    const english = e.target.textContent === "ENGLISH";
+    el.querySelector(".cx").textContent = english ? c.text_en : c.text;
+    e.target.textContent = english ? "ORIGINAL" : "ENGLISH";
+  });
   $("#listen").addEventListener("click", () => {
     if (c.audio) new Audio(c.audio).play().catch(() => speak(c.text, c.language || st.profile?.language));
     else speak(c.text, c.language || st.profile?.language);

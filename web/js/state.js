@@ -3,8 +3,6 @@
  * all in pitch coordinates (x 0..105 towards the away goal, y 0..68). */
 
 export const DEMO_MATCH = "demo-comeback";
-export const MATCH_ID = new URLSearchParams(location.search).get("match") || DEMO_MATCH;   // "Try another match"
-export const IS_DEMO = MATCH_ID === DEMO_MATCH;
 export const SPEEDS = [1, 5, 10, 20, 40];
 export const L = 105, W = 68;
 
@@ -14,8 +12,8 @@ export const esc = (s) => String(s ?? "")
   .replace(/(\d)-(\d)/g, "$1‑$2");   // keep scores like 1-2 on one line
 
 export const app = {
-  session: newSessionId(), profileId: "omar", speed: 10, paused: false,
-  match: null, teams: {}, home: null, away: null, roster: {}, profiles: [],
+  session: newSessionId(), speed: 10, paused: false, matchId: DEMO_MATCH, config: null, fan: null,
+  match: null, teams: {}, home: null, away: null, roster: {},
   snapshot: null, snapshotAt: performance.now(), timeline: [], cards: new Map(), notes: [], awayBands: [], present: true,
   lineup: {}, possession: null, holder: null,
   ball: { x: L / 2, y: W / 2, z: 0 }, ballAnim: null, pos: {},
@@ -38,8 +36,20 @@ export function emit(type, data) { for (const fn of app.listeners[type] || []) f
 export const teamColour = (team) => app.teams[team]?.colour || "#ecebe6";
 export const teamName = (team) => app.teams[team]?.name || team;
 export const isHome = (team) => team === app.home;
-export const level = () => app.profiles.find((p) => p.id === app.profileId)?.level || "casual";
-export const profile = () => app.profiles.find((p) => p.id === app.profileId);
+export const profile = () => app.fan;
+export const level = () => app.fan?.level || "casual";
+export const isStudio = () => document.body.dataset.mode === "studio";
+export const LANG_NAME = { en: "English", fr: "Français", es: "Español" };
+
+/** Who this fan is, in words: "Emberfield fan" or "Follows Halen Merewood". */
+export function fanLabel(p = app.fan) {
+  if (!p) return "";
+  if (p.club_id) return `${teamName(p.club_id)} fan`;
+  return `Follows ${app.roster[p.favourite_player_id]?.name || p.favourite_player_id}`;
+}
+
+/** The side a fan's story is told from: their club, or their player's team. */
+export const fanTeam = (p = app.fan) => p?.club_id || app.roster[p?.favourite_player_id]?.team || null;
 
 export function clockText(s) {
   if (!s) return "00:00";
