@@ -224,8 +224,10 @@ export function createProgram(canvas) {
     cam.mode = mode;
     if (opts.side) cam.side = opts.side;
     if (mode === "goal") camera.position.set(cam.side * (L / 2 + 6.5), 7.5, toZ(app.ball.y) * 0.3);
-    camera.fov = mode === "goal" ? 48 : 24;
+    camera.fov = mode === "goal" ? 48 : 24 * frameFit();
   }
+  // a taller screen shows more beyond the near touchline: zoom in a little to keep the pitch filling it
+  const frameFit = () => Math.max(0.8, Math.min(1, camera.aspect / 2.3));
 
   function directCamera(dt) {
     const bx = toX(app.ball.x), bz = toZ(app.ball.y);
@@ -240,7 +242,7 @@ export function createProgram(canvas) {
       const tx = Math.max(-34, Math.min(34, bx * 0.88));
       cam.x += (tx - cam.x) * k;
       const inBox = Math.abs(bx) > 36;
-      camera.fov += ((inBox ? 20.5 : 24) - camera.fov) * k * 0.6;
+      camera.fov += ((inBox ? 20.5 : 24) * frameFit() - camera.fov) * k * 0.6;
       camera.position.set(cam.x * 0.92, 27, 88);
       camera.lookAt(cam.x, 0, 3 + bz * 0.12);
     }

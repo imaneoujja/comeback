@@ -1,6 +1,7 @@
 /* Broadcast graphics on the PGM: score bug, danger strip, overlay cues (one slot per layer). */
 
 import { $, app, esc, teamColour, teamName, level, clockText, fanLabel } from "./state.js";
+import { receiptLines } from "./receipt.js";
 
 const MIN_WALL_S = { lower_third: 2.6, top_right: 2.6, banner: 5.5 };
 export const TYPE_LABEL = {
@@ -191,14 +192,16 @@ export function renderMetric(fan) {
     <span class="mv"><b style="color:${teamColour(s.home)}">${s.home}</b> ${m.value(s.teams[s.home])} – ${m.value(s.teams[s.away])} <b style="color:${teamColour(s.away)}">${s.away}</b></span>`;
 }
 
-/** Full-time: the fan's own front page, written by the Storyteller. */
-export function renderGazette(g, fan) {
+/** Full-time: the fan's own front page, written by the Storyteller, under their receipt. */
+export function renderGazette(g, fan, catchupSeconds = 0) {
+  const r = g.receipt ? receiptLines(g.receipt, catchupSeconds) : null;
   const s = app.snapshot;
   const home = app.teams[app.home].name, away = app.teams[app.away].name;
   const el = $("#gazette");
   el.innerHTML = `<div class="gz">
     <div class="gz-top"><span>FULL-TIME EDITION</span><span class="gz-mast">The Comeback Gazette</span>
       <span>WRITTEN FOR YOU · ${esc(fanLabel(fan).toUpperCase())} · ${esc((g.language || "").toUpperCase())}</span></div>
+    ${r ? `<div class="gz-receipt"><span class="gz-rk">YOUR MATCH</span><b>${esc(r.big)}</b><small>${esc(r.small)}</small></div>` : ""}
     <div class="gz-score">${esc(home)} <b>${s ? s.score[app.home] : ""}–${s ? s.score[app.away] : ""}</b> ${esc(away)}</div>
     <h1 class="gz-h">${esc(g.headline || "")}</h1>
     <div class="gz-body"><p class="gz-text">${esc(g.text)}</p>

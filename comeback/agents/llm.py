@@ -272,3 +272,29 @@ class SwitchableGateway:
 
     def __getattr__(self, name: str) -> Any:
         return getattr(self.inner, name)
+
+
+class PrecomputedOnlyGateway:
+    """A gateway that only serves cached replies, except while recording.
+
+    For texts written per fan *window* (e.g. "what you missed" lines): calling the model for
+    any window a fan happens to choose would make the cost grow with the audience, so outside
+    ``record`` mode a cache miss raises :class:`LLMUnavailable` and the writer falls back to
+    its factual template.
+    """
+
+    def __init__(self, inner: Any) -> None:
+        self.inner = inner
+
+    async def ask(self, agent_name: str, instructions: str, prompt: str) -> LLMReply:
+        if getattr(self.inner, "down", False):
+            raise LLMUnavailable("simulated outage (failure drill)")
+        if self.inner.settings.mode is not LLMMode.RECORD:
+            cached = self.inner.cache.get(self.inner.cache_key(agent_name, instructions, prompt))
+            if cached is None:
+                raise LLMUnavailable("not a precomputed window: factual template")
+            return LLMReply(cached, cached=True)
+        return await self.inner.ask(agent_name, instructions, prompt)
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self.inner, name)

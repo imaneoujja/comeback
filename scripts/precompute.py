@@ -8,6 +8,7 @@ with real model output:
 * for each of the 18 configurations: the late join at 60', the returns of the two demo
   absences (63' → 70.5', the autoplay window, and 75.5' → 86'), and the full-time recap;
 * an English version of every non-English text ("Show English");
+* the "what you missed" lines of each window, once per language (``comeback/agents/notes.py``);
 * neural voice-overs for the demo match (autoplay return, late join, full-time recap).
 
 Run once with ``LLM_MODE=record`` (needs Foundry credentials) to fill
@@ -29,9 +30,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from comeback.agents.brain import MatchBrain  # noqa: E402
 from comeback.agents.llm import LLMGateway  # noqa: E402
+from comeback.agents.notes import write_notes  # noqa: E402
 from comeback.agents.speech import SpeechGateway  # noqa: E402
 from comeback.agents.translator import english_version  # noqa: E402
 from comeback.engine.match import load_match  # noqa: E402
+from comeback.fans.missed import what_you_missed  # noqa: E402
 from comeback.fans.profiles import LANGUAGES, LEVELS, SIDES, fan_profile  # noqa: E402
 
 MATCHES = Path(__file__).resolve().parents[1] / "data" / "matches"
@@ -52,7 +55,7 @@ async def precompute(path: Path, gateway: LLMGateway, speech: SpeechGateway | No
             for side, lang, level in itertools.product(SIDES, LANGUAGES, LEVELS)]
     brain = MatchBrain(meta, gateway)
     voiced: list[str | None] = []
-    stats = {"llm": 0, "template": 0}
+    stats = {"llm": 0, "template": 0, "notes_llm": 0, "notes_template": 0}
 
     async def finish(result: dict, spoken: bool) -> None:
         stats[result["source"]] += 1
@@ -61,11 +64,18 @@ async def precompute(path: Path, gateway: LLMGateway, speech: SpeechGateway | No
         if speech and spoken:
             voiced.append(await speech.audio_url(text, lang))
 
+    async def notes(played: list[dict], from_t: float, to_t: float, left_snapshot: dict | None) -> None:
+        now = brain.engine.snapshot()
+        for lang in LANGUAGES:
+            missed = what_you_missed(meta, played, brain.engine.state, from_t, to_t, left_snapshot, now, lang)
+            stats["notes_" + (await write_notes(missed, brain.roster, gateway))["source"]] += 1
+
     left: dict[float, float] = {}
+    left_snapshots: dict[float, dict] = {}
     done: set[float] = set()
     joined = False
     print(f"\n######## {meta['home']['name']} v {meta['away']['name']} ({path.stem}) · {len(fans)} configurations")
-    for event in events:
+    for index, event in enumerate(events):
         for moment in brain.process(event).moments:
             if brain.cards[moment.moment_id]["pending"]:
                 await brain.write_card(moment)
@@ -74,16 +84,20 @@ async def precompute(path: Path, gateway: LLMGateway, speech: SpeechGateway | No
             joined = True
             for fan in fans:
                 await finish(await brain.catchup(fan, 0.0, event["t"], late_join=True), spoken=True)
+            await notes(events[: index + 1], 0.0, event["t"], None)
         for leave, back, spoken in ABSENCES:
             if leave not in left and m >= leave:
                 left[leave] = event["t"]
+                left_snapshots[leave] = brain.engine.snapshot()
             if leave in left and back not in done and m >= back:
                 done.add(back)
                 for fan in fans:
                     await finish(await brain.catchup(fan, left[leave], event["t"]), spoken=spoken)
+                await notes(events[: index + 1], left[leave], event["t"], left_snapshots[leave])
     for fan in fans:
         await finish(await brain.final_recap(fan), spoken=True)
     print(f"  catch-ups and recaps: {stats['llm']} verified LLM texts, {stats['template']} templates")
+    print(f"  what-you-missed lines: {stats['notes_llm']} verified LLM sets, {stats['notes_template']} templates")
     return voiced
 
 

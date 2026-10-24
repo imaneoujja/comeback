@@ -3,6 +3,7 @@
  * speaks the reason out loud in the fan's language (unlocked by the first tap). */
 
 import { speak, unlockSpeech, stopSpeech } from "./voice.js";
+import { receiptLines } from "./receipt.js";
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -123,7 +124,9 @@ function renderCatchup(c) {
   const d = c.delta || {};
   const el = $("#catchup");
   el.hidden = false;
-  el.innerHTML = `<div class="ck">PREVIOUSLY ON…</div>
+  const receipt = c.final && c.receipt ? receiptLines(c.receipt) : null;
+  el.innerHTML = `${receipt ? `<div class="ck">YOUR MATCH</div><div class="ct">${esc(receipt.big)}</div><div class="cr">${esc(receipt.small)}</div>` : ""}
+    <div class="ck">${c.final ? "FULL-TIME" : "PREVIOUSLY ON…"}</div>
     <div class="ct">${c.final ? esc(c.headline || "Full-time") : c.late_join ? "The story so far" : `You were away ${d.away_minutes} min`}</div>
     <div class="cx">${esc(c.text)}</div>
     <div class="cf"><span>${c.source === "llm" ? "✓ STORYTELLER → VERIFIER" : "TEMPLATE · VERIFIED FACTS"}</span>

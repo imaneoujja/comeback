@@ -17,12 +17,15 @@ from typing import Any
 from comeback.agents.analyst import needs_analyst
 from comeback.agents.brain import MatchBrain
 from comeback.agents.llm import LLMGateway, SwitchableGateway
+from comeback.agents.notes import write_notes
 from comeback.agents.speech import SpeechGateway
 from comeback.agents.translator import english_version
 from comeback.agents.watcher import Watcher
 from comeback.engine.match import EngineUpdate, load_match
 from comeback.fans.crowd import crowd_frames
+from comeback.fans.missed import what_you_missed
 from comeback.fans.profiles import FanProfile
+from comeback.fans.receipt import match_receipt
 from comeback.fans.session import ALERT_FOR, FanSession
 
 log = logging.getLogger(__name__)
@@ -66,6 +69,8 @@ class ReplaySession:
         self.index = 0
         self.paused = False
         self.away_bands: list[dict[str, float | None]] = []
+        self._left: dict[str, Any] | None = None   # the match as the fan left it (engine snapshot)
+        self.skipped: list[tuple[float, float]] = []  # stretches skipped ahead (neither live nor caught up)
         self._plan: list[tuple[float, str]] = []   # scheduled (second-half minute, "away" | "back"): the guided story
         self._subscribers: set[asyncio.Queue] = set()
         self._devices: set[asyncio.Queue] = set()
@@ -179,6 +184,7 @@ class ReplaySession:
 
     def go_away(self) -> dict[str, Any]:
         t = self.brain.engine.state.t
+        self._left = self.brain.engine.snapshot()
         self.fan.go_away(t)
         self.trace({"agent": "Watcher", "step": "watching", "label": self.fan.profile.display,
                     "detail": "fan left · watching " + " & ".join(self.watcher.teams)})
@@ -201,6 +207,7 @@ class ReplaySession:
         catchup = await self.brain.catchup(self.fan.profile, *window, trace=self.trace, snapshot=snapshot)
         catchup |= {"from_t": window[0], "to_t": window[1]}
         catchup |= await self._replay_and_voice(catchup, *window)
+        catchup["missed"] = await self._missed(*window, self._left, snapshot)
         self.publish("catchup", catchup)
         return catchup
 
@@ -236,8 +243,11 @@ class ReplaySession:
                 await self.come_back()
 
     def seek(self, minute: float) -> dict[str, Any]:
-        """Skip ahead to ``minute`` with the fan watching all along (guided demo): no catch-up."""
+        """Skip ahead to ``minute`` (no catch-up): the skipped stretch counts as not followed in the receipt."""
+        before = self.brain.engine.state.t
         self._fast_forward(minute)
+        if self.brain.engine.state.t > before:
+            self.skipped.append((before, self.brain.engine.state.t))
         self.publish("state", self.state_message())
         self._wake.set()
         return {"minute": self.brain.engine.state.minute}
@@ -258,6 +268,7 @@ class ReplaySession:
                                            snapshot=snapshot)
         catchup |= {"from_t": 0.0, "to_t": t, "late_join": True}
         catchup |= await self._replay_and_voice(catchup, 0.0, t)
+        catchup["missed"] = await self._missed(0.0, t, None, snapshot)
         self.publish("catchup", catchup)
         self._wake.set()
         return catchup
@@ -360,6 +371,13 @@ class ReplaySession:
                         "detail": "Azure AI Speech neural voice"})
         return {"replay": self.replay_clips(from_t, to_t), "audio": audio, "text_en": text_en}
 
+    async def _missed(self, from_t: float, to_t: float, left: dict[str, Any] | None,
+                      now: dict[str, Any]) -> dict[str, Any]:
+        """The return screen: who changed the game in the window (engine numbers, verified or template lines)."""
+        missed = what_you_missed(self.meta, self.events[: self.index], self.brain.engine.state, from_t, to_t,
+                                 left, now, self.fan.profile.language)
+        return await write_notes(missed, self.brain.roster, self.llm)
+
     async def _gazette(self) -> None:
         """Full-time: the Storyteller writes this fan's own recap of the match."""
         await self._drain_cards()
@@ -368,7 +386,13 @@ class ReplaySession:
         recap = await self.brain.final_recap(self.fan.profile, trace=self.trace)
         recap["audio"] = await self.speech.audio_url(recap["text"], recap["language"])
         recap["text_en"] = await english_version(recap["text"], recap["language"], self.llm, self.brain.known_names())
+        recap["receipt"] = self.receipt()
         self.publish("gazette", recap)
+
+    def receipt(self) -> dict[str, Any]:
+        """This fan's full-time receipt (goals live vs caught up, alerts judged as in the README)."""
+        return match_receipt(self.events[: self.index], self.fan.notifications, self.away_bands, self.skipped,
+                             self.brain.engine.state.t)
 
     async def _drain_cards(self) -> None:
         """Let pending cards finish (bounded): a catch-up should tell verified stories."""

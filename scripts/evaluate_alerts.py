@@ -38,13 +38,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from comeback.engine.alerts import AlertRule, AlertTracker  # noqa: E402
+from comeback.engine.alerts import ANTICIPATION_S, AlertRule, AlertTracker  # noqa: E402
+from comeback.engine.alerts import CHANCE_HORIZON_S as HORIZON_S  # noqa: E402
+from comeback.engine.alerts import CHANCE_MIN_XG as MIN_XG  # noqa: E402
 from comeback.engine.match import MatchEngine  # noqa: E402
 from comeback.synth.cli import generate_random  # noqa: E402
 
-HORIZON_S = 90.0          # an alert "comes true" if a real chance follows within 90 s
-MIN_XG = 0.1
-ANTICIPATION_S = 300.0    # a goal is "announced" by an alert in the previous 5 minutes
 CURVE = (30.0, 36.0, 40.0, 44.0, 48.0, 52.0, 55.0, 60.0, 65.0)
 FANS_PER_MATCH = 1_000
 RANDOM_DRAWS = 20

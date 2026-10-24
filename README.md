@@ -8,19 +8,25 @@
 ![Python 3.12](https://img.shields.io/badge/python-3.12-3776AB)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-**An AI match insights engine for studio and streaming that personalizes on what each fan
-saw, or missed.**
+**COMEBACK is an AI match insights engine for streaming and studio, on Azure: real-time
+insights, narratives and recaps, personalized for every fan, on what each fan saw or missed.**
 
-![COMEBACK in 20 seconds: a fan sets up their match, steps away, gets called back before the goal with the reason, comes back to a replay and a spoken catch-up, then the studio's control room](docs/comeback.gif)
+![COMEBACK in 30 seconds: a fan sets up their match, steps away, gets called back before the goal with the reason, comes back to a replay, a spoken catch-up and the players who changed the game, then their full-time receipt and the studio's control room](docs/comeback.gif)
 
-### You left the match. COMEBACK didn't.
+### Don't wait for the highlights. Live them.
 
-Today fans check the score every five minutes and are present nowhere: not at their
-kid's match, not in front of the game. COMEBACK reads every event of the match live,
-explains why moments matter, and personalizes them for each fan (language, side, level,
-favourite player, one metric). Step away, and it calls you back **before** the big
-moment, with the reason; come back, and it replays what you missed and tells you what
-changed. **Put your phone away. COMEBACK will tell you when it matters.**
+A fan who cannot watch the whole match today watches **nothing**, and sees the highlights
+the next day. COMEBACK brings them back **live** for the moments that matter: more live
+viewers, not fewer. It never pushes someone who can watch to leave. One product, three verbs:
+
+**Watch for me → Call me back → Catch me up.**
+
+COMEBACK reads every event of the match live, explains why moments matter, and
+personalizes them for each fan (language, side, level, favourite player, one metric).
+Step away, and it calls you back **before** the big moment, with the reason; come back,
+and it replays what you missed, tells you what changed and shows **who changed the game**.
+At full time, your receipt: *"You were live for 3 of 3 goals, and caught up on 7 minutes
+away in 21 seconds."* (You left the match. COMEBACK didn't.)
 
 - **54% of goals announced in advance**, 1.6× better than the same number of random
   alerts, on 50 unseen matches, with a **median warning of 60 s**. We announce big
@@ -51,12 +57,39 @@ No account, no key: it runs offline (see *What runs live, what is cached?* in th
 
 | | What happens | In the demo match |
 |---|---|---|
-| **1. You leave** | A Watcher agent keeps watching for you, under your own rules (goal threats, equaliser or winner only, any big moment; night mode). It knows your side, favourite player, level and language. | An Emberfield fan (French, analyst) steps away at 63', 0–2 down. |
-| **2. It's heating up** | It calls you back **before** the moment, and says why. Your phone takes over the screen, rings, and reads the reason aloud. | 65' and 69': *"Reviens — Emberfield est entré 3 fois dans la surface en 2 minutes et a tenté 1 tir."* |
-| **3. You return** | Spoiler-free: if a goal happened, your phone only said "something big happened"; the score waits for your replay. The TV rewinds: the moments you missed are replayed in 3D from behind the goal while a neural voice reads your "Previously on…" catch-up of what **changed**, sized to your absence. A live goal cuts the replay short. | 70': a catch-up in French, then the 71' goal, seen live. The phone confirms: *"COMEBACK l'avait senti : alerte à la 69e, but à la 71e."* |
-| **4. Full-time** | Your own front page: the match told from your side. | A Comets fan gets *"Heartbreak as Saltmarsh Comets lose late after red card"*. |
+| **Watch for me** | You step away (switch tab, press I'M AWAY, or your phone). A Watcher agent keeps watching for you, under your own rules: goal threats, equaliser or winner only, any big moment, or **only if this match gets good** (a quiet spell that comes alive); night mode. It knows your side, favourite player, level and language. | An Emberfield fan (French, analyst) steps away at 63', 0–2 down. |
+| **Call me back** | It calls you back **before** the moment, and says why. Your phone takes over the screen, rings, and reads the reason aloud. | 65' and 69': *"Reviens — Emberfield est entré 3 fois dans la surface en 2 minutes et a tenté 1 tir."* |
+| **Catch me up** | Spoiler-free: if a goal happened, your phone only said "something big happened"; the score waits for your replay. The TV rewinds: the moments you missed are replayed in 3D from behind the goal while a neural voice reads your "Previously on…" of what **changed**, sized to your absence. Then **What you missed**: the three players who changed the game, both teams then vs now (below). | 70': a catch-up in French, then the 71' goal, seen live. The phone confirms: *"COMEBACK l'avait senti : alerte à la 69e, but à la 71e."* |
+| **Full-time** | Your receipt (live goals, minutes watched, what your alerts were worth) and your own front page: the match told from your side. | *"You were live for all 3 goals, and caught up on 7 minutes away in 21 seconds."* |
 
 ![The fan view: back at 70', the TV shows the French catch-up of what changed, with SHOW ENGLISH and LISTEN; next to the match, the phone pairing panel and the two call-backs sent before the goal](docs/screenshot.png)
+
+### What you missed
+
+After the replay and the voice-over, the TV shows the **players who changed the game while
+you were away**, ranked by a transparent influence score (goals ×15, assists ×8, xG ×10,
+key passes ×3, plus forward passes, duels won and interceptions, capped so that a long
+window ranks the players who decided it, not the ones who touched the ball most). Each
+player opens a sheet: their actions on a 2D pitch (passes, key passes, shots sized by xG,
+runs, duels) and their numbers, *While you were away* or *Whole match*. Each team opens a
+sheet compared with the match as you left it. Every number comes from the match engine
+(the window's events replayed on their own, `comeback/fans/missed.py`); the one-line "why
+it matters" is written by the Storyteller and checked by the Verifier for the precomputed
+windows, and is a factual template for any other window: no model call per fan.
+
+![What you missed, 63'–70': Ciro Oakenfold (4 key passes, 0.29 xG), Kiro Sableford and Ciro Farrow, with one verified line each; Emberfield 7 shots and 0.76 xG while you were away, Saltmarsh Comets none](docs/missed.png)
+
+![A player sheet: Ciro Oakenfold's passes, key passes and shot on a 2D pitch, with his numbers while you were away and a toggle for the whole match](docs/player.png)
+
+### Your full-time receipt
+
+*"You were live for N of M goals, and caught up on the rest in X seconds."* Below it: the
+minutes you watched live, your call-backs and how many came true, with the same
+definitions as the alert evaluation below (a chance with xG ≥ 0.1 within 90 s; a goal
+announced by an alert in the 5 minutes before). A stretch you skipped counts as neither
+live nor caught up; the seconds are measured by the screen (replays plus voice-overs).
+
+![The full-time front page with the receipt: live for all 3 goals, caught up on 7 minutes away in 21 seconds; 29 of 36 minutes live, 2 call-backs, 1 followed by a chance within 90 s, 1 of 3 goals announced](docs/receipt.png)
 
 The first screen asks **who is watching**. A **fan** gets the TV (a 3D program feed with
 broadcast graphics: player tags, pass difficulty, shot speed, speed and distance tags,
@@ -118,13 +151,17 @@ The first screen asks who is watching.
    - **Step away 63'–70'** (the default): the match starts at 59'; you leave at 63',
      COMEBACK calls you back at 65' and 69' with the reason, and at 70' the TV replays
      what you missed while a neural voice reads your "Previously on…". Then the 71' goal,
-     live.
-   - **Join late at 60'**: you missed the first hour, you get the story so far.
-   - **From kick-off**: leave whenever you like (switch browser tab or press I'M AWAY).
+     live, and **What you missed**: tap a player for their sheet, or a team.
+   - **Join late at 60'**: you missed the first hour, you get the story so far and its
+     players.
+   - **From kick-off**: watch it all; if you have to step away, switch browser tab or press
+     I'M AWAY.
 
    Next to the match, **Pair your phone** shows a QR code: scan it and the call-backs
-   ring and speak on your own phone. **CALL ME BACK FOR** sets your rules. **CHANGE**
-   (top bar) switches language, side or style without restarting the match.
+   ring and speak on your own phone. **CALL ME BACK FOR** sets your rules (try *Only if
+   this match gets good* on the unscripted match). **CHANGE** (top bar) switches language,
+   side or style without restarting the match. Set the rate to ×40 to reach full time and
+   your receipt.
 2. **A studio.** The broadcaster's control room, from 60': the program feed, the agents
    at work (drafts, Verifier rejections, revisions), the Watcher's decision for the whole
    audience (**DECISIONS**), the same call-back as three audience segments get it
@@ -263,6 +300,10 @@ Stricter or looser, at a glance (same held-out matches):
 | **44 (default)** | **54%** | **21%** | **7.3** |
 | 55 (night mode) | 32% | 23% | 3.2 |
 | 65 | 9% | 30% | 0.8 |
+
+**"Only call me if this match gets good"** keeps the same rule but fires only after at least
+8 quiet minutes (both teams' danger below 35): on 40 unseen matches, about **1.9 calls per
+match** (against about 15 for the default rule, both teams), and at least one in 34 of them.
 
 Honest reading: most goals in our simulator come from short attacks, so many goals
 are not preceded by sustained pressure, and most alerts are not followed by a goal.
@@ -424,14 +465,14 @@ control row shows the judge is not lenient on gross errors. Details per text:
 | (i-b) **Interpret** into stats, patterns, context | `engine/state.py`: possession (overall and rolling), pass accuracy and difficulty, xG, speeds, distance with the ball, control vs chaos; `engine/danger.py`, `engine/moments.py` |
 | (i-c) **Explain** why a moment matters | Analyst's "why it matters"; storylines (redemption, the substitute's impact, comeback, numerical advantage); delta-based catch-ups |
 | (i-d) **Render** on screen, machine-readable | 3D program feed with broadcast graphics; `GET /api/overlays/{match}`: timed JSON cues per layer and audience, streamed live in the STUDIO **CUES** monitor; OpenAPI at `/docs` |
-| (i-e) **Personalize** | What the fan saw or missed (away, back, late join, spoiler-free return); the fan's own alert rules (goal threats, equaliser or winner, any big moment, night mode); club point of view; player mode (the followed player tagged all match); casual vs analyst live (words vs numbers on the danger and control graphics, different overlays and stories); language; one focus metric on screen. The studio's PERSONALIZE monitor shows each call-back as three audience segments get it |
-| (ii) Player identification | Lower-third name tags; the followed player is labelled in 3D all match |
+| (i-e) **Personalize** | What the fan saw or missed (away, back, late join, spoiler-free return, **What you missed** for their own absence window, their full-time receipt); the fan's own alert rules (goal threats, equaliser or winner, any big moment, only if this match gets good, night mode); club point of view; player mode (the followed player tagged all match); casual vs analyst live (words vs numbers on the danger and control graphics, different overlays and stories); language; one focus metric on screen. The studio's PERSONALIZE monitor shows each call-back as three audience segments get it |
+| (ii) Player identification | Lower-third name tags; the followed player is labelled in 3D all match; player sheets in What you missed |
 | (ii) Speed and distance on thresholds | Speed tag at ≥ 32 km/h sprints; distance tag every 100 m a player covers with the ball |
-| (ii) Pass quality | Distance, accuracy and a 0–100 difficulty rating, with ball speed |
+| (ii) Pass quality | Distance, accuracy and a 0–100 difficulty rating, with ball speed; key passes (the receiver shoots within 15 s) |
 | (ii) Ball and shot speed | Pass ball speed; shot speed tag on every shot |
 | (ii) Auto-eventing from video | **Not implemented.** COMEBACK works on event streams (synthetic here) |
-| (iii) Narratives, player context, milestones, recaps | Moment cards; milestones (fastest shot, top speed, 50 completed passes); catch-ups; per-fan full-time recap |
-| (iv) Control vs chaos, pressure, rhythm | Live "control vs chaos" graphic (rolling possession × accuracy; duels + turnovers per minute); danger index and its trend; momentum swings; momentum timeline; every call-back's decision chain (events → state → insight → decision) |
+| (iii) Narratives, player context, milestones, recaps | Moment cards; milestones (fastest shot, top speed, 50 completed passes); catch-ups; the players who changed the game in the fan's absence, with a verified line each; per-fan full-time recap and receipt |
+| (iv) Control vs chaos, pressure, rhythm | Live "control vs chaos" graphic (rolling possession × accuracy; duels + turnovers per minute); danger index and its trend; momentum swings; momentum timeline; every call-back's decision chain (events → state → insight → decision); "this match got good" (a quiet rhythm turning into danger); team sheets: control and danger as you left vs as you found them |
 | (v) Synthetic data innovation | Possession simulator with spells of dominance, transparent scripted beats, realism tests, a 10,000-fan audience simulation |
 | (vi) Multi-language storytelling | Catch-ups, alerts and recaps in English, French and Spanish, neural voice per language, and a checked **Show English** translation under every non-English catch-up |
 
@@ -547,6 +588,10 @@ Others have already proved fans want this:
   ([Google support](https://support.google.com/youtubetv/answer/9119412?hl=en-GB)).
 - **Turner Sports Excitement Alerts**: notifications when a game becomes close or
   turns into an upset ([Airship](https://www.airship.com/blog/turner-sports-ncaa-march-madness/)).
+  The closest idea to our "only call me if this match gets good" rule.
+- **Matchday Explainer**: a catch-up on demand, without a call-back.
+- **The Dugout, SubIntel**: the bench, seen from the coach's side. Calling a fan back
+  when *their* player is about to come on is in our *What's next*.
 
 They show the need. But recaps wait for the fan to ask (or to join late), and
 excitement alerts are about a whole game, for everyone. COMEBACK starts from the
@@ -576,9 +621,11 @@ uses no camera and no microphone.
   playable matches; other windows get verified templates unless `LLM_MODE=live`.
 - **Not implemented:** auto-eventing from video; real push notifications (the paired phone
   receives server-sent events instead).
-- **Next:** validation on real event feeds; Notification Hubs push; Foundry tracing of the
-  agents; a producer "approve before air" mode in STUDIO; more languages, including
-  right-to-left.
+- **Next:** call fans back when their player is about to come on (warm-up events, each
+  coach's substitution habits, a transparent "comes on in the next 10 minutes" estimate,
+  measured on unseen matches); validation on real event feeds; Notification Hubs push;
+  Foundry tracing of the agents; a producer "approve before air" mode in STUDIO; more
+  languages, including right-to-left.
 
 ## FAQ for judges
 
@@ -623,13 +670,13 @@ synthetic.
 ```bash
 cp .env.example .env    # set FOUNDRY_ENDPOINT, FOUNDRY_API_KEY, FOUNDRY_MODEL
 LLM_MODE=live python -m comeback                 # any absence gets a freshly written story
-LLM_MODE=record python scripts/precompute.py     # re-record the cache: 18 fan set-ups × 2 matches
+LLM_MODE=record python scripts/precompute.py     # re-record the cache: 18 fan set-ups × 2 matches, what-you-missed lines
 ```
 
 ## Development
 
 ```bash
-pytest                        # 68 tests: realism, engine, verifier, workflows, watchers, called-it, crowd, API, setup, drill, concurrency
+pytest                        # 76 tests: realism, engine, verifier, workflows, watchers, called-it, crowd, API, setup, what you missed, receipt, drill, concurrency
 ruff check .
 python -m comeback.synth.cli random --count 5    # more synthetic matches
 python scripts/evaluate_alerts.py

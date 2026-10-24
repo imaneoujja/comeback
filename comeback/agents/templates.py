@@ -146,6 +146,15 @@ def pressure_texts(lang: str, box_entries: int, shots: int) -> dict[str, str]:
     return {"box_text": box, "shots_text": shots_text}
 
 
+GOOD_TEXT = {  # "only call me if this match gets good": the match woke up after a quiet spell
+    "en": "Come back — the match just got good after {quiet} quiet minutes: "
+          "{team} have {box_text} in 2 minutes{shots_text}.",
+    "fr": "Reviens — le match s'emballe après {quiet} minutes calmes : {team} {box_text} en 2 minutes{shots_text}.",
+    "es": "Vuelve — el partido se enciende tras {quiet} minutos tranquilos: "
+          "{team} {box_text} en 2 minutos{shots_text}.",
+}
+
+
 SIDE_TEXT = {
     "en": ", {opponent}'s {side} side is cracking",
     "fr": ", le côté {side} de {opponent} craque",

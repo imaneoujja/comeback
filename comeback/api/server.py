@@ -20,6 +20,7 @@ from comeback.agents.llm import LLMGateway
 from comeback.agents.speech import AUDIO_DIR
 from comeback.api.replay import MATCHES_DIR, SPEEDS, ReplaySession, cue_visible, shared_crowd
 from comeback.engine.match import load_match, run_engine
+from comeback.engine.state import KEY_PASS_WINDOW_S
 from comeback.fans.crowd import scaling_curve
 from comeback.fans.profiles import fan_profile, for_match, load_profiles
 
@@ -258,6 +259,48 @@ async def player_stats(session_id: str, player: str) -> dict[str, Any]:
         raise HTTPException(404, f"no player matching {player!r}")
     pid = match[0]
     return {**state.roster[pid], "stats": state.players[pid].to_dict()}
+
+
+@app.get("/api/session/{session_id}/player/{player}/actions")
+async def player_actions(session_id: str, player: str, from_t: float = 0.0,
+                         to_t: float | None = None) -> dict[str, Any]:
+    """One player's actions between ``from_t`` and ``to_t`` (default: now), for the 2D view of the return screen.
+
+    Coordinates are pitch metres (x 0→105 towards the away goal). A pass is a key pass when its
+    receiver shoots within 15 s without the ball changing hands, as in the match engine.
+    """
+    replay = _session(session_id)
+    if player not in replay.brain.engine.state.roster:
+        raise HTTPException(404, f"unknown player {player!r}")
+    to = replay.brain.engine.state.t if to_t is None else to_t
+    actions: list[dict[str, Any]] = []
+    open_pass: dict[str, Any] | None = None
+    for e in replay.events[: replay.index]:
+        if e["t"] > to:
+            break
+        if e["type"] == "possession_change":
+            open_pass = None
+        if e["type"] == "shot" and open_pass and e["player"] == open_pass["receiver"] \
+                and e["t"] - open_pass["t"] <= KEY_PASS_WINDOW_S:
+            open_pass["key"] = True
+        if e["t"] < from_t or e.get("player") != player:
+            continue
+        base = {"type": e["type"], "minute": e["minute"], "x": e["x"], "y": e["y"]}
+        if e["type"] == "pass":
+            item = {**base, "end_x": e["end_x"], "end_y": e["end_y"], "success": e["success"],
+                    "receiver": e["receiver"], "t": e["t"], "key": False}
+            actions.append(item)
+            open_pass = item if e["success"] else None
+        elif e["type"] in ("carry", "sprint"):
+            actions.append({**base, "end_x": e["end_x"], "end_y": e["end_y"]})
+        elif e["type"] == "shot":
+            actions.append({**base, "xg": e["xg"], "outcome": e["outcome"]})
+        elif e["type"] in ("tackle", "interception", "pressure"):
+            actions.append({**base, "won": bool(e.get("won", e.get("success", True)))})
+    for a in actions:
+        a.pop("t", None)
+        a.pop("receiver", None)
+    return {"player": player, "team": replay.brain.engine.state.roster[player]["team"], "actions": actions}
 
 
 @app.post("/api/session/{session_id}/away")

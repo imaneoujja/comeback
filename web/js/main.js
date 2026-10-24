@@ -24,11 +24,17 @@ import { initAutoplay, startAutoplay, stopAutoplay, autoplayActive } from "./aut
 import { initFactCheck } from "./factcheck.js";
 import { initDecisions } from "./decision.js";
 import { initCues } from "./cues.js";
+import { initMissed, showMissed, hideMissed } from "./missed.js";
 
 let program = null;          // 3D renderer, or null → 2D fallback on the PGM canvas
 let programFor = null;       // the fixture the 3D stadium is dressed for
 let pendingStart = null;     // what to do once the stream is open: "away" | "join" | "seek" | null
 let pendingCard = null;      // a catch-up card waiting for its replay to end
+let missedPlan = null;       // the return screen, shown once the voice-over has finished
+let voicePlaying = false;
+let catchupClock = null;     // timing the current catch-up (replay + voice-over) for the receipt
+const MAX_CATCHUP_S = 120;
+const MISSED_AFTER_READING_MS = 12000;   // no voice-over: time to read the card first
 let lastFrame = performance.now();
 let lastSlow = 0;
 const matches = new Map();
@@ -43,6 +49,7 @@ async function boot() {
   initDecisions();
   initCues();
   initToast();
+  initMissed();
   initAutoplay({ setSpeed });
   requestAnimationFrame(frame);
   await initSetup({ getMatch, onStart: start });
@@ -97,7 +104,7 @@ async function start(cfg) {
     && prev.start === cfg.start;
   if (sameRun) {                      // same match, same moment: only the fan changes (language, side, style, metric)
     stopAutoplay();
-    hideCatchup();
+    clearReturnScreen();
     $("#gazette").hidden = true;
     await post(`fan?${fanQuery(cfg)}`);
     return;
@@ -152,7 +159,48 @@ function buildControls() {
     pendingCard = null;
     renderCatchup(c);
     if (voice) playVoice(c);
+    planMissed(c);
   });
+  onMessage("replay-end", () => { if (catchupClock) { catchupClock.replay = true; stopCatchupClock(); } });
+  onMessage("voice", ({ playing }) => {
+    if (catchupClock && playing) catchupClock.started = true;
+    if (catchupClock && !playing && catchupClock.started) { catchupClock.voice = true; stopCatchupClock(); }
+    voicePlaying = playing;
+    if (!playing && missedPlan?.waitVoice) { missedPlan.waitVoice = false; missedPlan.timer = setTimeout(toMissed, 1500); }
+  });
+  onMessage("show-missed", toMissed);
+  onMessage("show-story", () => { if (app.lastCatchup) renderCatchup(app.lastCatchup); });
+}
+
+/** The receipt's "caught up in X seconds": from the catch-up's arrival to the end of its replay and voice. */
+function stopCatchupClock(force = false) {
+  const clock = catchupClock;
+  if (!clock || (!force && !(clock.replay && clock.voice))) return;
+  catchupClock = null;
+  app.catchupSeconds += Math.min(MAX_CATCHUP_S, (performance.now() - clock.start) / 1000);
+}
+
+/** After the story (card + voice), the TV turns to "What you missed". */
+function planMissed(c) {
+  clearTimeout(missedPlan?.timer);
+  missedPlan = c.missed?.players?.length ? { c, waitVoice: voicePlaying } : null;
+  if (missedPlan && !voicePlaying) missedPlan.timer = setTimeout(toMissed, MISSED_AFTER_READING_MS);
+}
+
+function toMissed() {
+  const plan = missedPlan;
+  clearTimeout(plan?.timer);
+  missedPlan = null;
+  const c = plan?.c || app.lastCatchup;
+  if (!c || (plan && $("#catchup").hidden)) return;   // the fan closed the card: leave the match alone
+  if (showMissed(c.missed)) $("#catchup").hidden = true;
+}
+
+function clearReturnScreen() {
+  clearTimeout(missedPlan?.timer);
+  missedPlan = null;
+  hideMissed();
+  hideCatchup();
 }
 
 function renderControls() {
@@ -168,7 +216,10 @@ function restart() {
   Object.assign(app, { cards: new Map(), notes: [], timeline: [], awayBands: [], present: true, holder: null, pos: {}, topSpeed: {},
     eventsById: new Map(), crowd: null, speed: 10 });
   pendingCard = null;
-  hideCatchup(); clearOverlays();
+  app.lastCatchup = null;
+  catchupClock = null;
+  app.catchupSeconds = 0;
+  clearReturnScreen(); clearOverlays();
   $("#gazette").hidden = true;
   const cfg = app.config;
   pendingStart = cfg.mode === "studio" ? (cfg.studioStart === "60" ? "seek" : null) : { away: "away", join: "join" }[cfg.start] || null;
@@ -205,8 +256,9 @@ function connect() {
   on("snapshot", (s) => { app.snapshot = s; app.snapshotAt = performance.now(); renderScore(); renderMetric(profile()); });
   on("gazette", (g) => {
     if (isStudio()) return;
-    hideCatchup();
-    renderGazette(g, profile());
+    stopCatchupClock(true);
+    clearReturnScreen();
+    renderGazette(g, profile(), app.catchupSeconds);
     playVoice(g);
   });
   on("cue", (c) => { if (!isReplaying()) showCue(c); });   // live graphics wait during a replay
@@ -223,7 +275,7 @@ function connect() {
   on("settings", (st) => { app.settings = st; renderPrefs(); });
   on("presence", (p) => {
     app.present = p.present; app.awayBands = p.away_bands;
-    if (!p.present) { hideCatchup(); pendingCard = null; }
+    if (!p.present) { stopCatchupClock(true); clearReturnScreen(); pendingCard = null; }
     renderPresence();
   });
   on("catchup", onCatchup);
@@ -236,10 +288,13 @@ function connect() {
 
 /** "Previously on…": the TV replays what was missed, then the card; the voice tells the story. */
 function onCatchup(c) {
-  hideCatchup();
+  clearReturnScreen();
+  app.lastCatchup = c;
   const d = c.delta || {};
   const clips = (c.replay || []).filter((clip) => clip.events.length);
-  if (!clips.length || !program) { renderCatchup(c); playVoice(c); return; }
+  stopCatchupClock(true);
+  catchupClock = { start: performance.now(), replay: !clips.length || !program, voice: false, started: false };
+  if (!clips.length || !program) { renderCatchup(c); playVoice(c); planMissed(c); return; }
   const spoiler = !app.settings?.spoilers && !c.late_join && d.score_then !== d.score_now;
   if (!spoiler) playVoice(c);                    // the voice-over runs over the replay…
   pendingCard = { c, voice: spoiler };           // …unless it would give the score away before the replay does

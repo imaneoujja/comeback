@@ -8,6 +8,7 @@ from typing import Any
 from comeback.engine.pitch import attacking_frame, in_box, in_final_third
 
 ROLLING_WINDOW_S = 300.0
+KEY_PASS_WINDOW_S = 15.0   # a shot this soon after a completed pass to the shooter makes it a key pass
 ON_BALL_TYPES = {"pass", "carry", "sprint", "shot", "throw_in", "goal_kick", "corner"}
 
 
@@ -30,6 +31,9 @@ class PlayerStats:
     distance_with_ball_m: float = 0.0
     tackles_won: int = 0
     interceptions: int = 0
+    key_passes: int = 0      # completed passes the receiver shot from
+    duels: int = 0           # tackles, as the tackler or the player tackled
+    duels_won: int = 0
 
     def to_dict(self) -> dict[str, Any]:
         data = asdict(self)
@@ -107,6 +111,7 @@ class MatchState:
         self._possession_log: deque[tuple[float, float, str]] = deque()
         self._pass_log: deque[tuple[float, str, bool]] = deque()
         self._chaos_log: deque[float] = deque()
+        self._last_pass: tuple[str, str, str, float] | None = None   # (team, passer, receiver, t)
 
     # ----------------------------------------------------------- helpers
 
@@ -163,6 +168,7 @@ class MatchState:
             s.difficulty_sum += e["difficulty"]
             s.progressive_passes += e["success"] and e["progressive"]
         self._pass_log.append((e["t"], e["team"], e["success"]))
+        self._last_pass = (e["team"], e["player"], e["receiver"], e["t"]) if e["success"] else None
         if e["success"]:
             start = self.frame(e["team"], e["x"], e["y"])
             end = self.frame(e["team"], e["end_x"], e["end_y"])
@@ -189,6 +195,10 @@ class MatchState:
         team.shots_on_target += e["outcome"] in ("goal", "saved")
         team.fastest_shot_kmh = max(team.fastest_shot_kmh, e["shot_speed_kmh"])
         self.last_shot_t[e["team"]] = e["t"]
+        last = self._last_pass
+        if last and last[0] == e["team"] and last[2] == e["player"] and e["t"] - last[3] <= KEY_PASS_WINDOW_S:
+            self.players[last[1]].key_passes += 1
+        self._last_pass = None
         if e["xg"] >= 0.25 and e["outcome"] != "goal":
             player.big_chances_missed += 1
 
@@ -201,12 +211,19 @@ class MatchState:
         self.possession = None
 
     def _on_possession_change(self, e: dict[str, Any]) -> None:
+        self._last_pass = None
         self.teams[e["from_team"]].turnovers += 1
         self.possession = e["to_team"]
         self._chaos_log.append(e["t"])
 
     def _on_tackle(self, e: dict[str, Any]) -> None:
-        self.players[e["player"]].tackles_won += e["won"]
+        tackler = self.players[e["player"]]
+        tackler.tackles_won += e["won"]
+        tackler.duels += 1
+        tackler.duels_won += e["won"]
+        if e.get("opponent") in self.players:
+            self.players[e["opponent"]].duels += 1
+            self.players[e["opponent"]].duels_won += not e["won"]
         self._chaos_log.append(e["t"])
 
     def _on_interception(self, e: dict[str, Any]) -> None:

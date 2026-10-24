@@ -9,7 +9,7 @@ import { playVoice, stopVoice } from "./replay.js";
 const NOTE_LABEL = {
   come_back: "● COME BACK", goal: "● GOAL", big_moment: "● BIG MOMENT", called_it: "✓ CALLED IT", catchup: "PREVIOUSLY ON…",
 };
-const FOR_LABEL = { threat: "goal threats", equaliser: "equaliser / winner", big: "any big moment" };
+const FOR_LABEL = { threat: "goal threats", equaliser: "equaliser / winner", big: "any big moment", good: "if it gets good" };
 const ORIGINAL = { fr: "FRANÇAIS", es: "ESPAÑOL" };
 let reading = false;          // a voice-over is playing
 let companionVisible = true;  // the companion panel is on screen (not scrolled away on a small screen)
@@ -207,10 +207,11 @@ export function renderCatchup(c) {
     <div class="cu-t">${esc(title)}</div><div class="chips">${chips}</div>
     <div class="cu-text">${esc(c.text)}</div>
     <div class="cu-ai" id="cu-ai">AI-written for you · fact-checked against the match data${c.source === "template" ? " (template)" : ""}</div>
-    <div class="cu-f">${tag(c, "Storyteller")}<span class="cu-btns">${c.text_en ? `<button class="key" id="show-en">SHOW ENGLISH</button>` : ""}
+    <div class="cu-f">${tag(c, "Storyteller")}<span class="cu-btns">${c.missed?.players?.length ? `<button class="key hot" id="to-missed">WHAT YOU MISSED ▸</button>` : ""}${c.text_en ? `<button class="key" id="show-en">SHOW ENGLISH</button>` : ""}
       <button class="key ${reading ? "reading" : ""}" id="listen" aria-label="Read the catch-up aloud">${reading ? "■ STOP" : "▶ LISTEN"}</button></span></div>`;
   el.classList.remove("in"); void el.offsetWidth; el.classList.add("in");
   $("#cu-close").addEventListener("click", hideCatchup);
+  $("#to-missed")?.addEventListener("click", () => emit("show-missed", {}));
   $("#show-en")?.addEventListener("click", (e) => {        // for viewers who do not read the fan's language
     const english = e.target.textContent === "SHOW ENGLISH";
     el.querySelector(".cu-text").textContent = english ? c.text_en : c.text;

@@ -40,15 +40,15 @@
   <div class="setup loading" id="setup" role="dialog" aria-modal="true" aria-labelledby="su-h">
     <form class="su" id="su-form">
       <button type="button" class="su-x" id="su-x" aria-label="Close" hidden>×</button>
-      <div class="su-k">COMEBACK · AI MATCH INSIGHTS FOR STUDIO AND STREAMING</div>
-      <h1 class="su-h" id="su-h">You left the match. <em>COMEBACK didn't.</em></h1>
-      <p class="su-p">It watches the match with you, explains why moments matter, calls you back <b>before</b> the big
-        moment when you step away, and tells you what changed when you return.</p>
+      <div class="su-k">COMEBACK · AI MATCH INSIGHTS FOR STREAMING AND STUDIO</div>
+      <h1 class="su-h" id="su-h">Don't wait for the highlights. <em>Live them.</em></h1>
+      <p class="su-p">Can't watch the whole match? COMEBACK <b>watches it for you</b>, <b>calls you back</b> before the big
+        moment, with the reason, and <b>catches you up</b> on what changed when you return.</p>
 
       <div class="su-row">
         <div class="su-n">1</div><div class="su-q">WHO IS WATCHING?</div>
         <div class="su-opts two" data-field="mode">
-          <button type="button" data-value="fan"><b>A fan</b><small>Your side, your language, your level. Pair your phone and step away.</small></button>
+          <button type="button" data-value="fan"><b>A fan</b><small>Your side, your language, your level. Pair your phone for when you can't watch.</small></button>
           <button type="button" data-value="studio"><b>A studio</b><small>The broadcaster's control room: AI agents, overlay cues, call-backs for the whole audience.</small></button>
         </div>
       </div>
@@ -89,7 +89,7 @@
         <div class="su-opts three" data-field="start">
           <button type="button" data-value="away"><b>Step away 63'–70'</b><small>Live from 59'. You leave at 63', COMEBACK calls you back.</small></button>
           <button type="button" data-value="join"><b>Join late at 60'</b><small>You missed the first hour: get the story so far.</small></button>
-          <button type="button" data-value="kickoff"><b>From kick-off</b><small>Leave whenever you like: switch tabs, or press I'm away.</small></button>
+          <button type="button" data-value="kickoff"><b>From kick-off</b><small>Watch it all. If you have to step away, switch tabs or press I'm away.</small></button>
         </div>
       </div>
       <div class="su-row studio-q">
@@ -130,6 +130,7 @@
         <div class="stinger" id="stinger"></div>
         <div class="replay-bug" id="replay-bug" hidden><i></i>REPLAY · <span id="replay-label">WHILE YOU WERE AWAY</span></div>
         <div class="catchup" id="catchup" hidden></div>
+        <div class="missed" id="missed" hidden></div>
         <div class="gazette" id="gazette" hidden></div>
         <div class="outage-badge" id="outage-badge" hidden><i></i>LLM OFFLINE · FAILURE DRILL · AGENTS ON VERIFIED TEMPLATES</div>
         <div class="away-strip" id="away-veil" hidden><i></i><b>YOU'RE AWAY · COMEBACK IS WATCHING FOR YOU</b>
@@ -142,8 +143,8 @@
       <section class="cp-block cp-pair">
         <div class="cp-k">CAN'T WATCH THE WHOLE MATCH?</div>
         <div class="cp-t">Pair your phone</div>
-        <p class="cp-p">Step away whenever you like. COMEBACK calls you back <b>before</b> the big moment, with the reason,
-          and tells you what changed when you return.</p>
+        <p class="cp-p">When you have to step away, COMEBACK calls you back <b>before</b> the big moment, with the reason,
+          and catches you up when you return.</p>
         <div class="pair" id="pair"></div>
         <div class="cp-or">or just switch tabs: COMEBACK notices you left</div>
         <div class="cp-actions">
@@ -155,6 +156,7 @@
         <summary><span>CALL ME BACK FOR</span><b id="prefs-sum">goal threats · no spoilers</b></summary>
         <div class="seg pref-seg" id="pref-for" role="group" aria-label="Call me back for">
           <button data-for="threat">Goal threats</button><button data-for="equaliser">Equaliser / winner</button><button data-for="big">Any big moment</button>
+          <button data-for="good">Only if this match gets good</button>
         </div>
         <label class="pref"><input type="checkbox" id="pref-night"> Night mode: only the biggest moments, one call</label>
         <label class="pref"><input type="checkbox" id="pref-spoilers"> Show scores in alerts</label>

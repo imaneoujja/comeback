@@ -7,6 +7,11 @@ stays quiet right after the team's own shot: that chance is already over.
 
 from dataclasses import dataclass
 
+# How alerts are judged, everywhere (README, scripts/evaluate_alerts.py, the fan's full-time receipt):
+CHANCE_HORIZON_S = 90.0   # an alert "comes true" if the same team has a chance (xG ≥ 0.1) within 90 s
+CHANCE_MIN_XG = 0.1
+ANTICIPATION_S = 300.0    # a goal is "announced" if an alert for the scoring team came in the 5 minutes before
+
 
 @dataclass(frozen=True)
 class AlertRule:

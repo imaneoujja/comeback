@@ -15,19 +15,23 @@ from comeback.agents.templates import (
     BIG_MOMENT_TEXT,
     CALLED_IT_TEXT,
     GOAL_ALERT_TEXT,
+    GOOD_TEXT,
     RED_CARD_ALERT_TEXT,
     SIDE_TEXT,
     SIDE_WORDS,
     pressure_texts,
 )
-from comeback.engine.alerts import AlertRule, AlertTracker
+from comeback.engine.alerts import ANTICIPATION_S, AlertRule, AlertTracker
 from comeback.engine.match import EngineUpdate, MatchEngine
 from comeback.fans.session import FanSession
 
 MAX_ALERTS_PER_ABSENCE = 2
 NIGHT_THRESHOLD = 55.0      # night mode: only the strongest pressure wakes the fan
 NIGHT_MAX_ALERTS = 1
-CALLED_IT_WINDOW_S = 300.0  # a call-back "called" a goal scored by the same team within 5 minutes
+GOOD_QUIET_MIN = 8         # "this match got good": at least 8 quiet minutes before the alert…
+GOOD_QUIET_DANGER = 35.0   # …with both teams' danger below 35 (the alert itself is the usual rule).
+                           # On 40 unseen matches: ~1.9 calls per match, at least one in 34 of them.
+CALLED_IT_WINDOW_S = ANTICIPATION_S  # a call-back "called" a goal scored by the same team within 5 minutes
 _DEFENDING_SIDE = {"left": "right", "right": "left"}  # attacking left channel = defenders' right side
 
 
@@ -74,7 +78,7 @@ class Watcher:
             out.append(self._big_moment(e))
         elif self.session.alerts_this_absence < self.max_alerts:
             for team in self.teams:
-                if not self._wanted(team):
+                if not self._wanted(team, engine):
                     continue
                 danger, slope = engine.danger_now(team)
                 if self.trackers[team].check(e["t"], danger, slope, engine.state.seconds_since_shot(team)):
@@ -84,8 +88,10 @@ class Watcher:
         self.session.notifications += [n.__dict__ for n in out]
         return out
 
-    def _wanted(self, team: str) -> bool:
+    def _wanted(self, team: str, engine: MatchEngine) -> bool:
         """Does this fan want to hear about ``team`` pushing, under their own rules?"""
+        if self.session.settings.alert_for == "good":
+            return quiet_minutes(engine) >= GOOD_QUIET_MIN
         if self.session.settings.alert_for != "equaliser":
             return True
         club = self.session.profile.pov_team()
@@ -100,7 +106,10 @@ class Watcher:
         club = self.session.profile.pov_team()
         attacking_view = club is None or club == team
         names = st.team_names
-        if attacking_view:
+        if self.session.settings.alert_for == "good":
+            text = GOOD_TEXT[lang].format(quiet=quiet_minutes(engine), team=names[team],
+                                          **pressure_texts(lang, reasons["box_entries"], reasons["shots"]))
+        elif attacking_view:
             side = _DEFENDING_SIDE.get(reasons["main_channel"] or "")
             side_text = SIDE_TEXT[lang].format(opponent=names[st.opponent(team)], side=SIDE_WORDS[side][lang]) \
                 if side else ""
@@ -109,7 +118,7 @@ class Watcher:
         else:
             pressure = pressure_texts(lang, reasons["box_entries"], reasons["shots"])
             text = ALERT_TEXT["defending"][lang].format(team=names[club], opponent=names[team], **pressure)
-        facts = {"danger": round(danger), "score": st.score_str(),
+        facts = {"danger": round(danger), "score": st.score_str(), "quiet_minutes": quiet_minutes(engine),
                  **{k: v for k, v in reasons.items() if k != "evidence_event_ids"},
                  "decision": self._decision(engine, team, e, club)}
         return Notification("come_back", e["t"], e["minute"], team, text, facts, list(reasons["evidence_event_ids"]))
@@ -166,3 +175,13 @@ class Watcher:
                                                 minute=e["minute"]) if settings.spoilers else BIG_MOMENT_TEXT[lang]
         return Notification("big_moment", e["t"], e["minute"], e["team"], text,
                             {"red_card": e["player"], "spoiler_free": not settings.spoilers}, [e["id"]], settings.night)
+
+
+def quiet_minutes(engine: MatchEngine) -> int:
+    """How many minutes, up to the last one, both teams' danger stayed below ``GOOD_QUIET_DANGER``."""
+    quiet = 0
+    for entry in reversed(engine.timeline[:-1]):     # the current minute is the one that may be waking up
+        if max(entry["danger"].values()) >= GOOD_QUIET_DANGER:
+            break
+        quiet += 1
+    return quiet

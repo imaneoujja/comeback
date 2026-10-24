@@ -47,3 +47,4 @@ h1 { font-size: 40px; line-height: 1.02; margin: 0; font-weight: 700; }
 .to-x { border: 0; background: none; color: inherit; opacity: .7; font-family: var(--mono); font-size: 12px; letter-spacing: .14em; }
 @keyframes flash { 50% { background: #8f0f08; } }
 @keyframes drop { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+.catchup .cr { font-family: var(--mono); font-size: 11px; line-height: 1.5; color: #b9b7b0; margin: -4px 0 14px; }
