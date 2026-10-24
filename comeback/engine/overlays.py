@@ -62,8 +62,9 @@ class OverlayBuilder:
             }, 55, "all"))
         elif e["type"] == "carry":
             covered = self.state.players[e["player"]].distance_with_ball_m
-            before = covered - math.dist((e["x"], e["y"]), (e["end_x"], e["end_y"]))
-            if int(covered // DISTANCE_TAG_STEP_M) > int(before // DISTANCE_TAG_STEP_M):
+            before = max(0.0, covered - math.dist((e["x"], e["y"]), (e["end_x"], e["end_y"])))
+            step = DISTANCE_TAG_STEP_M
+            if covered >= step and int(covered // step) > int(before // step):
                 new.append(self._cue(e["t"], 4, "lower_third", "distance", {
                     **self._who(e["player"]), "distance_with_ball_m": round(covered),
                     "threshold_m": int(covered // DISTANCE_TAG_STEP_M * DISTANCE_TAG_STEP_M),

@@ -1,4 +1,5 @@
-/* "Step away 63'–70'": the fan's absence, run for them so the whole loop fits in two minutes.
+/* Demo controls → AUTOPLAY: the fan's absence, run for them so the whole loop fits in two minutes,
+ * then on to full time and the receipt.
  * The match starts at 59'; the server applies the absence at exact minutes (63' → 70.5'),
  * so the window never depends on how fast this browser reacts. The rate follows the action:
  * fast while away, real time on return (replay and voice-over), then back to normal.
@@ -39,6 +40,7 @@ export async function startAutoplay() {
 
 /** The viewer took over (pressed away/back): drop the plan, keep the rate. */
 export function stopAutoplay() {
+  clearTimeout(toFullTime);
   if (!run) return;
   clearTimeout(run.timer);
   if (run.phase === "start" || run.phase === "away" || run.phase === "approach") post("schedule");
@@ -51,9 +53,14 @@ function back() {
   run.timer = setTimeout(finish, MAX_REAL_TIME_S * 1000);
 }
 
+const TO_FULL_TIME_AFTER_MS = 30000;   // time to look at "What you missed", then on to the receipt
+let toFullTime = null;
+
 function finish() {
   if (!run) return;
   clearTimeout(run.timer);
   run = null;
-  setSpeed(app.speed === 1 ? 10 : app.speed);
+  setSpeed(10);
+  clearTimeout(toFullTime);
+  toFullTime = setTimeout(() => { if (app.speed === 10) setSpeed(40); }, TO_FULL_TIME_AFTER_MS);
 }

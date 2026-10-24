@@ -18,6 +18,7 @@ from comeback.agents.analyst import needs_analyst
 from comeback.agents.brain import MatchBrain
 from comeback.agents.llm import LLMGateway, SwitchableGateway
 from comeback.agents.notes import write_notes
+from comeback.agents.researcher import talking_points
 from comeback.agents.speech import SpeechGateway
 from comeback.agents.translator import english_version
 from comeback.agents.watcher import Watcher
@@ -27,11 +28,15 @@ from comeback.fans.missed import what_you_missed
 from comeback.fans.profiles import FanProfile
 from comeback.fans.receipt import match_receipt
 from comeback.fans.session import ALERT_FOR, FanSession
+from comeback.league import RESEARCH_TYPES, load_league
 
 log = logging.getLogger(__name__)
 
 MATCHES_DIR = Path(__file__).resolve().parents[2] / "data" / "matches"
 SPEEDS = (1, 5, 10, 20, 40)
+# Where each match is "live" when a viewer opens it (synthetic matches replayed as if live): a viewer
+# joins there and gets the story so far. The texts for these join points are precomputed.
+LIVE_MINUTE = {"demo-comeback": 60.0, "random-3112": 23.0}
 MAX_SLEEP_S = 1.5  # dead-ball pauses are shortened so the replay never feels frozen
 CARD_WAIT_S = 20.0
 CROWD_SIZE = 10_000
@@ -71,6 +76,8 @@ class ReplaySession:
         self.away_bands: list[dict[str, float | None]] = []
         self._left: dict[str, Any] | None = None   # the match as the fan left it (engine snapshot)
         self.skipped: list[tuple[float, float]] = []  # stretches skipped ahead (neither live nor caught up)
+        self.research_lang: str | None = None          # the studio's Research Desk: talking points in this language
+        self.talking: dict[str, dict[str, Any]] = {}
         self._plan: list[tuple[float, str]] = []   # scheduled (second-half minute, "away" | "back"): the guided story
         self._subscribers: set[asyncio.Queue] = set()
         self._devices: set[asyncio.Queue] = set()
@@ -172,6 +179,8 @@ class ReplaySession:
             "cards": sorted(self.brain.cards.values(), key=lambda c: c["t"]),
             "notifications": self.fan.notifications, "finished": st.finished,
             "crowd": self.crowd_snapshot(), "devices": len(self._devices), "outage": self.llm.down,
+            "talking_points": sorted(self.talking.values(), key=lambda tp: tp["t"]),
+            "research_lang": self.research_lang,
         }
 
     def crowd_snapshot(self) -> dict[str, Any]:
@@ -276,7 +285,9 @@ class ReplaySession:
     # ------------------------------------------------------------ the loop
 
     def _process(self, event: dict[str, Any], silent: bool = False) -> EngineUpdate:
+        started = time.perf_counter()
         update = self.brain.process(event)
+        engine_ms = (time.perf_counter() - started) * 1000
         for moment in update.moments:
             if self.brain.cards[moment.moment_id]["pending"]:
                 self._card_queue.put_nowait(moment)
@@ -297,14 +308,20 @@ class ReplaySession:
             if moment.importance >= 50 and moment.type != "danger_peak":
                 label = f"{moment.minute}' {moment.type.replace('_', ' ')}"
                 detail = f"{moment.team or 'match'} · importance {moment.importance} · {len(moment.facts)} facts"
-                self.trace({"agent": "Engine", "step": "moment", "label": label, "detail": detail})
+                self.trace({"agent": "Engine", "step": "moment", "label": label, "detail": detail,
+                            "moment_id": moment.moment_id})
         if event["type"] == "match_end":
             asyncio.create_task(self._gazette())
         timeline = self.brain.engine.timeline
         if timeline and timeline[-1]["t"] == event["t"]:
             self.publish("timeline", timeline[-1])
-        for note in self.watcher.on_update(self.brain.engine, update):
-            payload = {**note.__dict__, "decided_at": time.time()}   # for end-to-end latency measurements
+        started = time.perf_counter()
+        notes = self.watcher.on_update(self.brain.engine, update)
+        watcher_ms = (time.perf_counter() - started) * 1000
+        for note in notes:
+            # "Why this alert?": measured times of each step, and the send time for the delivery latency
+            payload = {**note.__dict__, "decided_at": time.time(),
+                       "timing": {"engine_ms": round(engine_ms, 2), "watcher_ms": round(watcher_ms, 2)}}
             self.publish("notification", payload)
             if note.kind == "come_back":
                 detail = (f"{note.team} danger {note.facts['danger']} & rising · "
@@ -347,6 +364,8 @@ class ReplaySession:
             try:
                 card = await self.brain.write_card(moment, trace=self.trace)
                 self.publish("card", card)
+                if self.research_lang and moment.type in RESEARCH_TYPES and moment.importance >= 50:
+                    await self._research(moment.moment_id, card)
             except Exception:
                 log.exception("card writing failed for %s", moment.moment_id)
             finally:
@@ -388,6 +407,25 @@ class ReplaySession:
         recap["text_en"] = await english_version(recap["text"], recap["language"], self.llm, self.brain.known_names())
         recap["receipt"] = self.receipt()
         self.publish("gazette", recap)
+
+    async def _research(self, moment_id: str, card: dict[str, Any]) -> None:
+        """The Researcher's talking points for one written card, in the studio's language."""
+        tagged = lambda step: self.trace({**step, "moment_id": moment_id})  # noqa: E731
+        tp = await talking_points({**card, "moment_id": moment_id}, load_league(), self.meta["home"]["id"],
+                                  self.meta["away"]["id"], self.research_lang, self.brain.team_names,
+                                  self.brain.roster, self.llm, tagged)
+        if tp:
+            self.talking[moment_id] = {**tp, "t": card["t"]}
+            self.publish("talking_point", self.talking[moment_id])
+
+    async def set_research(self, language: str) -> list[dict[str, Any]]:
+        """Switch the Research Desk's language: the talking points so far are rewritten (cached or templates)."""
+        self.research_lang = language
+        self.talking = {}
+        for moment_id, card in sorted(self.brain.cards.items(), key=lambda kv: kv[1]["t"]):
+            if card["type"] in RESEARCH_TYPES and card["importance"] >= 50 and not card.get("pending"):
+                await self._research(moment_id, card)
+        return sorted(self.talking.values(), key=lambda tp: tp["t"])
 
     def receipt(self) -> dict[str, Any]:
         """This fan's full-time receipt (goals live vs caught up, alerts judged as in the README)."""

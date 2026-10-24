@@ -2,28 +2,26 @@
  * Two views of the same engine: a FAN (the TV and a companion panel to pair a phone) and a
  * STUDIO (the broadcaster's control room). The setup screen decides which, and for whom. */
 
-import { $, app, SPEEDS, DEMO_MATCH, post, newSessionId, applyEvent, step, emit, on as onMessage, profile, fanLabel, fanTeam,
+import { $, app, SPEEDS, post, newSessionId, applyEvent, step, emit, on as onMessage, profile, fanLabel, fanTeam,
   teamColour, isStudio, LANG_NAME } from "./state.js";
 import {
   renderScore, renderTimecode, showCue, expireOverlays, refreshBanner, clearOverlays, put, favouriteTag, renderMetric,
-  renderGazette, milestoneTag,
+  renderGazette, milestoneTag, flashStat, statShowing,
 } from "./graphics.js";
 import {
-  renderData, renderRundown, drawTimeline, renderPresence, renderNotes, renderCatchup, hideCatchup, initToast, notify,
+  renderData, drawTimeline, renderPresence, renderNotes, renderCatchup, hideCatchup, initToast, notify,
   renderPrefs,
 } from "./panels.js";
 import { drawTactical } from "./tactical.js";
-import { initAgents } from "./agents.js";
-import { initAudience, loadScale } from "./audience.js";
 import { initPairing } from "./pairing.js";
-import { initFocus } from "./focus.js";
 import { unlockSpeech } from "./voice.js";
-import { isReplaying, buffer, playReplay, playVoice, interruptForLive, unlockAudio } from "./replay.js";
-import { initSetup, openSetup } from "./setup.js";
+import { isReplaying, buffer, playReplay, playVoice, interruptForLive, unlockAudio, cancelReplay, stopVoice } from "./replay.js";
+import { initSetup, openSetup, liveMatch } from "./setup.js";
 import { initAutoplay, startAutoplay, stopAutoplay, autoplayActive } from "./autoplay.js";
-import { initFactCheck } from "./factcheck.js";
-import { initDecisions } from "./decision.js";
 import { initCues } from "./cues.js";
+import { initStudio } from "./studio.js";
+import { initInsights } from "./insights.js";
+import { initResearch } from "./research.js";
 import { initMissed, showMissed, hideMissed } from "./missed.js";
 
 let program = null;          // 3D renderer, or null → 2D fallback on the PGM canvas
@@ -41,18 +39,18 @@ const matches = new Map();
 
 async function boot() {
   buildControls();
-  initAgents();
-  initAudience();
   initPairing();
-  initFocus();
-  initFactCheck();
-  initDecisions();
   initCues();
+  initStudio();
+  initInsights();
+  initResearch();
   initToast();
   initMissed();
   initAutoplay({ setSpeed });
   requestAnimationFrame(frame);
-  await initSetup({ getMatch, onStart: start });
+  await initSetup({ getMatch, onStart: start, onNav: (mode) => {
+    for (const b of document.querySelectorAll("#product-nav button")) b.classList.toggle("on", b.dataset.nav === mode);
+  } });
 }
 
 function getMatch(id) {
@@ -74,7 +72,6 @@ async function useMatch(id) {
   $(".lg-home-name").textContent = app.teams[app.home].name.toUpperCase();
   $(".lg-away-name").textContent = app.teams[app.away].name.toUpperCase();
   for (const a of document.querySelectorAll("[data-overlays]")) a.href = `/api/overlays/${id}`;
-  loadScale();
 }
 
 /** The 3D stadium is dressed in the fixture's colours: a new fixture gets a new one. */
@@ -100,8 +97,7 @@ async function start(cfg) {
   const prev = app.config;
   app.config = cfg;
   setMode(cfg.mode);
-  const sameRun = app.es && prev && cfg.mode === "fan" && prev.mode === "fan" && prev.match === cfg.match
-    && prev.start === cfg.start;
+  const sameRun = app.es && prev && cfg.mode === "fan" && prev.mode === "fan" && prev.match === cfg.match;
   if (sameRun) {                      // same match, same moment: only the fan changes (language, side, style, metric)
     stopAutoplay();
     clearReturnScreen();
@@ -111,12 +107,12 @@ async function start(cfg) {
   }
   await useMatch(cfg.match);
   await ensureProgram();
-  restart();
+  restart(cfg.mode === "studio" ? "seek" : "join");   // a live match: you join it where it is
 }
 
 function fanQuery(cfg) {
   const q = cfg.mode === "studio" ? { side: "home", lang: "en", level: "analyst" }
-    : { side: cfg.side, lang: cfg.lang, level: cfg.level, metric: cfg.metric };
+    : { side: cfg.side, lang: cfg.lang, level: cfg.level, metric: cfg.metric, ...(cfg.player ? { player: cfg.player } : {}) };
   return new URLSearchParams(q).toString();
 }
 
@@ -139,10 +135,18 @@ function buildControls() {
   $("#speeds").innerHTML = SPEEDS.map((s) => `<button data-speed="${s}">×${s}</button>`).join("");
   $("#speeds").addEventListener("click", (e) => { const s = Number(e.target.dataset.speed); if (s) setSpeed(s); });
   $("#pause").addEventListener("click", () => { app.paused = !app.paused; renderControls(); post(`pause?paused=${app.paused}`); });
-  $("#restart").addEventListener("click", restart);
-  $("#setup-btn").addEventListener("click", openSetup);
-  $("#fan-chip").addEventListener("click", openSetup);
-  $("#jump-btn").addEventListener("click", () => post("seek?minute=59.5"));
+  $("#restart").addEventListener("click", () => restart(null));               // from kick-off
+  $("#autoplay-btn").addEventListener("click", () => { closeDemo(); restart("autoplay"); });
+  $("#jump-go").addEventListener("click", () => { const m = Number($("#jump-min").value); if (m > 0) post(`seek?minute=${m}`); });
+  $("#fan-chip").addEventListener("click", () => openSetup("fan"));
+  $("#product-nav").addEventListener("click", (e) => { if (e.target.dataset.nav) openSetup(e.target.dataset.nav); });
+  $("#demo-btn").addEventListener("click", () => ($("#demo").hidden ? openDemo() : closeDemo()));
+  $("#demo-x").addEventListener("click", closeDemo);
+  document.addEventListener("keydown", (e) => {
+    if (e.key.toLowerCase() !== "d" || e.metaKey || e.ctrlKey || ["INPUT", "SELECT", "TEXTAREA"].includes(e.target.tagName)) return;
+    if ($("#demo").hidden) openDemo(); else closeDemo();
+  });
+  $("#cp-quiet-go").addEventListener("click", () => post("settings?alert_for=good"));
   $("#btn-away").addEventListener("click", () => { stopAutoplay(); if (app.present) post("away"); });
   $("#btn-back").addEventListener("click", () => { stopAutoplay(); if (!app.present) post("back"); });
   $("#outage-btn").addEventListener("click", () => post(`outage?down=${!app.outage}`));
@@ -208,12 +212,19 @@ function renderControls() {
   $("#pause").textContent = app.paused ? "PLAY" : "PAUSE";
 }
 
-function restart() {
+function openDemo() { $("#demo").hidden = false; $("#demo-btn").classList.add("on"); }
+function closeDemo() { $("#demo").hidden = true; $("#demo-btn").classList.remove("on"); }
+
+/** A new session on the same match. ``then``: "join" (live, the story so far), "seek" (studio, live),
+ * "autoplay" (the demo scenario) or null (from kick-off). */
+function restart(then = null) {
   if (!app.config) return;
   if (app.es) app.es.close();
   stopAutoplay();
+  cancelReplay();
+  stopVoice();
   app.session = newSessionId();
-  Object.assign(app, { cards: new Map(), notes: [], timeline: [], awayBands: [], present: true, holder: null, pos: {}, topSpeed: {},
+  Object.assign(app, { cards: new Map(), notes: [], timeline: [], awayBands: [], present: true, holder: null, pass: null, pos: {}, topSpeed: {},
     eventsById: new Map(), crowd: null, speed: 10 });
   pendingCard = null;
   app.lastCatchup = null;
@@ -221,15 +232,15 @@ function restart() {
   app.catchupSeconds = 0;
   clearReturnScreen(); clearOverlays();
   $("#gazette").hidden = true;
-  const cfg = app.config;
-  pendingStart = cfg.mode === "studio" ? (cfg.studioStart === "60" ? "seek" : null) : { away: "away", join: "join" }[cfg.start] || null;
+  pendingStart = then;
   connect();
 }
 
 /* ------------------------------------------------------------------ stream */
 
 function connect() {
-  const url = `/api/stream?match_id=${encodeURIComponent(app.matchId)}&session=${app.session}&${fanQuery(app.config)}&speed=${app.speed}`;
+  const desk = app.config.mode === "studio" ? "&research=en" : "";       // the studio's Research Desk
+  const url = `/api/stream?match_id=${encodeURIComponent(app.matchId)}&session=${app.session}&${fanQuery(app.config)}&speed=${app.speed}${desk}`;
   const es = new EventSource(url);
   app.es = es;
   const on = (type, fn) => es.addEventListener(type, (m) => { const d = JSON.parse(m.data); fn(d); emit(type, d); });
@@ -253,7 +264,7 @@ function connect() {
       favouriteTag(fav);
     }
   });
-  on("snapshot", (s) => { app.snapshot = s; app.snapshotAt = performance.now(); renderScore(); renderMetric(profile()); });
+  on("snapshot", (s) => { app.snapshot = s; app.snapshotAt = performance.now(); renderScore(); renderMetric(profile()); flashStats(s); });
   on("gazette", (g) => {
     if (isStudio()) return;
     stopCatchupClock(true);
@@ -264,15 +275,17 @@ function connect() {
   on("cue", (c) => { if (!isReplaying()) showCue(c); });   // live graphics wait during a replay
   on("card", (c) => {
     const isNew = !app.cards.has(c.moment_id);
-    app.cards.set(c.moment_id, c); renderRundown(); refreshBanner(c);
+    app.cards.set(c.moment_id, c); refreshBanner(c);
     if (isNew && c.type === "milestone" && !isReplaying()) milestoneTag(c);
+    if (isNew && c.type === "momentum_swing" && !isReplaying()) flashStat("control", 7);
   });
   on("timeline", (t) => app.timeline.push(t));
   on("notification", (n) => {
+    n.received_at = Date.now() / 1000;            // with the server's decided_at: the delivery time in "Why this alert?"
     app.notes.unshift(n); renderNotes();
     if (!n.silent) notify(n);                     // night mode: delivered without a buzz
   });
-  on("settings", (st) => { app.settings = st; renderPrefs(); });
+  on("settings", (st) => { app.settings = st; renderPrefs(); renderQuiet(); });
   on("presence", (p) => {
     app.present = p.present; app.awayBands = p.away_bands;
     if (!p.present) { stopCatchupClock(true); clearReturnScreen(); pendingCard = null; }
@@ -283,7 +296,7 @@ function connect() {
   on("outage", (o) => renderOutage(o.down));
   on("end", () => put("banner", `<div class="bn" style="--team:#ecebe6"><div class="bn-k">FULL-TIME</div>
       <div class="bn-t">${app.teams[app.home].name} ${app.snapshot?.score_str ?? ""} ${app.teams[app.away].name}</div></div>`, 120, 999));
-  for (const type of ["agent", "device"]) on(type, () => {});   // forwarded to the AGENTS monitor and the pairing panel
+  for (const type of ["agent", "device", "talking_point", "talking_points"]) on(type, () => {});   // forwarded to the AGENTS monitor and the pairing panel
 }
 
 /** "Previously on…": the TV replays what was missed, then the card; the voice tells the story. */
@@ -308,7 +321,7 @@ function onState(s) {
     cards: new Map(s.cards.map((c) => [c.moment_id, c])), notes: [...s.notifications].reverse(),
     possession: s.snapshot.possession, crowd: s.crowd, settings: s.settings,
   });
-  renderControls(); renderScore(); renderFanChip(); renderPresence(); renderNotes(); renderRundown(); renderData(); renderPrefs();
+  renderControls(); renderScore(); renderFanChip(); renderPresence(); renderNotes(); renderData(); renderPrefs();
   renderMetric(profile());
   renderOutage(Boolean(s.outage));
   const fav = profile()?.favourite_player_id;               // sprints before a join or a seek were not streamed
@@ -321,19 +334,39 @@ function onState(s) {
   if (program) program.setFavourite(fav || null);
   const todo = pendingStart;
   pendingStart = null;
-  if (todo === "away") startAutoplay();
-  else if (todo === "join") post("join?minute=60");
-  else if (todo === "seek") post("seek?minute=59.5");
+  const minute = app.config.liveMinute || 0;
+  if (todo === "autoplay") startAutoplay();
+  else if (todo === "join" && minute) post(`join?minute=${minute}`);
+  else if (todo === "seek" && minute) post(`seek?minute=${minute}`);
+  renderQuiet();
 }
 
 function renderFanChip() {
   const m = app.match;
   const fixture = m ? `${m.home.name} v ${m.away.name}`.toUpperCase() : "";
-  $("#bar-sub").textContent = `${fixture} · ${app.matchId === DEMO_MATCH ? "SCRIPTED STORYLINE" : "UNSCRIPTED"}`;
+  $("#bar-sub").textContent = fixture;
   const p = profile();
   if (!p || isStudio()) return;
   $("#fan-chip").innerHTML = `<i style="background:${teamColour(fanTeam(p))}"></i>${fanLabel(p).toUpperCase()} · ${LANG_NAME[p.language].toUpperCase()}
     · ${p.level.toUpperCase()}<span>CHANGE</span>`;
+}
+
+/** When a stat graphic has something to say: danger when a side is pushing, then now and then the
+ * fan's own metric and (analysts) control vs chaos. Wall-clock spacing keeps the screen clean. */
+const lastFlash = { danger: 0, metric: 0, control: 0 };
+function flashStats(s) {
+  if (isReplaying()) return;
+  const now = performance.now();
+  const pushing = [s.home, s.away].some((c) => s.teams[c].danger >= 44 && s.teams[c].danger_slope > 0);
+  if (pushing && now - lastFlash.danger > 25000) { lastFlash.danger = now; flashStat("danger", 7); return; }
+  if (statShowing()) return;
+  if (profile()?.focus_metric && now - lastFlash.metric > 60000) { lastFlash.metric = now; flashStat("metric", 6); return; }
+  if (profile()?.level === "analyst" && now - lastFlash.control > 90000) { lastFlash.control = now; flashStat("control", 6); }
+}
+
+/** A quiet match: offer "only call me if this match gets good". */
+function renderQuiet() {
+  $("#cp-quiet").hidden = isStudio() || !liveMatch(app.matchId)?.quiet || app.settings?.alert_for === "good";
 }
 
 /** Failure drill: the LLM is cut for this session; agents keep the show going on verified templates. */
@@ -341,7 +374,7 @@ function renderOutage(down) {
   app.outage = down;
   $("#outage-badge").hidden = !down;
   $("#outage-btn").classList.toggle("on", down);
-  $("#outage-btn").textContent = down ? "⚡ RESTORE THE LLM" : "⚡ CUT THE LLM";
+  $("#outage-btn").textContent = down ? "RESTORE THE LLM" : "SIMULATE LLM OUTAGE";
 }
 
 /* ------------------------------------------------------------------ render loop */

@@ -17,6 +17,7 @@ from comeback.agents.verifier import (
     check_no_final_result,
     check_numbers,
     check_numerical_claims,
+    check_omissions,
     check_scope,
 )
 from comeback.agents.watcher import Watcher
@@ -412,3 +413,38 @@ def test_no_final_result_before_full_time_but_equalisers_are_fine() -> None:
     assert check_no_final_result("Elderglen logró el empate 2-2.", finished=False) == []   # "el empate": the equaliser
     assert check_no_final_result("Larkhaven drew level at 2-2.", finished=False) == []
     assert check_no_final_result("Emberfield won the match.", finished=True) == []
+
+
+def test_a_full_time_recap_gives_the_final_score_and_the_biggest_gap() -> None:
+    names = {"EMB": "Emberfield", "SMC": "Saltmarsh Comets"}
+    demo = [(0, 1), (0, 2), (1, 2), (2, 2), (3, 2)]                 # the comeback: 0-2 down, 3-2 at the end
+    missing_gap = "Emberfield won 3-2 against Saltmarsh Comets thanks to a late goal."
+    missing_final = "From 0-2 down, Emberfield fought back to win it in stoppage time."
+    assert any("biggest gap" in i and "0-2" in i for i in check_omissions(missing_gap, demo, names))
+    assert any("final score" in i and "3-2" in i for i in check_omissions(missing_final, demo, names))
+    assert check_omissions("Mené 2-0, Emberfield l'emporte 3–2 face à Saltmarsh Comets.", demo, names) == []
+    assert check_omissions("De 0 a 2 a 3-2: remontada de Emberfield.", demo, names) == []
+    level = [(1, 0), (1, 1), (2, 1), (2, 2)]                        # never a two-goal gap: the final score is enough
+    assert check_omissions("Ashvale and Larkhaven shared the points, 2-2.", level, names) == []
+    assert check_omissions("A 1.2 xG draw.", level, names)          # "1.2" is not a score
+
+
+def test_numerical_claims_on_an_adjective_or_about_the_opponents() -> None:
+    on_pitch = {"Emberfield": 11, "Saltmarsh Comets": 10}
+    ok = ["Despite your team's brave effort, the full-strength Emberfield turned the game around.",
+          "Emberfield a ajusté sa tactique, profitant de l'infériorité numérique adverse.",
+          "Emberfield pressed against ten-man Saltmarsh Comets."]
+    for text in ok:
+        assert check_numerical_claims(text, on_pitch) == [], text
+    assert check_numerical_claims("Saltmarsh Comets a profité de l'infériorité numérique adverse.", on_pitch)
+
+
+def test_english_possessive_of_club_names() -> None:
+    from comeback.agents.templates import moment_line, possessive
+
+    assert possessive("Emberfield") == "Emberfield's" and possessive("Saltmarsh Comets") == "Saltmarsh Comets'"
+    names = {"EMB": "Emberfield", "SMC": "Saltmarsh Comets"}
+    goal = {"type": "goal", "minute": 39, "team": "SMC",
+            "facts": {"situation": "extends_lead", "scorer_name": "Elian Glenwick", "score_after": "0-2"}}
+    assert "extends Saltmarsh Comets' lead" in moment_line(goal, "en", names)
+    assert "extends Emberfield's lead" in moment_line({**goal, "team": "EMB"}, "en", names)

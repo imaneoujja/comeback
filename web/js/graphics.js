@@ -78,6 +78,12 @@ export function showCue(cue) {
   if (!html) return;
   const wall = Math.max(MIN_WALL_S[cue.layer], (cue.t_out - cue.t_in) / app.speed);
   put(cue.layer, html, wall, cue.priority, cue.data.moment_id);
+  if (cue.layer === "lower_third" && cue.data.player) tagPlayer(cue.data.player, wall);
+}
+
+/** Ring the player a lower third names, on the pitch, while the graphic is shown. */
+export function tagPlayer(pid, seconds) {
+  app.tagged = { pid, until: performance.now() + seconds * 1000 };
 }
 
 export function put(layer, html, seconds, priority = 50, momentId = null) {
@@ -91,7 +97,19 @@ export function clearOverlays() {
   for (const layer of Object.keys(slots)) { slots[layer] = null; $(`#ov-${layer}`).innerHTML = ""; }
 }
 
+/* Only the score bug stays on screen. Danger, the fan's metric and control vs chaos come in one at a
+ * time, for a few seconds, when they say something (see flashStats in main.js). */
+const STATS = ["danger", "metric", "control"];
+let statUntil = 0;
+export const statShowing = () => performance.now() < statUntil;
+
+export function flashStat(id, seconds) {
+  statUntil = performance.now() + seconds * 1000;
+  for (const s of STATS) $(`#${s}`).classList.toggle("flash", s === id);
+}
+
 export function expireOverlays(now) {
+  if (statUntil && now > statUntil) { statUntil = 0; for (const s of STATS) $(`#${s}`).classList.remove("flash"); }
   for (const [layer, o] of Object.entries(slots)) {
     if (o && o.until < now) {
       const el = $(`#ov-${layer}`);
@@ -133,9 +151,10 @@ function cueHtml(cue) {
     case "sprint":
       return speedTag(d, "SPEED", `${d.speed_kmh.toFixed(1)} KM/H`,
         `${d.distance_m} M SPRINT · ${d.distance_with_ball_m} M WITH THE BALL`);
-    case "distance":
-      return speedTag(d, "DISTANCE", `${d.threshold_m} M`,
-        `WITH THE BALL · TOP SPEED ${d.top_speed_kmh ? d.top_speed_kmh.toFixed(1) + " KM/H" : "–"}`);
+    case "distance":                                      // only when a 100 m step is reached, never "0 m" or "–"
+      if (!(d.threshold_m >= 100)) return "";
+      return speedTag(d, "WITH THE BALL", `${d.threshold_m} M`,
+        d.top_speed_kmh ? `COVERED THIS MATCH · TOP SPEED ${d.top_speed_kmh.toFixed(1)} KM/H` : "COVERED THIS MATCH");
     case "danger":
       return `<div class="bn danger" style="${team}"><div class="bn-k">DANGER ▲ ${esc(teamName(d.team).toUpperCase())}</div>
         <div class="bn-t">${d.box_entries} box entries in ${Math.round(d.window_s / 60)} minutes</div>
@@ -162,6 +181,7 @@ export function favouriteTag(pid) {
   put("lower_third", `<div class="lt fav" style="--team:${teamColour(info.team)}"><div class="lt-num">${info.number}</div>
     <div class="lt-body"><div class="lt-k">★ YOUR PLAYER</div><div class="lt-name">${esc(first)} <b>${esc(rest.join(" "))}</b></div>
     <div class="lt-meta">${esc(info.position)} · ${esc(teamName(info.team))}</div></div></div>`, 2.8, 58);
+  tagPlayer(pid, 2.8);
 }
 
 const METRIC = {

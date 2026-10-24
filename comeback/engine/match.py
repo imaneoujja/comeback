@@ -108,7 +108,8 @@ class MatchEngine:
                 "control": round(control[code], 3),
                 "danger": round(danger, 1),
                 "danger_slope": round(slope, 1),
-                "last_2min": {k: recent[k] for k in ("box_entries", "shots", "corners", "final_third_passes")},
+                "last_2min": {k: recent[k] for k in ("box_entries", "shots", "corners", "final_third_passes",
+                                                     "main_channel")},
                 "players_on_pitch": st.players_on_pitch[code],
                 "formation": st.formation[code],
             }

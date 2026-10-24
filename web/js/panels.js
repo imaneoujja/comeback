@@ -2,7 +2,7 @@
  * the "Previously on…" catch-up on the TV, and the studio's DATA, RUNDOWN and TIMELINE. */
 
 import { $, app, esc, teamColour, sizeCanvas, emit, on, isStudio } from "./state.js";
-import { TYPE_LABEL, tag } from "./graphics.js";
+import { tag } from "./graphics.js";
 import { stopSpeech } from "./voice.js";
 import { playVoice, stopVoice } from "./replay.js";
 
@@ -39,18 +39,6 @@ export function renderData() {
   $("#data").innerHTML = `<table><tr><th></th><th style="color:${teamColour(s.home)}">${s.home}</th><th style="color:${teamColour(s.away)}">${s.away}</th></tr>
     ${rows.map(([k, x, y]) => `<tr><td>${k}</td><td class="v">${x}</td><td class="v">${y}</td></tr>`).join("")}
     <tr><td>CHAOS · DUELS+TURNOVERS/MIN</td><td class="v" colspan="2">${s.chaos_per_min.toFixed(1)}</td></tr></table>`;
-}
-
-/* ------------------------------------------------------------------ RUNDOWN */
-
-export function renderRundown() {
-  if (!isStudio()) return;
-  const list = [...app.cards.values()].filter((c) => (c.importance >= 50 && c.type !== "danger_peak") || c.type === "milestone")
-    .sort((x, y) => y.t - x.t);
-  $("#cards").innerHTML = list.length ? list.map((c) => `
-    <div class="rd" style="--team:${teamColour(c.team)}"><span class="tcx">${c.minute}'</span><span class="ty">${TYPE_LABEL[c.type] || c.type}</span>
-    <span class="hl" title="${esc(c.why_it_matters)}">${esc(c.headline)}</span>${tag(c)}</div>`).join("")
-    : `<div class="empty">AWAITING FIRST KEY MOMENT…</div>`;
 }
 
 /* ------------------------------------------------------------------ TIMELINE */
@@ -145,15 +133,52 @@ function minuteAt(t) {
   return e ? e.minute : Math.floor(t / 60);
 }
 
+const whyOpen = new Set();     // call-backs whose "Why this alert?" chain is unfolded (by match time)
+
 export function renderNotes() {
   const el = $("#notes");
+  if (!el.dataset.bound) {
+    el.dataset.bound = "1";
+    el.addEventListener("click", (e) => {
+      const t = e.target.closest("[data-why]")?.dataset.why;
+      if (t) { whyOpen.has(t) ? whyOpen.delete(t) : whyOpen.add(t); renderNotes(); }
+    });
+  }
   if (!app.notes.length) {
     el.innerHTML = `<div class="empty">Nothing yet. Step away and COMEBACK watches the match for you.</div>`;
     return;
   }
-  el.innerHTML = app.notes.slice(0, 5).map((n) => `
-    <div class="note ${n.kind}"><div class="note-h"><b>${NOTE_LABEL[n.kind] || n.kind}${n.silent ? " · SILENT" : ""}</b><span>${n.minute}'</span></div>
-    <div class="note-x">${esc(n.text)}</div></div>`).join("");
+  el.innerHTML = app.notes.slice(0, 5).map((n) => {
+    const why = n.kind === "come_back" && n.facts?.decision;
+    const open = why && whyOpen.has(String(n.t));
+    return `<div class="note ${n.kind}"><div class="note-h"><b>${NOTE_LABEL[n.kind] || n.kind}${n.silent ? " · SILENT" : ""}</b><span>${n.minute}'</span></div>
+    <div class="note-x">${esc(n.text)}</div>${why ? `<button class="why-b" data-why="${n.t}">${open ? "HIDE" : "WHY THIS ALERT?"}</button>` : ""}
+    ${open ? whyChain(n) : ""}</div>`;
+  }).join("");
+}
+
+/** The decision behind one call-back, step by step, with match times and measured computing times. */
+function whyChain(n) {
+  const f = n.facts, d = f.decision;
+  const at = (e) => `${e.minute}:${String(e.second).padStart(2, "0")}`;
+  const evs = (n.evidence_event_ids || []).map((id) => app.eventsById.get(id)).filter(Boolean);
+  const what = (e) => (e.type === "shot" ? `shot · xG ${e.xg.toFixed(2)}` : "into the box");
+  const name = (pid) => app.roster[pid]?.name || pid;
+  const ms = (v) => (v == null ? "" : ` · ${v < 1 ? v.toFixed(2) : v.toFixed(1)} ms`);
+  const delivered = n.received_at && n.decided_at ? Math.max(0, Math.round((n.received_at - n.decided_at) * 1000)) : null;
+  const team = app.teams[n.team]?.name || n.team;
+  const rel = { attacking: `your team is attacking`, defending: `your team is defending`, neutral: "you follow both sides" }[d.relation];
+  const rows = [
+    ["EVENTS", evs.length ? evs.map((e) => `${at(e)} ${esc(name(e.player))}: ${what(e)} <i>${e.id}</i>`).join("<br>")
+      : `${f.box_entries} box entries, ${f.shots} shots in 2 min`],
+    ["ENGINE", `${n.minute}' · ${esc(team)} danger <b>${f.danger}</b>/100, +${d.slope} in 30 s${ms(n.timing?.engine_ms)}`],
+    ["RULE", `≥ ${d.threshold} ✓ · rising ≥ +${d.min_slope} ✓ · no own shot for ${d.since_own_shot_s} s (≥ ${d.quiet_after_shot_s}) ✓ ·
+      call ${d.alert_number} of ${d.max_alerts} this absence`],
+    ["WATCHER", `you were away for ${Math.round((d.away_for_s || 0) / 60)} min · ${rel} → call you back${ms(n.timing?.watcher_ms)}`],
+    ...(delivered != null ? [["DELIVERY", `on this screen ${delivered} ms after the decision`]] : []),
+  ];
+  return `<ol class="why-chain">${rows.map(([k, v]) => `<li><i>${k}</i><span>${v}</span></li>`).join("")}
+    <li class="why-note">A rule on the engine's danger index, not a prediction. No model call.</li></ol>`;
 }
 
 /** The fan's alert rules (opt-in). */

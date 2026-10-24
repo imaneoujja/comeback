@@ -21,22 +21,22 @@
  "comeback": {
   "texts": 57,
   "texts_with_a_problem_delivered": 0,
-  "verified_llm_texts": 56,
-  "template_fallbacks": 1,
+  "verified_llm_texts": 55,
+  "template_fallbacks": 2,
   "problems_caught_by_verifier": {
-   "invented or wrong number": 3,
+   "invented or wrong number": 5,
    "numerical advantage on the wrong team": 5,
    "result announced before full time": 1,
    "player or club not in the facts": 3
   },
-  "calls": 68,
-  "usd_per_call": 0.0003304058823529412,
-  "seconds_per_call_median": null
+  "calls": 69,
+  "usd_per_call": 0.0003306376811594203,
+  "seconds_per_call_median": 1.031791958026588
  },
  "at_200k_fans_demo_match": {
   "fans": 200000,
   "comeback_calls": 1830,
-  "comeback_usd": 0.6046427647058824,
+  "comeback_usd": 0.6050669565217391,
   "single_agent_calls": 633921,
   "single_agent_usd": 811.7147097999999
  }

@@ -10,7 +10,7 @@ from typing import Any
 
 from comeback.agents.analyst import AnalystTask, needs_analyst, write_moment_card
 from comeback.agents.llm import LLMGateway
-from comeback.agents.storyteller import CatchupTask, write_catchup
+from comeback.agents.storyteller import CatchupTask, goal_scores, write_catchup
 from comeback.agents.templates import moment_card_text
 from comeback.agents.workflow import Tracer
 from comeback.engine.match import EngineUpdate, MatchEngine
@@ -61,7 +61,9 @@ class MatchBrain:
         data = moment.to_dict()
         situation = self._situations.get(moment.moment_id) or self._situation()
         task = AnalystTask(data, self.team_names, self.roster, self._recent_headlines(moment.t), situation)
-        card = {**await write_moment_card(task, self.gateway, trace), "pending": False}
+        # each step carries its moment: two moments can share a label ("81' big chance")
+        tagged = (lambda step: trace({**step, "moment_id": moment.moment_id})) if trace else None
+        card = {**await write_moment_card(task, self.gateway, tagged), "pending": False}
         self.cards[moment.moment_id] = card
         return card
 
@@ -79,7 +81,8 @@ class MatchBrain:
         selected = select_cards(cards, from_t, to_t, profile, bucket)
         now = snapshot or self.engine.snapshot()
         delta = build_delta(self.engine.timeline, now, from_t, self.team_names, in_window)
-        task = CatchupTask(profile, bucket, selected, delta, self.team_names, self.roster, late_join, final)
+        task = CatchupTask(profile, bucket, selected, delta, self.team_names, self.roster, late_join, final,
+                           goal_scores([c for c in cards if c["t"] <= to_t]))
         return await write_catchup(task, self.gateway, trace)
 
     async def final_recap(self, profile: FanProfile, trace: Tracer | None = None) -> dict[str, Any]:

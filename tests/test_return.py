@@ -163,3 +163,55 @@ def test_player_actions_for_the_2d_view() -> None:
         assert client.get("/api/session/actions/player/XXX-1/actions").status_code == 404
     finally:
         server.sessions.pop("actions", None)
+
+
+def test_live_now_and_any_followed_player() -> None:
+    """The front door: matches "live now" with their audience; neutral fans and any player to follow."""
+    live = {m["match_id"]: m for m in client.get("/api/live").json()}
+    assert (live["demo-comeback"]["minute"], live["demo-comeback"]["score"]) == (60, "0-2")
+    assert live["random-3112"]["quiet"] and live["random-3112"]["score"] == "0-0"
+    assert all(m["audience"]["viewers"] == 10_000 and m["audience"]["call_backs"] > 0 for m in live.values())
+    neutral = fan_profile("neutral", "en", "casual", None, "EMB", "SMC")
+    assert neutral.club_id is None and neutral.favourite_player_id is None and neutral.pov_team() is None
+    follows = fan_profile("home", "fr", "analyst", None, "EMB", "SMC", "EMB-7")
+    assert (follows.club_id, follows.favourite_player_id, follows.focus_metric) == ("EMB", "EMB-7", "top_speed")
+    assert fan_profile("neutral", "es", "casual", None, "EMB", "SMC", "SMC-9") == \
+        fan_profile("player", "es", "casual", None, "EMB", "SMC")       # same texts as the precomputed set-up
+    assert fan_profile("home", "en", "casual", None, "EMB", "SMC", "XXX-1").favourite_player_id is None
+
+
+def test_milestone_cards_say_which_mark_was_reached() -> None:
+    from comeback.agents.templates import moment_card_text
+
+    names = {"EMB": "Emberfield", "SMC": "Saltmarsh Comets"}
+    base = {"type": "milestone", "minute": 69, "team": "EMB"}
+    speed = moment_card_text({**base, "facts": {"milestone": "top_speed_so_far", "player_name": "Ciro Oakenfold",
+                                                 "speed_kmh": 34.2, "previous_top_kmh": 33.1}}, names)
+    assert "top speed of the match: 34.2 km/h" in speed["headline"] and "33.1" in speed["why_it_matters"]
+    fifty = {"milestone": "50_completed_passes", "player_name": "Kiro Sableford"}
+    passes = moment_card_text({**base, "facts": fifty}, names)
+    assert "50 completed passes" in passes["headline"]
+    meta, events = load_match(DEMO)
+    engine = MatchEngine(meta)
+    for e in events:
+        for m in engine.process(e).moments:
+            if m.type == "milestone":
+                assert "milestone for" not in moment_card_text(m.to_dict(), engine.state.team_names)["headline"].lower()
+
+
+def test_match_insights_show_what_the_engine_already_knows() -> None:
+    from comeback.api import server
+
+    replay = ReplaySession("insights", "demo-comeback", fan_profile("home", "en", "analyst", None, "EMB", "SMC"),
+                           _offline())
+    server.sessions["insights"] = replay
+    try:
+        replay.seek(75)
+        out = client.get("/api/session/insights/insights").json()
+        goals = [s for s in out["shots"] if s["outcome"] == "goal"]
+        assert len(goals) == 3 and all(0 < s["xg"] < 1 for s in out["shots"])        # 0-1, 0-2, 1-2 by 75'
+        scores = [p["influence"] for p in out["players"]]
+        assert len(scores) == 6 and scores == sorted(scores, reverse=True)
+        assert {"avg_pass_difficulty", "top_speed_kmh", "key_passes"} <= set(out["players"][0]["match"])
+    finally:
+        server.sessions.pop("insights", None)

@@ -18,7 +18,7 @@ from fastapi.staticfiles import StaticFiles
 
 from comeback.agents.llm import LLMGateway
 from comeback.agents.speech import AUDIO_DIR
-from comeback.api.replay import MATCHES_DIR, SPEEDS, ReplaySession, cue_visible, shared_crowd
+from comeback.api.replay import LIVE_MINUTE, MATCHES_DIR, SPEEDS, ReplaySession, cue_visible, shared_crowd
 from comeback.engine.match import load_match, run_engine
 from comeback.engine.state import KEY_PASS_WINDOW_S
 from comeback.fans.crowd import scaling_curve
@@ -87,10 +87,10 @@ def _profile(profile_id: str, match_id: str = DEFAULT_MATCH):
     return for_match(profiles[profile_id], meta["home"]["id"], meta["away"]["id"])
 
 
-def _fan(match_id: str, side: str, lang: str, level: str, metric: str | None):
-    """The fan as configured on the first screen (side, language, style, metric), for this fixture."""
+def _fan(match_id: str, side: str, lang: str, level: str, metric: str | None, player: str | None = None):
+    """The fan as configured on the first screen (side, followed player, language, style, metric)."""
     meta = _match_meta(match_id)
-    return fan_profile(side, lang, level, metric, meta["home"]["id"], meta["away"]["id"])
+    return fan_profile(side, lang, level, metric, meta["home"]["id"], meta["away"]["id"], player)
 
 
 @cache
@@ -140,6 +140,40 @@ def matches() -> list[dict[str, Any]]:
     return out
 
 
+QUIET_XG = 1.0            # no goal and under 1.0 xG in total: "quiet so far"
+
+
+@cache
+def _live_view(match_id: str) -> dict[str, Any]:
+    from comeback.engine.match import MatchEngine
+
+    meta, events = load_match(_match_path(match_id))
+    minute = LIVE_MINUTE.get(match_id, 0.0)
+    engine = MatchEngine(meta)
+    target = (2, minute) if minute >= 45 else (1, minute)
+    index = next(i for i, e in enumerate(events) if (e["period"], e["minute"] + e["second"] / 60) >= target)
+    for e in events[: index + 1]:
+        engine.process(e)
+    st = engine.state
+    _, frames = shared_crowd(match_id)
+    frame = frames[max(i for i in frames if i <= index)] if any(i <= index for i in frames) else {}
+    chances = sum(t.xg for t in st.teams.values())
+    return {"match_id": match_id, "home": meta["home"]["name"], "away": meta["away"]["name"],
+            "home_id": st.home, "away_id": st.away,
+            "home_colour": meta["home"]["colour"], "away_colour": meta["away"]["colour"],
+            "score": st.score_str(), "minute": st.minute, "live_minute": minute,
+            "quiet": sum(st.score.values()) == 0 and chances < QUIET_XG, "xg": round(chances, 2),
+            "scripted": meta.get("scenario") is not None,
+            "audience": {"viewers": frame.get("size", 0), "away": frame.get("away", 0),
+                         "call_backs": frame.get("alerts_sent", 0)}}
+
+
+@app.get("/api/live")
+def live_matches() -> list[dict[str, Any]]:
+    """The matches "live now", at the minute a new viewer joins them, with their audience."""
+    return [_live_view(path.stem) for path in sorted(MATCHES_DIR.glob("*.jsonl"))]
+
+
 @app.get("/api/profiles")
 def profiles(match_id: str = DEFAULT_MATCH) -> list[dict[str, Any]]:
     return [_profile(pid, match_id).__dict__ for pid in load_profiles()]
@@ -180,7 +214,8 @@ async def scale(match_id: str) -> dict[str, Any]:
 @app.get("/api/stream")
 async def stream(request: Request, match_id: str = DEFAULT_MATCH, session: str | None = None,
                  profile: str = "omar", side: str | None = None, lang: str = "en", level: str = "casual",
-                 metric: str | None = None, speed: int = 10, device: bool = False) -> StreamingResponse:
+                 metric: str | None = None, player: str | None = None, speed: int = 10,
+                 device: bool = False, research: str | None = None) -> StreamingResponse:
     """Server-Sent Events: events, snapshots, overlay cues, moment cards, alerts, catch-ups.
 
     The fan is either configured (``side``/``lang``/``level``/``metric``, the first screen) or a
@@ -192,8 +227,10 @@ async def stream(request: Request, match_id: str = DEFAULT_MATCH, session: str |
     if device and replay is None:
         raise HTTPException(404, "no such session: scan the QR code shown next to the match")
     if replay is None or replay.match_id != match_id:
-        fan = _fan(match_id, side, lang, level, metric) if side else _profile(profile, match_id)
+        fan = _fan(match_id, side, lang, level, metric, player) if side else _profile(profile, match_id)
         replay = ReplaySession(session_id, match_id, fan, gateway, speed)
+        if research in ("en", "fr", "es"):
+            replay.research_lang = research                # the studio's Research Desk
         sessions[session_id] = replay
     queue = replay.subscribe(device=device)
     replay.start()
@@ -303,6 +340,55 @@ async def player_actions(session_id: str, player: str, from_t: float = 0.0,
     return {"player": player, "team": replay.brain.engine.state.roster[player]["team"], "actions": actions}
 
 
+@app.post("/api/session/{session_id}/research")
+async def research_language(session_id: str, lang: str = "en") -> list[dict[str, Any]]:
+    """The Research Desk's language (en / fr / es): the talking points so far, rewritten."""
+    if lang not in ("en", "fr", "es"):
+        raise HTTPException(400, "lang must be en, fr or es")
+    points = await _session(session_id).set_research(lang)
+    _session(session_id).publish("talking_points", points)
+    return points
+
+
+@app.get("/api/league/{match_id}")
+def league(match_id: str) -> dict[str, Any]:
+    """The synthetic league around a live match: table, form, leaders, injuries, head-to-head, records."""
+    from comeback.league import load_league
+
+    meta = _match_meta(match_id)
+    lg = load_league()
+    home, away = meta["home"]["id"], meta["away"]["id"]
+    leaders = {k: lg.leaders(k, 5, 300 if k == "pass_accuracy" else 0)
+               for k in ("goals", "assists", "xg", "top_speed_kmh", "pass_accuracy")}
+    from comeback.synth.teams import CLUBS
+
+    return {"season": lg.data["season"], "matchday": lg.data["played_matchdays"] + 1, "home": home, "away": away,
+            "colours": {c: CLUBS[c].colour for c in lg.clubs},
+            "standings": lg.standings(), "leaders": leaders, "unavailable": lg.unavailable(),
+            "head_to_head": lg.head_to_head(home, away), "records": lg.records()}
+
+
+@app.get("/api/session/{session_id}/insights")
+async def match_insights(session_id: str, top: int = 6) -> dict[str, Any]:
+    """What the engine already knows, for the fan's "Match insights" panel: every shot so far (xG,
+    outcome, where) and the players ranked by the same influence score as "What you missed"."""
+    from comeback.fans.missed import influence
+
+    replay = _session(session_id)
+    st = replay.brain.engine.state
+    shots = [{k: e[k] for k in ("minute", "team", "player", "x", "y", "xg", "outcome", "shot_speed_kmh")}
+             for e in replay.events[: replay.index] if e["type"] == "shot"]
+    ranked = []
+    for pid, stats in st.players.items():
+        score, reasons = influence(stats)
+        if score > 0:
+            info = st.roster[pid]
+            ranked.append({"id": pid, "name": info["name"], "number": info["number"], "position": info["position"],
+                           "team": info["team"], "influence": score, "reasons": reasons, "match": stats.to_dict()})
+    ranked.sort(key=lambda p: (-p["influence"], p["id"]))
+    return {"t": st.t, "minute": st.minute, "shots": shots, "players": ranked[:top]}
+
+
 @app.post("/api/session/{session_id}/away")
 async def away(session_id: str) -> dict[str, Any]:
     return _session(session_id).go_away()
@@ -361,10 +447,10 @@ async def pause(session_id: str, paused: bool = True) -> dict[str, Any]:
 
 @app.post("/api/session/{session_id}/fan")
 async def configure_fan(session_id: str, side: str, lang: str = "en", level: str = "casual",
-                        metric: str | None = None) -> dict[str, Any]:
+                        metric: str | None = None, player: str | None = None) -> dict[str, Any]:
     """Change the fan's configuration on a running session (same match, same moment)."""
     replay = _session(session_id)
-    replay.set_profile(_fan(replay.match_id, side, lang, level, metric))
+    replay.set_profile(_fan(replay.match_id, side, lang, level, metric, player))
     replay.away_bands = []
     replay.publish("state", replay.state_message())
     return replay.fan.profile.__dict__

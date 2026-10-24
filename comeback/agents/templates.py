@@ -32,7 +32,7 @@ _MOMENT_LINES: dict[str, dict[str, str]] = {
         "es": "Min. {minute} — {scorer_name} recorta distancias para {team}: {score_after}.",
     },
     "goal.extends_lead": {
-        "en": "{minute}' — {scorer_name} extends {team}'s lead: {score_after}.",
+        "en": "{minute}' — {scorer_name} extends {team_poss} lead: {score_after}.",
         "fr": "{minute}e — {scorer_name} creuse l'écart pour {team} : {score_after}.",
         "es": "Min. {minute} — {scorer_name} amplía la ventaja de {team}: {score_after}.",
     },
@@ -72,9 +72,24 @@ _MOMENT_LINES: dict[str, dict[str, str]] = {
         "es": "Min. {minute} — {team} aprieta: {box_entries} llegadas al área en 2 minutos.",
     },
     "milestone": {
-        "en": "{minute}' — milestone for {player_name} ({team}).",
-        "fr": "{minute}e — cap franchi pour {player_name} ({team}).",
-        "es": "Min. {minute} — hito para {player_name} ({team}).",
+        "en": "{minute}' — {player_name} ({team}) reaches a new mark in this match.",
+        "fr": "{minute}e — {player_name} ({team}) franchit un cap dans ce match.",
+        "es": "Min. {minute} — {player_name} ({team}) supera una marca en este partido.",
+    },
+    "milestone.fastest_shot_so_far": {
+        "en": "{minute}' — {player_name} ({team}) hits the fastest shot of the match: {shot_speed_kmh} km/h.",
+        "fr": "{minute}e — {player_name} ({team}) signe la frappe la plus rapide du match : {shot_speed_kmh} km/h.",
+        "es": "Min. {minute} — {player_name} ({team}) firma el disparo más rápido del partido: {shot_speed_kmh} km/h.",
+    },
+    "milestone.top_speed_so_far": {
+        "en": "{minute}' — {player_name} ({team}) sets the top speed of the match: {speed_kmh} km/h.",
+        "fr": "{minute}e — {player_name} ({team}) signe la pointe de vitesse du match : {speed_kmh} km/h.",
+        "es": "Min. {minute} — {player_name} ({team}) marca la velocidad punta del partido: {speed_kmh} km/h.",
+    },
+    "milestone.50_completed_passes": {
+        "en": "{minute}' — {player_name} ({team}) reaches 50 completed passes.",
+        "fr": "{minute}e — {player_name} ({team}) atteint 50 passes réussies.",
+        "es": "Min. {minute} — {player_name} ({team}) llega a 50 pases completados.",
     },
     "half_time": {
         "en": "Half-time: {score}.",
@@ -95,6 +110,9 @@ _OUTCOME_TEXT = {
 }
 
 _WHY_EN: dict[str, str] = {
+    "milestone.fastest_shot_so_far": "No shot in this match has travelled faster ({previous_fastest_kmh} km/h before).",
+    "milestone.top_speed_so_far": "Nobody has run faster in this match ({previous_top_kmh} km/h before).",
+    "milestone.50_completed_passes": "Fifty completed passes already: {team} play through {player_name}.",
     "goal": "It changes the score to {score_after} with the {situation_text}.",
     "big_chance": "An xG of {xg} chance that did not go in: the score stays {score}.",
     "red_card": "{team} must play the rest of the match with {players_left} players.",
@@ -156,7 +174,7 @@ GOOD_TEXT = {  # "only call me if this match gets good": the match woke up after
 
 
 SIDE_TEXT = {
-    "en": ", {opponent}'s {side} side is cracking",
+    "en": ", {opponent_poss} {side} side is cracking",
     "fr": ", le côté {side} de {opponent} craque",
     "es": ", la banda {side} de {opponent} se resquebraja",
 }
@@ -202,6 +220,11 @@ STORY_INTRO = {
     "es": "La historia hasta ahora (min. {minute}): {score_now}.",
 }
 
+FINAL_GAP = {   # a full-time recap always gives the biggest gap of the match (the Verifier's omission check)
+    "en": "Biggest gap of the match: {home} {a}-{b} {away}.",
+    "fr": "Plus gros écart du match : {home} {a}-{b} {away}.",
+    "es": "Mayor diferencia del partido: {home} {a}-{b} {away}.",
+}
 FINAL_INTRO = {
     "en": "Full-time: {score_now}.",
     "fr": "Coup de sifflet final : {score_now}.",
@@ -222,12 +245,18 @@ class _Defaults(dict):
         return ""
 
 
+def possessive(name: str) -> str:
+    """English possessive of a club name: "Emberfield's", but "Saltmarsh Comets'" (the name ends in s)."""
+    return f"{name}'" if name.endswith("s") else f"{name}'s"
+
+
 def moment_values(moment: dict[str, Any], team_names: dict[str, str]) -> dict[str, Any]:
     """Placeholder values for a moment: its facts plus readable team names."""
     team = moment.get("team")
     opponent = next((name for code, name in team_names.items() if code != team), "")
     values = {**moment["facts"], "minute": moment["minute"],
               "team": team_names.get(team, ""), "opponent": opponent}
+    values |= {"team_poss": possessive(values["team"]), "opponent_poss": possessive(opponent)}
     return values
 
 
@@ -236,6 +265,8 @@ def moment_line(moment: dict[str, Any], lang: str, team_names: dict[str, str]) -
     lang = lang if lang in LANGUAGES else "en"
     mtype = moment["type"]
     key = f"goal.{moment['facts'].get('situation')}" if mtype == "goal" else mtype
+    if mtype == "milestone" and f"milestone.{moment['facts'].get('milestone')}" in _MOMENT_LINES:
+        key = f"milestone.{moment['facts']['milestone']}"     # say which mark: fastest shot, top speed, 50 passes
     values = moment_values(moment, team_names)
     if mtype == "big_chance":
         values["outcome_text"] = _OUTCOME_TEXT.get(values.get("outcome"), _OUTCOME_TEXT["saved"])[lang]
@@ -248,5 +279,6 @@ def moment_card_text(moment: dict[str, Any], team_names: dict[str, str]) -> dict
     values["situation_text"] = _SITUATION_TEXT.get(values.get("situation"), "goal")
     headline = moment_line(moment, "en", team_names).split(" — ", 1)[-1]
     headline = headline[:1].upper() + headline[1:]  # the line's tail starts lower case ("the game turns…")
-    why = _WHY_EN.get(moment["type"], "A notable moment for {team}.").format_map(_Defaults(values))
+    kind = f"milestone.{values.get('milestone')}" if moment["type"] == "milestone" else moment["type"]
+    why = _WHY_EN.get(kind, _WHY_EN.get(moment["type"], "A notable moment for {team}.")).format_map(_Defaults(values))
     return {"headline": headline, "why_it_matters": why}

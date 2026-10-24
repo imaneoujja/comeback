@@ -37,10 +37,15 @@ function render() {
   let img = "";
   if (qr) { qr.addData(url); qr.make(); img = qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true }); }
   el.innerHTML = `<div class="pr-qr">${img}</div><div class="pr-side"><b>SCAN WITH YOUR PHONE CAMERA</b>
-    <a class="pr-url" href="${url}" target="_blank" rel="noopener">${url.replace(/^https?:\/\//, "")}</a>
+    <button type="button" class="pr-copy" id="pr-copy">Can't scan? Copy link</button>
     <small>Then tap “Tap to pair” and keep the phone screen on.${["localhost", "127.0.0.1"].includes(location.hostname)
       ? " Same Wi-Fi as this computer." : ""}</small></div>`;
 }
+
+document.addEventListener("click", async (e) => {
+  if (e.target.id !== "pr-copy") return;
+  try { await navigator.clipboard.writeText(url); e.target.textContent = "Link copied ✓"; } catch { window.prompt("Open this link on your phone:", url); }
+});
 
 function setPaired(n) {
   if (Boolean(n) === Boolean(paired)) { paired = n; return; }

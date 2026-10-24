@@ -16,8 +16,12 @@
 <body data-mode="fan" class="configuring">
   <header class="bar">
     <div class="bar-left">
-      <span class="tally on-air"><i></i>ON AIR</span>
+      <span class="tally on-air studio-only"><i></i>ON AIR</span>
+      <span class="tally live-tag fan-only"><i></i>LIVE</span>
       <span class="wordmark">COMEBACK</span>
+      <nav class="seg product-nav" id="product-nav" aria-label="Product">
+        <button data-nav="fan" class="on">FAN APP</button><button data-nav="studio">STUDIO CONSOLE</button>
+      </nav>
       <span class="sub" id="bar-sub"></span>
     </div>
     <div class="bar-mid">
@@ -25,89 +29,80 @@
       <span class="bar-score" id="bar-score"></span>
     </div>
     <div class="bar-right">
-      <button class="fan-chip fan-only" id="fan-chip" title="Change your settings"></button>
-      <button class="key on studio-only" id="auto-direct" title="One monitor on air at a time">AUTO DIRECT</button>
-      <button class="key studio-only" id="outage-btn" title="Failure drill: cut the LLM for this session">⚡ CUT THE LLM</button>
-      <button class="key studio-only" id="jump-btn">JUMP TO 60'</button>
-      <span class="ctl-label">RATE</span>
-      <div class="seg" id="speeds" role="group" aria-label="Replay speed"></div>
-      <button class="key" id="pause" aria-label="Pause">PAUSE</button>
-      <button class="key" id="restart">RESTART</button>
-      <button class="key" id="setup-btn">⚙ SET UP</button>
+      <button class="fan-chip fan-only" id="fan-chip" title="Change match or settings"></button>
+      <button class="key studio-only" id="outage-btn" title="Failure drill: every LLM call fails for this session">SIMULATE LLM OUTAGE</button>
     </div>
   </header>
 
   <div class="setup loading" id="setup" role="dialog" aria-modal="true" aria-labelledby="su-h">
-    <form class="su" id="su-form">
+    <form class="su" id="su-form" data-view="fan">
       <button type="button" class="su-x" id="su-x" aria-label="Close" hidden>×</button>
-      <div class="su-k">COMEBACK · AI MATCH INSIGHTS FOR STREAMING AND STUDIO</div>
-      <h1 class="su-h" id="su-h">Don't wait for the highlights. <em>Live them.</em></h1>
-      <p class="su-p">Can't watch the whole match? COMEBACK <b>watches it for you</b>, <b>calls you back</b> before the big
-        moment, with the reason, and <b>catches you up</b> on what changed when you return.</p>
-
-      <div class="su-row">
-        <div class="su-n">1</div><div class="su-q">WHO IS WATCHING?</div>
-        <div class="su-opts two" data-field="mode">
-          <button type="button" data-value="fan"><b>A fan</b><small>Your side, your language, your level. Pair your phone for when you can't watch.</small></button>
-          <button type="button" data-value="studio"><b>A studio</b><small>The broadcaster's control room: AI agents, overlay cues, call-backs for the whole audience.</small></button>
+      <div class="fan-home">
+        <div class="su-k">COMEBACK · AI MATCH INSIGHTS FOR STREAMING AND STUDIO</div>
+        <h1 class="su-h" id="su-h">Don't wait for the highlights. <em>Live them.</em></h1>
+        <p class="su-p">Can't watch the whole match? COMEBACK <b>watches it for you</b>, <b>calls you back</b> before the big
+          moment, with the reason, and <b>catches you up</b> on what changed when you return.</p>
+        <div class="su-row">
+          <div class="su-n">1</div><div class="su-q">PICK A LIVE MATCH</div>
+          <div class="su-opts live-list" data-field="match" id="su-matches"></div>
+        </div>
+        <div class="su-row">
+          <div class="su-n">2</div><div class="su-q">YOUR SIDE</div>
+          <div class="su-side">
+            <div class="su-opts three" data-field="side" id="su-sides"></div>
+            <label class="su-select"><span>Follow a player <small>(optional)</small></span>
+              <select id="su-player"></select></label>
+          </div>
+        </div>
+        <div class="su-row">
+          <div class="su-n">3</div><div class="su-q">HOW YOU LIKE IT</div>
+          <div class="su-side">
+            <div class="su-opts two" data-field="level">
+              <button type="button" data-value="casual"><b>Casual</b><small>The story, in plain words.</small></button>
+              <button type="button" data-value="analyst"><b>Analyst</b><small>The numbers: xG, danger index, pass difficulty.</small></button>
+            </div>
+            <div class="su-inline">
+              <label class="su-select"><span>Language</span><select id="su-lang">
+                <option value="en">English</option><option value="fr">Français</option><option value="es">Español</option></select></label>
+              <details class="su-more"><summary>More options</summary>
+                <label class="su-select"><span>Your one stat on screen</span><select id="su-metric">
+                  <option value="">Automatic</option><option value="xg">xG</option><option value="possession">Possession</option>
+                  <option value="top_speed">Top speed</option><option value="pass_difficulty">Pass difficulty</option></select></label>
+              </details>
+            </div>
+          </div>
+        </div>
+        <div class="su-go">
+          <button type="submit" class="su-start" id="su-start" disabled>Loading…</button>
+          <span class="su-sum" id="su-sum"></span>
+          <button type="button" class="su-link" data-goto="studio">For broadcasters: Studio view →</button>
         </div>
       </div>
-      <div class="su-row">
-        <div class="su-n">2</div><div class="su-q">MATCH</div>
-        <div class="su-opts two" data-field="match" id="su-matches"></div>
+      <div class="studio-home">
+        <div class="su-k">COMEBACK · STUDIO CONSOLE</div>
+        <h1 class="su-h">Live now</h1>
+        <p class="su-p">Plug the control room into a live match: the AI agents, the Watcher's call-backs for the whole
+          audience, the overlay cues for your graphics renderer.</p>
+        <div class="console" id="console"></div>
+        <div class="su-go"><button type="button" class="su-link" data-goto="fan">← Fan app</button></div>
       </div>
-      <div class="su-row fan-q">
-        <div class="su-n">3</div><div class="su-q">YOU SUPPORT</div>
-        <div class="su-opts three" data-field="side" id="su-sides"></div>
-      </div>
-      <div class="su-row fan-q">
-        <div class="su-n">4</div><div class="su-q">LANGUAGE</div>
-        <div class="su-opts three" data-field="lang">
-          <button type="button" data-value="en"><b>English</b></button>
-          <button type="button" data-value="fr"><b>Français</b></button>
-          <button type="button" data-value="es"><b>Español</b></button>
-        </div>
-      </div>
-      <div class="su-row fan-q">
-        <div class="su-n">5</div><div class="su-q">STYLE</div>
-        <div class="su-opts two" data-field="level">
-          <button type="button" data-value="casual"><b>Casual</b><small>The story, in plain words.</small></button>
-          <button type="button" data-value="analyst"><b>Analyst</b><small>The numbers: xG, danger index, pass difficulty.</small></button>
-        </div>
-      </div>
-      <div class="su-row fan-q">
-        <div class="su-n">6</div><div class="su-q">YOUR ONE NUMBER</div>
-        <div class="su-opts four" data-field="metric">
-          <button type="button" data-value="xg"><b>xG</b></button>
-          <button type="button" data-value="possession"><b>Possession</b></button>
-          <button type="button" data-value="top_speed"><b>Top speed</b></button>
-          <button type="button" data-value="pass_difficulty"><b>Pass difficulty</b></button>
-        </div>
-      </div>
-      <div class="su-row fan-q">
-        <div class="su-n">7</div><div class="su-q">WHEN DO YOU WATCH?</div>
-        <div class="su-opts three" data-field="start">
-          <button type="button" data-value="away"><b>Step away 63'–70'</b><small>Live from 59'. You leave at 63', COMEBACK calls you back.</small></button>
-          <button type="button" data-value="join"><b>Join late at 60'</b><small>You missed the first hour: get the story so far.</small></button>
-          <button type="button" data-value="kickoff"><b>From kick-off</b><small>Watch it all. If you have to step away, switch tabs or press I'm away.</small></button>
-        </div>
-      </div>
-      <div class="su-row studio-q">
-        <div class="su-n">3</div><div class="su-q">START AT</div>
-        <div class="su-opts two" data-field="studioStart">
-          <button type="button" data-value="60"><b>60'</b><small>The second-half drama, straight away.</small></button>
-          <button type="button" data-value="0"><b>Kick-off</b><small>The whole match.</small></button>
-        </div>
-      </div>
-
-      <div class="su-go">
-        <button type="submit" class="su-start" id="su-start" disabled>Loading the match…</button>
-        <span class="su-sum" id="su-sum"></span>
-      </div>
-      <div class="su-f">Fictional clubs and players · synthetic match data · Microsoft Agent Framework · Microsoft Foundry ·
-        Azure AI Speech</div>
+      <div class="su-f">Demo: synthetic matches, fictional clubs; one match follows a scripted storyline. ·
+        Microsoft Agent Framework · Microsoft Foundry · Azure AI Speech</div>
     </form>
   </div>
+
+  <button class="demo-btn" id="demo-btn" title="Demo controls (D)">DEMO</button>
+  <aside class="demo" id="demo" hidden aria-label="Demo controls">
+    <div class="demo-h"><b>DEMO CONTROLS</b><span>press D</span><button id="demo-x" aria-label="Close">×</button></div>
+    <div class="demo-k">RATE</div>
+    <div class="seg" id="speeds" role="group" aria-label="Replay speed"></div>
+    <div class="demo-row"><button class="key" id="pause">PAUSE</button><button class="key" id="restart">RESTART FROM KICK-OFF</button></div>
+    <div class="demo-k">JUMP TO MINUTE</div>
+    <div class="demo-row"><input type="number" id="jump-min" min="1" max="95" value="60"><button class="key" id="jump-go">JUMP</button></div>
+    <div class="demo-k">SCENARIO</div>
+    <button class="key hot" id="autoplay-btn">▶ AUTOPLAY: AWAY 63'–70', WHAT YOU MISSED, RECEIPT</button>
+    <div class="demo-n" id="demo-n">Synthetic matches replayed as if live. Jumps count as minutes you did not follow.</div>
+  </aside>
 
   <div class="toast" id="toast" role="status" hidden></div>
 
@@ -132,6 +127,7 @@
         <div class="catchup" id="catchup" hidden></div>
         <div class="missed" id="missed" hidden></div>
         <div class="gazette" id="gazette" hidden></div>
+        <div class="synth-tag" aria-label="Synthetic match feed">SYNTHETIC MATCH FEED · FICTIONAL CLUBS</div>
         <div class="outage-badge" id="outage-badge" hidden><i></i>LLM OFFLINE · FAILURE DRILL · AGENTS ON VERIFIED TEMPLATES</div>
         <div class="away-strip" id="away-veil" hidden><i></i><b>YOU'RE AWAY · COMEBACK IS WATCHING FOR YOU</b>
           <span>we'll call you back before the big moment</span></div>
@@ -140,6 +136,13 @@
 
     <aside class="companion fan-only" id="companion" aria-label="Your match companion">
       <div class="cp-presence" id="presence"></div>
+      <nav class="cp-tabs" id="cp-tabs" aria-label="Companion">
+        <button data-tab="alerts" class="on">YOUR ALERTS</button><button data-tab="insights">MATCH INSIGHTS</button>
+      </nav>
+      <div class="cp-pane insights" data-pane="insights" id="insights" hidden></div>
+      <div class="cp-pane" data-pane="alerts">
+      <div class="cp-quiet" id="cp-quiet" hidden><span>This match is quiet so far.</span>
+        <button class="key hot" id="cp-quiet-go">ONLY CALL ME IF IT GETS GOOD</button></div>
       <section class="cp-block cp-pair">
         <div class="cp-k">CAN'T WATCH THE WHOLE MATCH?</div>
         <div class="cp-t">Pair your phone</div>
@@ -166,46 +169,43 @@
         <div class="cp-k">SENT TO YOUR PHONE</div>
         <div class="notes" id="notes" aria-live="polite"></div>
       </section>
+      </div>
     </aside>
 
-    <section class="mon agents-mon studio-only" data-mon="agents" aria-label="Agents">
-      <div class="mon-label"><span class="tally amber" id="agents-tally"><i></i>AGENTS</span><span class="src">AGENT FRAMEWORK · FOUNDRY</span></div>
-      <div class="screen" id="agents-screen"><div id="agents"></div><div class="factcheck" id="factcheck" hidden></div></div>
+    <section class="mon feed-mon studio-only" data-mon="feed" aria-label="Live agent feed and research desk">
+      <div class="mon-label rtabs" id="rtabs"><span class="tally amber" id="feed-tally"><i></i></span>
+        <button data-rtab="feed" class="on">LIVE AGENT FEED</button><button data-rtab="desk">RESEARCH DESK</button>
+        <span class="src right" id="rtab-src">ENGINE → ANALYST → VERIFIER → WATCHER</span></div>
+      <div class="screen feed" id="feed"></div>
+      <div class="screen desk" id="desk" hidden>
+        <div class="tp-card" id="tp-card"></div>
+        <nav class="desk-tabs" id="desk-tabs">
+          <button data-dtab="match" class="on">THIS MATCH</button><button data-dtab="standings">STANDINGS</button><button data-dtab="form">FORM</button><button data-dtab="players">PLAYERS</button><button data-dtab="injuries">INJURIES</button><button data-dtab="h2h">HEAD-TO-HEAD</button>
+        </nav>
+        <div class="desk-pane" id="desk-pane"></div>
+      </div>
     </section>
 
-    <section class="mon row2 studio-only" data-mon="decisions" aria-label="Watcher decisions">
-      <div class="mon-label"><span class="tally amber" id="decisions-tally"><i></i>DECISIONS</span><span class="src">WATCHER · WHY THESE FANS, WHY NOW</span></div>
-      <div class="screen decisions" id="decisions"><div class="empty">No call-back yet. When a side builds real pressure, the Watcher's reasoning appears here.</div></div>
+    <section class="numbers studio-only" id="numbers" aria-label="Audience"></section>
+
+    <section class="raw-bar studio-only">
+      <button id="raw-toggle" aria-expanded="false">RAW FEED ▸</button>
+      <span>overlay cues as timed JSON · engine data · timeline · for technical review</span>
     </section>
 
-    <section class="mon row2 studio-only" data-mon="pers" aria-label="Personalization">
-      <div class="mon-label"><span class="tally amber" id="pers-tally"><i></i>PERSONALIZE</span><span class="src">ONE CALL-BACK · THREE AUDIENCE SEGMENTS</span></div>
-      <div class="screen pers" id="pers"><div class="empty">The latest call-back, as three different fans receive it.</div></div>
-    </section>
-
-    <section class="mon row2 studio-only" data-mon="aud" aria-label="Audience">
-      <div class="mon-label"><span class="tally amber"><i></i>AUD</span><span class="src">10,000 SIMULATED FANS</span></div>
-      <div class="screen" id="audience"></div>
-    </section>
-
-    <section class="mon row3 cues-mon studio-only" data-mon="cues" aria-label="Overlay cue feed">
+    <section class="mon row3 cues-mon studio-only raw" data-mon="cues" aria-label="Overlay cue feed">
       <div class="mon-label"><span class="tally amber" id="cues-tally"><i></i>CUES</span><span class="src">TIMED JSON FOR A BROADCAST RENDERER</span>
         <a class="src right mono-link" data-overlays href="/api/overlays/demo-comeback" target="_blank" rel="noopener">GET /api/overlays</a>
         <a class="src mono-link" href="/docs" target="_blank" rel="noopener">/docs</a></div>
       <div class="screen cues" id="cues"><div class="empty">Cues appear as the match is rendered…</div></div>
     </section>
 
-    <section class="mon row3 data-mon studio-only" data-mon="data" aria-label="Match data">
+    <section class="mon row3 data-mon studio-only raw" data-mon="data" aria-label="Match data">
       <div class="mon-label"><span class="tally amber"><i></i>DATA</span><span class="src">MATCH ENGINE</span></div>
       <div class="screen data" id="data"></div>
     </section>
 
-    <section class="mon row3 rundown-mon studio-only" data-mon="rundown" aria-label="Rundown">
-      <div class="mon-label"><span class="tally amber"><i></i>RUNDOWN</span><span class="src">VERIFIED MOMENT CARDS</span></div>
-      <div class="screen rundown" id="cards"></div>
-    </section>
-
-    <section class="mon tl-mon" data-mon="tl" aria-label="Timeline">
+    <section class="mon tl-mon raw" data-mon="tl" aria-label="Timeline">
       <div class="mon-label"><span class="tally amber"><i></i>TL</span><span class="src" id="tl-src">MATCH TIMELINE</span>
         <span class="legend">
           <span><i class="lg-home"></i><b class="lg-home-name"></b></span><span><i class="lg-away"></i><b class="lg-away-name"></b></span>

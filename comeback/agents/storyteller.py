@@ -6,12 +6,19 @@ sized to the absence. Goes through the same Writer → Verifier → fallback wor
 """
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from comeback.agents.analyst import moment_player_ids, readable_facts
 from comeback.agents.llm import LLMGateway, parse_json_reply
-from comeback.agents.templates import CATCHUP_INTRO, FINAL_INTRO, NOTHING_HAPPENED, STORY_INTRO, moment_line
+from comeback.agents.templates import (
+    CATCHUP_INTRO,
+    FINAL_GAP,
+    FINAL_INTRO,
+    NOTHING_HAPPENED,
+    STORY_INTRO,
+    moment_line,
+)
 from comeback.agents.verifier import (
     allowed_numbers,
     check_comparisons,
@@ -20,6 +27,7 @@ from comeback.agents.verifier import (
     check_no_final_result,
     check_numbers,
     check_numerical_claims,
+    check_omissions,
     check_respect,
     check_scope,
 )
@@ -63,6 +71,7 @@ class CatchupTask:
     roster: dict[str, dict[str, Any]]
     late_join: bool = False
     final: bool = False          # full-time recap ("Gazette"): also needs a headline
+    scores: list[tuple[int, int]] = field(default_factory=list)   # after each goal of the match (omission check)
 
 
 PROMPT_DELTA_KEYS = ("score_then", "score_now", "in_control_then", "in_control_now",
@@ -84,6 +93,17 @@ def prompt_delta(delta: dict[str, Any], late_join: bool, team_names: dict[str, s
         out[key] = labelled_score(out.get(key), team_names)
     if late_join:
         out["minute_now"] = delta["minute_now"]
+    return out
+
+
+def goal_scores(cards: list[dict[str, Any]]) -> list[tuple[int, int]]:
+    """The score after each goal among the cards, in match order (home, away)."""
+    out = []
+    for c in sorted(cards, key=lambda c: c["t"]):
+        score = c["facts"].get("score_after") if c["type"] == "goal" else None
+        if score:
+            home, away = score.split("-")
+            out.append((int(home), int(away)))
     return out
 
 
@@ -160,6 +180,8 @@ class StorytellerWriter:
         issues += check_respect(text)
         for card in task.cards:
             issues += check_comparisons(text, card["facts"], task.team_names)
+        if task.final:
+            issues += check_omissions(text, task.scores or goal_scores(task.cards), task.team_names)
         return issues
 
     def fallback(self, task: CatchupTask) -> dict[str, Any]:
@@ -169,9 +191,13 @@ class StorytellerWriter:
         lines = [moment_line(c, lang, task.team_names) for c in task.cards]
         if not lines:
             lines = [NOTHING_HAPPENED[lang].format(score_now=task.delta["score_now"])]
+        home, away = task.team_names.values()
+        if task.final and check_omissions(" ".join(lines), task.scores, task.team_names):
+            a, b = max(task.scores, key=lambda s: abs(s[0] - s[1]))
+            if abs(a - b) >= 2:
+                lines.append(FINAL_GAP[lang].format(home=home, away=away, a=a, b=b))
         out = {"text": " ".join([intro, *lines])}
         if task.final:
-            home, away = task.team_names.values()
             out["headline"] = f"{home} {task.delta['score_now']} {away}"
         return out
 

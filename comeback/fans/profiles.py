@@ -65,23 +65,31 @@ def for_match(profile: FanProfile, home: str, away: str) -> FanProfile:
     return replace(profile, club_id=club, favourite_player_id=fav)
 
 
-SIDES = ("home", "away", "player")
+SIDES = ("home", "away", "neutral", "player")   # "player": neutral, following the away team's number 9
 LANGUAGES = ("en", "fr", "es")
 LEVELS = ("casual", "analyst")
 METRICS = ("xg", "possession", "top_speed", "pass_difficulty")
 
 
-def fan_profile(side: str, language: str, level: str, metric: str | None, home: str, away: str) -> FanProfile:
+def fan_profile(side: str, language: str, level: str, metric: str | None, home: str, away: str,
+                player: str | None = None) -> FanProfile:
     """The fan as configured on the first screen. No name: texts address the fan as "you".
 
-    ``side``: "home" or "away" (supports that club) or "player" (neutral, follows the away
-    team's number 9). Unknown values fall back to the defaults (home, English, casual).
+    ``side``: "home" or "away" (supports that club) or "neutral"; ``player`` (optional): a player
+    of this match the fan follows. "player" is the neutral fan following the away number 9.
+    Unknown values fall back to the defaults (home, English, casual).
     """
     side = side if side in SIDES else "home"
+    if side == "player":
+        side, player = "neutral", f"{away}-9"
+    if player and player.split("-")[0] not in (home, away):
+        player = None
     language = language if language in LANGUAGES else "en"
     level = level if level in LEVELS else "casual"
-    default_metric = "top_speed" if side == "player" else "xg" if level == "analyst" else "possession"
+    default_metric = "top_speed" if player else "xg" if level == "analyst" else "possession"
     metric = metric if metric in METRICS else default_metric
     club = home if side == "home" else away if side == "away" else None
-    favourite = f"{away}-9" if side == "player" else None
-    return FanProfile(f"fan-{side}-{language}-{level}", "", club, favourite, level, language, metric)  # type: ignore[arg-type]
+    who = "player" if side == "neutral" and player == f"{away}-9" else side
+    suffix = f"-{player}" if player and who != "player" else ""
+    return FanProfile(f"fan-{who}-{language}-{level}{suffix}", "", club, player, level, language,  # type: ignore[arg-type]
+                      metric)
