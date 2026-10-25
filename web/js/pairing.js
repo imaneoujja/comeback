@@ -30,7 +30,7 @@ async function refresh() {
 function render() {
   const el = $("#pair");
   if (paired) {
-    el.innerHTML = `<div class="pr-ok"><i></i><span><b>PHONE PAIRED</b><small>It will ring before the big moments.</small></span></div>`;
+    el.innerHTML = `<div class="pr-ok"><i></i><span><b>PHONE PAIRED</b><small>It will ring when it starts to matter.</small></span></div>`;
     return;
   }
   const qr = window.qrcode ? window.qrcode(0, "M") : null;

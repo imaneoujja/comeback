@@ -15,7 +15,9 @@ when you return.**
 Attention here means one thing: is the fan watching or away. It comes from the viewing app
 itself, opt-in. No camera, no microphone.
 
-![COMEBACK in 30 seconds: a fan sets up their match, steps away, gets called back before the goal with the reason, comes back to a replay, a spoken catch-up and the players who changed the game, then their full-time receipt and the studio's control room](docs/comeback.gif)
+**[Live demo](https://comeback.lemonforest-f9ddbdf8.switzerlandnorth.azurecontainerapps.io)** · **Video:** (link) · **The fan journey in English:** [https://comeback.lemonforest-f9ddbdf8.switzerlandnorth.azurecontainerapps.io/?as=fan&side=home&lang=en&match=demo-comeback](https://comeback.lemonforest-f9ddbdf8.switzerlandnorth.azurecontainerapps.io/?as=fan&side=home&lang=en&match=demo-comeback)
+
+![COMEBACK in 30 seconds: a fan sets up their match, steps away, gets called back when it starts to matter, with the reason, comes back to a replay, a spoken catch-up and the players who changed the game, then their full-time receipt and the studio's control room](docs/comeback.gif)
 
 ### Don't wait for the highlights. Live them.
 
@@ -27,7 +29,7 @@ viewers, not fewer. It never pushes someone who can watch to leave. One product,
 
 COMEBACK reads every event of the match live, explains why moments matter, and
 personalizes them for each fan (language, side, level, favourite player, one metric).
-Step away, and it calls you back **before** the big moment, with the reason; come back,
+Step away, and it calls you back **when it starts to matter**, with the reason; come back,
 and it replays what you missed, tells you what changed and shows **who changed the game**.
 At full time, your receipt: *"You were live for 3 of 3 goals, and caught up on 7 minutes
 away in 21 seconds."* (You left the match. COMEBACK didn't.)
@@ -71,12 +73,12 @@ No account, no key: it runs offline on recorded agent texts (see *Live vs record
 
 | | What happens | In the demo match |
 |---|---|---|
-| **Watch for me** | You step away (switch tab, press I'M AWAY, or your phone). A Watcher agent keeps watching for you, under your own rules: goal threats, equaliser or winner only, any big moment, or **only if this match gets good** (a quiet spell that comes alive); night mode. It knows your side, favourite player, level and language. | An Emberfield fan (French, analyst) steps away at 63', 0–2 down. |
-| **Call me back** | It calls you back **before** the moment, and says why. Your phone takes over the screen, rings, and reads the reason aloud. | 65' and 69': *"Reviens — Emberfield est entré 3 fois dans la surface en 2 minutes et a tenté 1 tir."* |
-| **Catch me up** | Spoiler-free: if a goal happened, your phone only said "something big happened"; the score waits for your replay. The TV rewinds: the moments you missed are replayed in 3D from behind the goal while a neural voice reads your "Previously on…" of what **changed**, sized to your absence. Then **What you missed**: the three players who changed the game, both teams then vs now (below). | 70': a catch-up in French, then the 71' goal, seen live. The phone confirms: *"COMEBACK l'avait senti : alerte à la 69e, but à la 71e."* |
+| **Watch for me** | You step away (switch tab, press I'M AWAY, or your phone). A Watcher agent keeps watching for you, under your own rules: goal threats, equaliser or winner only, any big moment, or **only if this match gets good** (a quiet spell that comes alive); night mode. It knows your side, favourite player, level and language. | An Emberfield fan (English, analyst) steps away at 63', 0–2 down. |
+| **Call me back** | It calls you back **when it starts to matter**, and says why. Your phone takes over the screen, rings, and reads the reason aloud. | Calls at 65' and 69'. At 69': *"Come back — Emberfield have entered the box 3 times in 2 minutes and taken 1 shot."* |
+| **Catch me up** | Spoiler-free: if a goal happened, your phone only said "something big happened"; the score waits for your replay. The TV rewinds: the moments you missed are replayed in 3D from behind the goal while a neural voice reads your "Previously on…" of what **changed**, sized to your absence. Then **What you missed**: the three players who changed the game, both teams then vs now (below). | 70': a spoken catch-up, then the 71' goal, seen live. The phone confirms: *"COMEBACK called it: alert at 69', goal at 71'. You were back in time."* |
 | **Full-time** | Your receipt (live goals, minutes watched, what your alerts were worth) and your own front page: the match told from your side. | *"You were live for all 3 goals, and caught up on 7 minutes away in 21 seconds."* |
 
-![The fan view: back at 70', the TV shows the French catch-up of what changed, with SHOW ENGLISH and LISTEN; next to the match, the phone pairing panel and the two call-backs sent before the goal](docs/screenshot.png)
+![The fan view: back at 70', the TV shows the English catch-up of what changed (also in French and Spanish), with WHAT YOU MISSED and the voice-over; next to the match, the phone pairing panel and the two call-backs sent before the goal, the 69' one unfolded in Why this alert?](docs/screenshot.png)
 
 Two products on one engine, side by side in the top bar. The **Fan app** (the default)
 opens on the matches **live now**: pick one, your side (or neutral, and optionally a player
@@ -157,8 +159,9 @@ Stricter or looser, at a glance (same held-out matches):
 | 65 | 9% | 30% | 0.8 |
 
 **"Only call me if this match gets good"** keeps the same rule but fires only after at least
-8 quiet minutes (both teams' danger below 35): on 40 unseen matches, about **1.9 calls per
-match** (against about 15 for the default rule, both teams), and at least one in 34 of them.
+8 quiet minutes (both teams' danger below 35): in a separate run on 40 other unseen matches
+(not the 50-match evaluation above), about **1.9 calls per match** for both teams together
+(against about 15 for the default rule), and at least one in 34 of them.
 
 Honest reading: most goals in our simulator come from short attacks, so many goals
 are not preceded by sustained pressure, and most alerts are not followed by a goal.
@@ -198,10 +201,10 @@ its trend (with the milliseconds the engine took), each condition of the rule, t
 decision for this fan (how long they had been away, which side they are on, and its own
 milliseconds), and how long the alert took to reach the screen. The 69' call in the demo:
 three box entries and a shot between 67:29 and 69:21 → danger 61/100, +22 in 30 s (engine
-0.9 ms) → threshold, trend, no own shot for 30 s, call 2 of 2 → the Watcher calls back a fan
-away for 6 minutes (1.7 ms) → on screen 7 ms later. A rule, not a prediction; no model call.
+0.38 ms) → threshold, trend, no own shot for 30 s, call 2 of 2 → the Watcher calls back a fan
+away for 6 minutes (0.28 ms) → on screen 6 ms later. A rule, not a prediction; no model call.
 
-![Why this alert? on the 69' call-back: the four events with their times and ids, the engine's danger 61/100 and +22.1 in 30 s computed in 0.91 ms, the rule's checks, the Watcher's decision in 1.7 ms, delivered 7 ms later](docs/why.png)
+![Why this alert? on the 69' call-back: the four events with their times and ids, the engine's danger 61/100 and +22.1 in 30 s computed in 0.38 ms, the rule's checks, the Watcher's decision in 0.28 ms, delivered 6 ms later](docs/why.png)
 
 ### Latency and load
 
@@ -342,6 +345,10 @@ LLM calls needed to serve the whole demo match, by audience size (`/api/scale`):
 | 50,000 | 1,515 | 158,631 |
 | 200,000 | **1,830** | **633,938** |
 
+The right-hand column is one call per catch-up (633,921 at 200,000 fans) plus the match's 17
+key-moment cards (633,938); the single agent below writes its cards inside each catch-up, so it
+needs 633,921.
+
 These are cost figures on the scripted demo match. They say nothing about how
 accurate the alerts are: that is measured separately, below. The audience is
 simulated once per match and shared by every viewer of that match (not once per
@@ -472,7 +479,7 @@ does, in your language and from your side.
 
 **For broadcasters and the official app (B2B2C):** COMEBACK is a layer they integrate, not
 one more app. It does not pull viewers away from the live feed; it brings back fans who
-had already left, before the peak moment, instead of sending a spoiler after it. In the
+had already left, when it starts to matter, instead of sending a spoiler after it. In the
 simulation, 882 of 10,000 fans were back in time for the 71' goal (assumption: 65% of
 called fans return; a real figure needs an A/B test in production).
 
@@ -509,7 +516,7 @@ and Verifier.
    You join where the match is: the TV replays the goals you missed while a neural voice
    tells the story so far, then **What you missed** shows the players who made it. Then you
    watch live. When you have to step away, switch browser tab or press **I'M AWAY**: COMEBACK
-   calls you back before the big moment (pair your phone with the QR code to get the call
+   calls you back when it starts to matter (pair your phone with the QR code to get the call
    on it), and catches you up when you return. On the quiet match, try **Only call me if it
    gets good**. **CHANGE** (top bar) switches side, player, language or style without
    restarting the match.
@@ -604,8 +611,8 @@ flowchart LR
 **Business model (B2B2C).** COMEBACK is a layer that broadcasters, streaming platforms and
 the official app integrate, not one more app for fans: an SDK and API for presence-aware
 call-backs, catch-ups and overlay cues, priced per match or per active viewer. Its value
-for the integrator is live minutes and ad inventory: fans who had left come back before
-the peak moment.
+for the integrator is live minutes and ad inventory: fans who had left come back when it
+starts to matter.
 
 **Cost per match at 200,000 fans** (demo match, list prices): about **1,830 LLM calls ≈ $0.61**
 (cards written once, stories shared by fans with the same moments, language, level, side
@@ -754,8 +761,8 @@ question: it watches the match for you and comes to you when it starts to matter
 
 They show the need. But recaps wait for the fan to ask (or to join late), and
 excitement alerts are about a whole game, for everyone. COMEBACK starts from the
-fan's own attention: it notices that *you* left, calls *you* back *before* the
-moment, from *your* club's side, and tells *you* what you missed. We don't claim
+fan's own attention: it notices that *you* left, calls *you* back *when it starts to
+matter*, from *your* club's side, and tells *you* what you missed. We don't claim
 to be first; we combine these ideas around presence, at a cost that doesn't grow
 with the audience.
 
