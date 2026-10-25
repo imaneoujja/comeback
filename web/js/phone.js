@@ -105,7 +105,7 @@ function renderScore() {
 function renderNotes() {
   $("#notes").innerHTML = st.notes.length ? st.notes.slice(0, 8).map((n) => `
     <div class="note ${n.kind}"><div class="nh"><b>${{ come_back: "● COME BACK", goal: "● GOAL", big_moment: "● BIG MOMENT", called_it: "✓ CALLED IT" }[n.kind] || n.kind}</b><span>${n.minute}'</span></div>
-    <div class="nx">${esc(n.text)}</div></div>`).join("") : `<div class="empty">Leave the match: COMEBACK will call you back before the big moment.</div>`;
+    <div class="nx">${esc(n.text)}</div></div>`).join("") : `<div class="empty">Leave the match: COMEBACK will call you back when it starts to matter.</div>`;
 }
 
 function takeover(n) {
