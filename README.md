@@ -15,7 +15,7 @@ when you return.**
 Attention here means one thing: is the fan watching or away. It comes from the viewing app
 itself, opt-in. No camera, no microphone.
 
-**[Live demo](https://comeback.lemonforest-f9ddbdf8.switzerlandnorth.azurecontainerapps.io)** · **Video:** (link) · **The fan journey in English:** [https://comeback.lemonforest-f9ddbdf8.switzerlandnorth.azurecontainerapps.io/?as=fan&side=home&lang=en&match=demo-comeback](https://comeback.lemonforest-f9ddbdf8.switzerlandnorth.azurecontainerapps.io/?as=fan&side=home&lang=en&match=demo-comeback)
+**[Live demo](https://comeback.lemonforest-f9ddbdf8.switzerlandnorth.azurecontainerapps.io)** · **[Video (2 min)](https://youtu.be/h_aXo5JeWsk)** · **The fan journey in English:** [https://comeback.lemonforest-f9ddbdf8.switzerlandnorth.azurecontainerapps.io/?as=fan&side=home&lang=en&match=demo-comeback](https://comeback.lemonforest-f9ddbdf8.switzerlandnorth.azurecontainerapps.io/?as=fan&side=home&lang=en&match=demo-comeback)
 
 ![COMEBACK in 30 seconds: a fan sets up their match, steps away, gets called back when it starts to matter, with the reason, comes back to a replay, a spoken catch-up and the players who changed the game, then their full-time receipt and the studio's control room](docs/comeback.gif)
 
